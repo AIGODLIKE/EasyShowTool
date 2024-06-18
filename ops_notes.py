@@ -80,13 +80,14 @@ class ENN_OT_edit_note(bpy.types.Operator):
         area = screen.areas[0]
         area.ui_type = 'TEXT_EDITOR'
         area.spaces[0].text = text
+        area.spaces[0].show_syntax_highlight = False
         return {'FINISHED'}
 
 
 def header_menu(self, context):
     layout = self.layout
     layout.operator(ENN_OT_add_note.bl_idname, icon='TEXT')
-    layout.operator(ENN_OT_edit_note.bl_idname, icon='CURRENT_FILE')
+    # layout.operator(ENN_OT_edit_note.bl_idname, icon='CURRENT_FILE')
 
 
 def register():
