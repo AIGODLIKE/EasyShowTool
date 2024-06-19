@@ -115,6 +115,30 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
                                location=location)
 
 
+class ENN_OT_move_gp(bpy.types.Operator):
+    bl_idname = "enn.move_gp"
+    bl_label = "Move"
+    bl_description = "Move the selected Grease Pencil Object"
+    bl_options = {'UNDO'}
+
+    move_vector: bpy.props.IntVectorProperty(name='Move Vector', size=2, default=(50, 50))
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context)
+
+    def execute(self, context):
+        nt: bpy.types.NodeTree = context.space_data.edit_tree
+        gp_data: bpy.types.GreasePencil = nt.grease_pencil
+        if not gp_data:
+            return {'CANCELLED'}
+        layer_index: int = gp_data.layers.active_index
+        with gpd_build(gp_data) as gp_data_builder:
+            gp_data_builder.move(layer_index, self.move_vector)
+        context.area.tag_redraw()
+        return {'FINISHED'}
+
+
 class ENN_PT_gn_edit_panel(bpy.types.Panel):
     bl_label = "Edit Grease Pencil Text"
     bl_idname = "ENN_PT_gn_edit_panel"
@@ -126,16 +150,37 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
         layout = self.layout
         layout.prop(context.window_manager, "enn_gp_size")
 
-        layout.prop(context.window_manager, "enn_gp_add_type")
+        box = layout.box()
+        box.label(text="Add")
+        row = box.row()
+        row.prop(context.window_manager, "enn_gp_add_type", expand=True)
+
+        if context.window_manager.enn_gp_add_type == 'TEXT':
+            box.prop(context.window_manager, "enn_gp_text")
+        elif context.window_manager.enn_gp_add_type == 'MESH':
+            box.prop(context.window_manager, "enn_gp_obj")
+        op = box.operator(ENN_OT_add_gp_modal.bl_idname)
+        op.add_type = context.window_manager.enn_gp_add_type
 
         layout.separator()
-        layout.prop(context.window_manager, "enn_gp_text")
-        op = layout.operator(ENN_OT_add_gp_modal.bl_idname)
-        op.add_type = 'TEXT'
 
-        layout.prop(context.window_manager, "enn_gp_obj")
-        op = layout.operator(ENN_OT_add_gp_modal.bl_idname)
-        op.add_type = 'MESH'
+        box = layout.box()
+        box.label(text="Move Active Layer")
+        row = box.row()
+        row.prop(context.window_manager, "enn_gp_move_dis")
+
+        dis = context.window_manager.enn_gp_move_dis
+        col = box.column(align=True)
+        row = col.row(align=True)
+        op = row.operator(ENN_OT_move_gp.bl_idname, icon='TRIA_UP')
+        op.move_vector = (0, dis)
+        op = row.operator(ENN_OT_move_gp.bl_idname, icon='TRIA_DOWN')
+        op.move_vector = (0, -dis)
+        row = col.row(align=True)
+        op = row.operator(ENN_OT_move_gp.bl_idname, icon='TRIA_LEFT')
+        op.move_vector = (-dis, 0)
+        op = row.operator(ENN_OT_move_gp.bl_idname, icon='TRIA_RIGHT')
+        op.move_vector = (dis, 0)
 
 
 def header_menu(self, context):
@@ -144,15 +189,16 @@ def header_menu(self, context):
 
 
 def register():
-    bpy.types.WindowManager.enn_gp_size = bpy.props.IntProperty(name="Pixel Size", default=100)
+    bpy.types.WindowManager.enn_gp_size = bpy.props.IntProperty(name="Size", default=100, subtype='PIXEL')
     bpy.types.WindowManager.enn_gp_add_type = bpy.props.EnumProperty(items=lambda self, context: enum_add_type_items())
     bpy.types.WindowManager.enn_gp_text = bpy.props.StringProperty(name="Text", default="Hello World")
-    bpy.types.WindowManager.enn_gp_obj = bpy.props.PointerProperty(type=bpy.types.Object,
+    bpy.types.WindowManager.enn_gp_obj = bpy.props.PointerProperty(name='Object', type=bpy.types.Object,
                                                                    poll=lambda self, obj: obj.type in {'MESH',
                                                                                                        'GPENCIL'})
-
+    bpy.types.WindowManager.enn_gp_move_dis = bpy.props.IntProperty(name='Distance', default=50)
     bpy.utils.register_class(ENN_OT_add_gp)
     bpy.utils.register_class(ENN_OT_add_gp_modal)
+    bpy.utils.register_class(ENN_OT_move_gp)
     bpy.utils.register_class(ENN_PT_gn_edit_panel)
     # bpy.types.NODE_HT_header.append(header_menu)
 
@@ -160,5 +206,6 @@ def register():
 def unregister():
     bpy.utils.unregister_class(ENN_OT_add_gp)
     bpy.utils.unregister_class(ENN_OT_add_gp_modal)
+    bpy.utils.unregister_class(ENN_OT_move_gp)
     bpy.utils.unregister_class(ENN_PT_gn_edit_panel)
     # bpy.types.NODE_HT_header.remove(header_menu)
