@@ -209,10 +209,10 @@ class CreateGreasePencilData(GreasePencilCache):
     @staticmethod
     def from_text(text: str, size: int = 100, hex_color: str = '#E7E7E7') -> bpy.types.GreasePencil:
         """
-        Create a text object in the scene.
+        Create a text object in the scene and convert it to grease pencil data.
         :param text:  the text to display
         :param size:  in pixels
-        :return:
+        :return: the grease pencil data
         """
         bpy.ops.object.text_add()
         obj = bpy.context.object
@@ -228,26 +228,43 @@ class CreateGreasePencilData(GreasePencilCache):
         gp_data = gp_obj.data
         layer = gp_data.layers[0]
         layer.info = text
-        layer.color = GP_Color.hex_2_rgb(hex_color)
         CreateGreasePencilData.del_later(gp_obj)
         return gp_data
 
     @staticmethod
-    def from_mesh_obj(obj: bpy.types.Object) -> bpy.types.GreasePencil:
+    def from_mesh_obj(obj: bpy.types.Object, size: int = 100) -> bpy.types.GreasePencil:
         """
-        Create a grease pencil object from a mesh object.
+        Create a grease pencil object from a mesh object and convert it to grease pencil data.
         :param obj:  the mesh object
         :return:
         """
         new_obj = obj.copy()
+        new_obj.data = obj.data.copy()
         bpy.context.collection.objects.link(new_obj)
+        new_obj.scale = (size, size, size)
         bpy.context.view_layer.objects.active = new_obj
+        bpy.ops.object.select_all(action='DESELECT')
+        new_obj.select_set(True)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
         CreateGreasePencilData.convert_2_gp()
 
         gp_obj = bpy.context.object
         gp_data = gp_obj.data
         CreateGreasePencilData.del_later(gp_obj)
 
+        return gp_data
+
+    @staticmethod
+    def from_gp_obj(obj: bpy.types.Object, size: int = 100) -> bpy.types.GreasePencil:
+        """
+        Create a grease pencil object from a grease pencil object and convert it to grease pencil data.
+        :param obj:  the grease pencil object
+        :return:
+        """
+        gp_data = obj.data.copy()
+        with BuildGreasePencilData(gp_data) as gp_builder:
+            for layer in gp_builder.gp_data.layers:
+                gp_builder.scale(layer.info, Vector((size, size, 1)), Vector((0, 0, 0)))
         return gp_data
 
 
@@ -331,12 +348,12 @@ class BuildGreasePencilData(GreasePencilCache):
         self._set_space('3D')
         return self
 
-    def color(self, layer_name: str, hex_color: str) -> 'BuildGreasePencilData':
+    def color(self, layer_name_or_index: Union[str, int], hex_color: str) -> 'BuildGreasePencilData':
         """Set the color of the grease pencil annotation layer.
         :param layer_name: The name of the layer.
         :param hex_color: The color in hex format.
         :return: instance"""
-        layer = self.gp_data.layers.get(layer_name, None)
+        layer = self._get_layer(layer_name_or_index)
         if layer:
             layer.color = GP_Color.hex_2_rgb(hex_color)
         return self
