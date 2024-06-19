@@ -7,27 +7,25 @@ from dataclasses import dataclass, field
 from math import radians
 
 
-def s_scale(v: float, r: bool = False) -> float:
+def ui_scale(v: float, r: bool = False) -> float:
     """
-    this is a very strange convert grease pencil annotation location between 2d space to 3d space
+    convert grease pencil annotation location between 2d space to 3d space
     :param v: value
     :param r: reverse False: 3d -> 2d, True: 2d -> 3d
     :return: value
-
-    SCALE: float = 1.1145124817 measure by hand
     """
-
-    return v / 2 * 1.1145124817 if not r else v * 2 / 1.1145124817
+    ui_scale = bpy.context.preferences.system.ui_scale
+    return v / ui_scale if not r else v * ui_scale
 
 
 def loc3d_2_r2d(location: Union[Vector, Sequence]) -> Vector:
     """Convert 3D space point to 2D space."""
-    return Vector((s_scale(location[0]), s_scale(location[1])))
+    return Vector((ui_scale(location[0]), ui_scale(location[1])))
 
 
 def r2d_2_loc3d(location: Union[Vector, Sequence]) -> Vector:
     """Convert 2D space point to 3D space."""
-    return Vector((s_scale(location[0], r=True), s_scale(location[1], r=True)))
+    return Vector((ui_scale(location[0], r=True), ui_scale(location[1], r=True)))
 
 
 @dataclass
@@ -72,13 +70,13 @@ class GreasePencilBBox:
     def size_2d(self) -> tuple[float, float]:
         """Return the size of the bounding box in 2d space."""
         size = self.size
-        return s_scale(size[0]), s_scale(size[1])
+        return ui_scale(size[0]), ui_scale(size[1])
 
     @property
     def center_2d(self) -> tuple[float, float]:
         """Return the center of the bounding box in 2d space."""
         center = self.center
-        return s_scale(center[0]), s_scale(center[1])
+        return ui_scale(center[0]), ui_scale(center[1])
 
     @property
     def bbox_points(self) -> tuple[tuple[float, float], ...]:
@@ -195,8 +193,9 @@ class CreateGreasePencilData(GreasePencilCache):
     offset: ClassVar[float] = 0.01
 
     @classmethod
-    def convert_2_gp(cls):
-        bpy.ops.object.convert(target='GPENCIL', seams=cls.seam, faces=cls.faces, offset=cls.offset)
+    def convert_2_gp(cls, keep_original: bool = False):
+        bpy.ops.object.convert(target='GPENCIL', seams=cls.seam, faces=cls.faces, offset=cls.offset,
+                               keep_original=keep_original)
 
     @staticmethod
     def empty() -> bpy.types.GreasePencil:
@@ -266,7 +265,7 @@ class EditGreasePencilStroke():
     @staticmethod
     def _move_stroke(stroke: bpy.types.GPencilStroke, v: Vector):
         """Move the grease pencil data."""
-        move_3d = Vector((s_scale(v[0], r=True), s_scale(v[1], r=True), 0))  # apply scale
+        move_3d = Vector((ui_scale(v[0], r=True), ui_scale(v[1], r=True), 0))  # apply scale
         with EditGreasePencilStroke.stroke_points(stroke) as points:
             points += move_3d
             stroke.points.foreach_set('co', points.ravel())
