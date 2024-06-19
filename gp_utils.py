@@ -146,21 +146,38 @@ class GreasePencilBBox(GreasePencilProperty):
 
     @property
     def size(self) -> tuple[float, float]:
-        """Return the size of the bounding box."""
-        self._handle_error()
+        """Return the 3d size of the bounding box."""
         return self.max_x - self.min_x, self.max_y - self.min_y
 
     @property
     def center(self) -> tuple[float, float]:
-        """Return the center of the bounding box."""
-        self._handle_error()
+        """Return the 3d center of the bounding box."""
         return (self.min_x + self.max_x) / 2, (self.min_y + self.max_y) / 2
+
+    @property
+    def top_left(self) -> tuple[float, float]:
+        """Return the 3d top left point of the bounding box."""
+        return self.min_x, self.max_y
+
+    @property
+    def top_right(self) -> tuple[float, float]:
+        """Return the 3d top right point of the bounding box."""
+        return self.max_x, self.max_y
+
+    @property
+    def bottom_left(self) -> tuple[float, float]:
+        """Return the 3d bottom left point of the bounding box."""
+        return self.min_x, self.min_y
+
+    @property
+    def bottom_right(self) -> tuple[float, float]:
+        """Return the 3d bottom right point of the bounding box."""
+        return self.max_x, self.min_y
 
     @property
     def bbox_points_3d(self) -> tuple[tuple[float, float], ...]:
         """Return the bounding box points."""
-        self._handle_error()
-        return (self.min_x, self.max_y), (self.max_x, self.max_y), (self.min_x, self.min_y), (self.max_x, self.min_y)
+        return self.top_left, self.top_right, self.bottom_left, self.bottom_right
 
     @property
     def bbox_points_v2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
@@ -171,10 +188,6 @@ class GreasePencilBBox(GreasePencilProperty):
     def bbox_points_r2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
         """Return the bounding box points in region 2d space."""
         return tuple(map(DPI.v2d_2_r2d, self.bbox_points_v2d))
-
-    def _handle_error(self):
-        if not hasattr(self, 'max_x'):
-            raise ValueError('Please call calc_bbox() first.')
 
     @staticmethod
     def _calc_stroke_bbox(stroke: bpy.types.GPencilStroke) -> tuple[float, float, float, float]:
@@ -212,7 +225,7 @@ class GreasePencilBBox(GreasePencilProperty):
 
         return self.calc_bbox(layer.info, frame)
 
-    def calc_bbox(self, layer_name_or_inedx: Union[str, int], frame: int = 0) -> tuple[tuple[float, float], ...]:
+    def calc_bbox(self, layer_name_or_inedx: Union[str, int], frame: int = 0) -> None:
         """
         Calculate the bounding box of the grease pencil annotation.
         :param layer_name_or_inedx: The name or index of the layer.
@@ -245,8 +258,6 @@ class GreasePencilBBox(GreasePencilProperty):
         self.min_x = min(x_list)
         self.max_y = max(y_list)
         self.min_y = min(y_list)
-
-        return (self.min_x, self.max_y), (self.max_x, self.max_y), (self.min_x, self.min_y), (self.max_x, self.min_y)
 
 
 class GreasePencilCache:

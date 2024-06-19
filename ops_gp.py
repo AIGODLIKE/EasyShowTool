@@ -89,7 +89,7 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
 
     def invoke(self, context, event):
         context.window_manager.modal_handler_add(self)
-        context.window.cursor_set('PICK_AREA')
+        context.window.cursor_modal_set('PICK_AREA')
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
@@ -147,13 +147,20 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     # state
+    cursor_shape = 'DEFAULT'
     draw_handle = None
     mouse_pos = (0, 0)
     mouse_pos_prev = (0, 0)
+
     is_dragging: bool = False
+    in_drag_area: bool = False
+    in_near_area: bool = False
     drag_start_pos = (0, 0)
     drag_stop_pos = (0, 0)
     delta_vec = (0, 0)  # last mouse move vector, in view2d space
+    # draw points
+    draw_points: list[tuple[int, int]] = []
+    draw_coords: list[tuple[int, int]] = []
     # data
     gp_data_bbox: gpd_bbox = None
     gp_data_builder: gpd_build = None
@@ -176,8 +183,9 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
         self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px, (self, context), 'WINDOW',
                                                                       'POST_PIXEL')
         context.window_manager.modal_handler_add(self)
-        context.window.cursor_set('MOVE_X')
-
+        # if self.cursor_shape != 'HAND':
+        #     context.window.cursor_modal_set('HAND')
+        #     self.cursor_shape = 'HAND'
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
@@ -205,7 +213,9 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
             self.is_dragging = False
             self.drag_stop_pos = self.mouse_pos
             self.gp_data_bbox.calc_active_layer_bbox()
-        if event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
+            _ = self.gp_data_bbox.bbox_points_3d  # update the 3d bbox
+            context.area.tag_redraw()
+        if event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE", "MIDDLEMOUSE"}:
             return {'PASS_THROUGH'}
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
