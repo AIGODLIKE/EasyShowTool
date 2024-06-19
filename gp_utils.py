@@ -30,13 +30,6 @@ def r2d_2_loc3d(location: Union[Vector, Sequence]) -> Vector:
     return Vector((s_scale(location[0], r=True), s_scale(location[1], r=True)))
 
 
-def np_vertices_from_stroke(stroke: bpy.types.GPencilStroke) -> np.ndarray:
-    """Get the vertices from the stroke."""
-    vertices = np.empty(len(stroke.points) * 3, dtype='f')
-    stroke.points.foreach_get('co', vertices)
-    return vertices.reshape((len(stroke.points), 3))
-
-
 @dataclass
 class GP_Color:
 
@@ -109,9 +102,9 @@ class GreasePencilBBox:
         :param stroke:
         :return:
         """
-        vertices = np_vertices_from_stroke(stroke)
-        max_xyz_id = np.argmax(vertices, axis=0)
-        min_xyz_id = np.argmin(vertices, axis=0)
+        with EditGreasePencilStroke.stroke_points(stroke) as vertices:
+            max_xyz_id = np.argmax(vertices, axis=0)
+            min_xyz_id = np.argmin(vertices, axis=0)
 
         return vertices, max_xyz_id, min_xyz_id
 
@@ -170,6 +163,7 @@ class GreasePencilBBox:
 
 
 class GreasePencilCache:
+    """Grease Pencil Cache, cache the grease pencil objects."""
     tmp_objs: ClassVar[list[bpy.types.Object]] = []
 
     @classmethod
@@ -189,12 +183,20 @@ class GreasePencilCache:
             cls.tmp_objs.extend(obj_list)
 
 
-class GreasePencilDataFactory(GreasePencilCache):
-    """Grease Pencil Data Factory"""
+class CreateGreasePencilData(GreasePencilCache):
+    """Grease Pencil Data Factory, a static class that makes it easy to create grease pencil data.
+    :param seam:  Add seam to the grease pencil data.
+    :param faces: Add faces to the grease pencil data.
+    :param offset: The offset of the grease pencil data.
+    """
+
+    seam: ClassVar[bool] = False
+    faces: ClassVar[bool] = False
+    offset: ClassVar[float] = 0.01
 
     @classmethod
     def convert_2_gp(cls):
-        bpy.ops.object.convert(target='GPENCIL', seams=False, faces=False, offset=0.01)
+        bpy.ops.object.convert(target='GPENCIL', seams=cls.seam, faces=cls.faces, offset=cls.offset)
 
     @staticmethod
     def empty() -> bpy.types.GreasePencil:
@@ -202,7 +204,7 @@ class GreasePencilDataFactory(GreasePencilCache):
         bpy.ops.object.gpencil_add(type='EMPTY')
         obj = bpy.context.object
         gp_data = obj.data
-        GreasePencilDataFactory.del_later(obj)
+        CreateGreasePencilData.del_later(obj)
         return gp_data
 
     @staticmethod
@@ -221,14 +223,14 @@ class GreasePencilDataFactory(GreasePencilCache):
 
         bpy.ops.object.select_all(action='DESELECT')
         obj.select_set(True)
-        GreasePencilDataFactory.convert_2_gp()
+        CreateGreasePencilData.convert_2_gp()
 
         gp_obj = bpy.context.object
         gp_data = gp_obj.data
         layer = gp_data.layers[0]
         layer.info = text
         layer.color = GP_Color.hex_2_rgb(hex_color)
-        GreasePencilDataFactory.del_later(gp_obj)
+        CreateGreasePencilData.del_later(gp_obj)
         return gp_data
 
     @staticmethod
@@ -241,26 +243,68 @@ class GreasePencilDataFactory(GreasePencilCache):
         new_obj = obj.copy()
         bpy.context.collection.objects.link(new_obj)
         bpy.context.view_layer.objects.active = new_obj
-        GreasePencilDataFactory.convert_2_gp()
+        CreateGreasePencilData.convert_2_gp()
 
         gp_obj = bpy.context.object
         gp_data = gp_obj.data
-        GreasePencilDataFactory.del_later(gp_obj)
+        CreateGreasePencilData.del_later(gp_obj)
 
         return gp_data
 
 
+class EditGreasePencilStroke():
+    """Grease Pencil Stroke, easy to manipulate Stroke data."""
+
+    @staticmethod
+    @contextmanager
+    def stroke_points(stroke: bpy.types.GPencilStroke) -> np.ndarray:
+        """Get the vertices from the stroke."""
+        points = np.empty(len(stroke.points) * 3, dtype='f')
+        stroke.points.foreach_get('co', points)
+        yield points.reshape((len(stroke.points), 3))
+
+    @staticmethod
+    def _move_stroke(stroke: bpy.types.GPencilStroke, v: Vector):
+        """Move the grease pencil data."""
+        move_3d = Vector((s_scale(v[0], r=True), s_scale(v[1], r=True), 0))  # apply scale
+        with EditGreasePencilStroke.stroke_points(stroke) as points:
+            points += move_3d
+            stroke.points.foreach_set('co', points.ravel())
+
+    @staticmethod
+    def _scale_stroke(stroke: bpy.types.GPencilStroke, scale: Vector, pivot: Vector):
+        """Scale the grease pencil data."""
+        scale_3d = Vector((scale[0], scale[1], 1))
+        pivot_3d = Vector((pivot[0], pivot[1], 0))
+        with EditGreasePencilStroke.stroke_points(stroke) as points:
+            points = (points - pivot_3d) * scale_3d + pivot_3d
+            stroke.points.foreach_set('co', points.ravel())
+
+    @staticmethod
+    def _rotate_stroke(stroke: bpy.types.GPencilStroke, degree: int, pivot: Vector):
+        """Rotate the grease pencil data."""
+        pivot_3d = Vector((pivot[0], pivot[1], 0))
+        with EditGreasePencilStroke.stroke_points(stroke) as vertices:
+            vertices = (vertices - pivot_3d) @ np.array([[np.cos(radians(degree)), -np.sin(radians(degree)), 0],
+                                                         [np.sin(radians(degree)), np.cos(radians(degree)), 0],
+                                                         [0, 0, 1]]) + pivot_3d
+            stroke.points.foreach_set('co', vertices.ravel())
+
+
 @dataclass
-class GreasePencilDataBuilder(GreasePencilCache):
+class BuildGreasePencilData(GreasePencilCache):
     """Grease Pencil Data Builder, easy to manipulate grease pencil data.
+    using with statement will automatically clean up the cache.else you need to call cleanup() manually.
     usage:
     with GreasePencilDataBuilder(gp_data) as gp_builder:
-        gp_builder.color('Layer', '#FF0000')
-        .move('Layer', Vector((1, 1, 0)))
-        .scale('Layer', Vector((2, 2, 1)), Vector((0, 0, 0)))
+        gp_builder.color('Layer', '#FF0000') \
+        .move('Layer', Vector((1, 1, 0))) \
+        .scale('Layer', Vector((2, 2, 1)), Vector((0, 0, 0))) \
         .rotate('Layer', 90, Vector((0, 0, 0)))
+
     """
     gp_data: bpy.types.GreasePencil
+    edit: EditGreasePencilStroke = EditGreasePencilStroke()
 
     def __enter__(self):
         """allow to use with statement"""
@@ -278,16 +322,17 @@ class GreasePencilDataBuilder(GreasePencilCache):
     def layer_names(self) -> list[str]:
         return [layer.info for layer in self.gp_data.layers]
 
-    def to_2d(self) -> 'GreasePencilDataBuilder':
-        """Convert the grease pencil data to 2D space."""
+    def to_2d(self) -> 'BuildGreasePencilData':
+        """show the grease pencil data in 2D space."""
         self._set_space('2D')
         return self
 
-    def to_3d(self) -> 'GreasePencilDataBuilder':
+    def to_3d(self) -> 'BuildGreasePencilData':
+        """show the grease pencil data in 3D space."""
         self._set_space('3D')
         return self
 
-    def color(self, layer_name: str, hex_color: str) -> 'GreasePencilDataBuilder':
+    def color(self, layer_name: str, hex_color: str) -> 'BuildGreasePencilData':
         """Set the color of the grease pencil annotation layer.
         :param layer_name: The name of the layer.
         :param hex_color: The color in hex format.
@@ -297,7 +342,7 @@ class GreasePencilDataBuilder(GreasePencilCache):
             layer.color = GP_Color.hex_2_rgb(hex_color)
         return self
 
-    def link(self, context: bpy.types.Context) -> 'GreasePencilDataBuilder':
+    def link(self, context: bpy.types.Context) -> 'BuildGreasePencilData':
         """Link the grease pencil data to the node group. So that the grease pencil can be seen in the node editor."""
         if context.area.type != 'NODE_EDITOR':
             raise ValueError('Please switch to the node editor.')
@@ -307,41 +352,38 @@ class GreasePencilDataBuilder(GreasePencilCache):
         self._link_nodegroup(context.space_data.edit_tree)
         return self
 
-    def move(self, layer_name_or_index: Union[str, int], v: Vector) -> 'GreasePencilDataBuilder':
+    def move(self, layer_name_or_index: Union[str, int], v: Vector) -> 'BuildGreasePencilData':
         """Move the grease pencil data."""
 
         layer = self._get_layer(layer_name_or_index)
 
-        with self._edit_space(layer_name_or_index):
-            for frame in layer.frames:
-                for stroke in frame.strokes:
-                    self._move_stroke(stroke, v)
+        for frame in layer.frames:
+            for stroke in frame.strokes:
+                self.edit._move_stroke(stroke, v)
 
         return self
 
-    def scale(self, layer_name_or_index: Union[str, int], scale: Vector, pivot: Vector) -> 'GreasePencilDataBuilder':
+    def scale(self, layer_name_or_index: Union[str, int], scale: Vector, pivot: Vector) -> 'BuildGreasePencilData':
         """Scale the grease pencil data."""
         layer = self._get_layer(layer_name_or_index)
 
-        with self._edit_space(layer_name_or_index):
-            for frame in layer.frames:
-                for stroke in frame.strokes:
-                    self._scale_stroke(stroke, scale, pivot)
+        for frame in layer.frames:
+            for stroke in frame.strokes:
+                self.edit._scale_stroke(stroke, scale, pivot)
 
         return self
 
-    def rotate(self, layer_name_or_index: Union[str, int], degree: int, pivot: Vector) -> 'GreasePencilDataBuilder':
+    def rotate(self, layer_name_or_index: Union[str, int], degree: int, pivot: Vector) -> 'BuildGreasePencilData':
         """Rotate the grease pencil data."""
         layer = self._get_layer(layer_name_or_index)
 
-        with self._edit_space(layer_name_or_index):
-            for frame in layer.frames:
-                for stroke in frame.strokes:
-                    self._rotate_stroke(stroke, degree, pivot)
+        for frame in layer.frames:
+            for stroke in frame.strokes:
+                self.edit._rotate_stroke(stroke, degree, pivot)
 
         return self
 
-    def join(self, other_gp_data: bpy.types.GreasePencil) -> 'GreasePencilDataBuilder':
+    def join(self, other_gp_data: bpy.types.GreasePencil) -> 'BuildGreasePencilData':
         """Join the grease pencil data."""
         self_obj = bpy.data.objects.new('tmp', self.gp_data)
         tmp_obj = bpy.data.objects.new('tmp', other_gp_data)
@@ -358,7 +400,10 @@ class GreasePencilDataBuilder(GreasePencilCache):
         return self
 
     def _get_layer(self, layer_name_or_index: Union[int, str]) -> bpy.types.GPencilLayer:
-        """Handle the layer."""
+        """Handle the layer.
+        :param layer_name_or_index: The name or index of the layer.
+        :return: The layer object.
+        """
         if isinstance(layer_name_or_index, int):
             try:
                 layer = self.gp_data.layers[layer_name_or_index]
@@ -370,18 +415,9 @@ class GreasePencilDataBuilder(GreasePencilCache):
             raise ValueError(f'Layer {layer_name_or_index} not found.')
         return layer
 
-    def _link_nodegroup(self, nt: bpy.types.NodeTree, ) -> 'GreasePencilDataBuilder':
+    def _link_nodegroup(self, nt: bpy.types.NodeTree, ) -> None:
         """Link the grease pencil data to the node group. So that the grease pencil can be seen in the node editor."""
         nt.grease_pencil = self.gp_data
-        return self
-
-    @contextmanager
-    def _edit_space(self, layer_name_or_index: Optional[Union[str, int]] = None):
-        """Edit the space of the grease pencil strokes."""
-        self._set_space('3D', layer_name_or_index)
-        yield
-        self._set_space('2D', layer_name_or_index)
-        self.gp_data.update_tag()
 
     def _set_space(self, type: Literal['2D', '3D'],
                    layer_name_or_index: Optional[Union[str, int]] = None) -> None:
@@ -403,31 +439,3 @@ class GreasePencilDataBuilder(GreasePencilCache):
         else:
             for layer in self.gp_data.layers:
                 convert_layer(layer)
-
-    @staticmethod
-    def _move_stroke(stroke: bpy.types.GPencilStroke, v: Vector):
-        """Move the grease pencil data."""
-        move_3d = Vector((s_scale(v[0], r=True), s_scale(v[1], r=True), 0))  # apply scale
-        vertices = np_vertices_from_stroke(stroke)
-        vertices += move_3d
-        stroke.points.foreach_set('co', vertices.ravel())
-
-    @staticmethod
-    def _scale_stroke(stroke: bpy.types.GPencilStroke, scale: Vector, pivot: Vector):
-        """Scale the grease pencil data."""
-        scale_3d = Vector((scale[0], scale[1], 1))
-        pivot_3d = Vector((pivot[0], pivot[1], 0))
-        vertices = np_vertices_from_stroke(stroke)
-
-        vertices = (vertices - pivot_3d) * scale_3d + pivot_3d
-        stroke.points.foreach_set('co', vertices.ravel())
-
-    @staticmethod
-    def _rotate_stroke(stroke: bpy.types.GPencilStroke, degree: int, pivot: Vector):
-        """Rotate the grease pencil data."""
-        pivot_3d = Vector((pivot[0], pivot[1], 0))
-        vertices = np_vertices_from_stroke(stroke)
-        vertices = (vertices - pivot_3d) @ np.array([[np.cos(radians(degree)), -np.sin(radians(degree)), 0],
-                                                     [np.sin(radians(degree)), np.cos(radians(degree)), 0],
-                                                     [0, 0, 1]]) + pivot_3d
-        stroke.points.foreach_set('co', vertices.ravel())

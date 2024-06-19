@@ -1,6 +1,7 @@
 import bpy
 
-from .gp_utils import GreasePencilDataFactory, GreasePencilDataBuilder
+from .gp_utils import CreateGreasePencilData as gpd_create
+from .gp_utils import BuildGreasePencilData as gpd_build
 from .ops_notes import has_edit_tree
 
 
@@ -27,13 +28,13 @@ class ENN_OT_add_gp_text(bpy.types.Operator):
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
 
         if not gp_data:
-            gp_data = GreasePencilDataFactory.empty()
-        font_gp_data = GreasePencilDataFactory.from_text(self.text, self.size)
+            gp_data = gpd_create.empty()
+        font_gp_data = gpd_create.from_text(self.text, self.size)
 
-        with GreasePencilDataBuilder(gp_data) as gp_data_builder:
-            gp_data_builder.link(context).join(font_gp_data).move(-1, self.location)
+        with gpd_build(gp_data) as gp_data_builder:
+            gp_data_builder.link(context).join(font_gp_data).move(-1, self.location).to_2d()
 
-        GreasePencilDataFactory.cleanup()
+        gpd_create.cleanup()
         return {'FINISHED'}
 
 
