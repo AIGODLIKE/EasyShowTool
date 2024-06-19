@@ -178,7 +178,6 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
         self.gp_data_bbox = gpd_bbox(gp_data)
         self.gp_data_bbox.calc_active_layer_bbox()
         self.gp_data_builder = gpd_build(gp_data)
-        self.active_layer_index = gp_data.layers.active_index
 
         self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px, (self, context), 'WINDOW',
                                                                       'POST_PIXEL')
@@ -207,18 +206,27 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
                 move_from = DPI.r2d_2_v2d(self.mouse_pos_prev)
                 move_to = DPI.r2d_2_v2d(self.mouse_pos)
                 self.delta_vec = Vector((move_to[0] - move_from[0], move_to[1] - move_from[1]))
-                self.gp_data_builder.move(self.active_layer_index, self.delta_vec, vec_type='v2d')
-
+                self.gp_data_builder.move(self.gp_data_builder.active_layer_index, self.delta_vec, vec_type='v2d')
         if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             self.is_dragging = False
             self.drag_stop_pos = self.mouse_pos
-            self.gp_data_bbox.calc_active_layer_bbox()
-            _ = self.gp_data_bbox.bbox_points_3d  # update the 3d bbox
-            context.area.tag_redraw()
+            self.update_gp_data(context)
+        if event.type in {"Q", "E"} and event.value == 'PRESS':  # set active layer
+            if event.type == "Q":
+                self.gp_data_builder.active_next_layer()
+            elif event.type == "E":
+                self.gp_data_builder.active_prev_layer()
+            self.update_gp_data(context)
+
         if event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE", "MIDDLEMOUSE"}:
             return {'PASS_THROUGH'}
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
+
+    def update_gp_data(self, context):
+        self.gp_data_bbox.calc_active_layer_bbox()
+        _ = self.gp_data_bbox.bbox_points_3d  # update the 3d bbox
+        context.area.tag_redraw()
 
 
 class ENN_PT_gn_edit_panel(bpy.types.Panel):

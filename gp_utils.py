@@ -106,9 +106,20 @@ class GreasePencilProperty:
     @active_layer_index.setter
     def active_layer_index(self, index: int):
         """Set the active layer index."""
-        if len(self.gp_data.layers) <= index:
-            raise IndexError(f'Index {index} out of range.')
-        self.gp_data.layers.active_index = index
+        if index < 0:
+            self.gp_data.layers.active_index = len(self.gp_data.layers) - 1
+        elif index >= len(self.gp_data.layers):
+            self.gp_data.layers.active_index = 0
+        else:
+            self.gp_data.layers.active_index = index
+
+    def active_next_layer(self):
+        """Set the next layer as active."""
+        self.active_layer_index += 1
+
+    def active_prev_layer(self):
+        """Set the last layer as active."""
+        self.active_layer_index -= 1
 
     @property
     def layer_names(self) -> list[str]:
