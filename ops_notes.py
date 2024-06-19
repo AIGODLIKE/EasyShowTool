@@ -1,5 +1,6 @@
 import bpy
 from typing import Optional
+from .public_path import get_pref
 
 NOTE_DATA_NAME: str = '.NodeNote'  # use . to hide the text data
 
@@ -32,15 +33,16 @@ class ENN_OT_add_note(bpy.types.Operator):
         return has_edit_tree(context)
 
     def execute(self, context):
-        width: int = 200
-        height: int = 150
-        self.node_tree: bpy.types.NodeTree = context.space_data.edit_tree
-        frame_node = self.node_tree.nodes.new('NodeFrame')
+        width: int = get_pref().note_width
+        height: int = get_pref().note_height
+        node_tree: bpy.types.NodeTree = context.space_data.edit_tree
+        frame_node: bpy.types.Node = node_tree.nodes.new('NodeFrame')
 
         frame_node.label = 'Note'
         frame_node.location = context.space_data.cursor_location
         frame_node.width = width
         frame_node.height = height
+        frame_node.shrink = False
         text_data = bpy.data.texts.new(name=NOTE_DATA_NAME)
         frame_node.text = text_data
         self.move_node(frame_node)
@@ -48,7 +50,7 @@ class ENN_OT_add_note(bpy.types.Operator):
 
     def move_node(self, node: bpy.types.Node):
         bpy.ops.node.select_all(action='DESELECT')
-        self.node_tree.nodes.active = node
+        bpy.context.space_data.edit_tree.nodes.active = node
         node.select = True
         bpy.ops.transform.translate('INVOKE_DEFAULT')
 
@@ -57,8 +59,6 @@ class ENN_OT_edit_note(bpy.types.Operator):
     bl_idname = "enn.edit_note"
     bl_label = "Edit Note"
     bl_description = "Edit the note"
-
-    # bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -81,6 +81,7 @@ class ENN_OT_edit_note(bpy.types.Operator):
         area.ui_type = 'TEXT_EDITOR'
         area.spaces[0].text = text
         area.spaces[0].show_syntax_highlight = False
+        area.spaces[0].show_region_header = False
         return {'FINISHED'}
 
 

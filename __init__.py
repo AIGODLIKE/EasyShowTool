@@ -10,14 +10,20 @@ bl_info = {
     "category": "Node"
 }
 
-from . import ops_notes,keymap
+from . import ops_notes, keymap, preferences
+
+modules = [
+    ops_notes,
+    preferences,
+    keymap
+]
 
 
 def register():
-    ops_notes.register()
-    keymap.register()
+    for m in modules:
+        m.register()
 
 
 def unregister():
-    keymap.unregister()
-    ops_notes.unregister()
+    for m in modules.reverse():
+        m.unregister()
