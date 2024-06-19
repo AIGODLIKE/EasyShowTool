@@ -1,23 +1,33 @@
 import bpy
 import numpy as np
 from mathutils import Vector
-from typing import Literal, Optional, Union, Sequence, ClassVar
+from typing import Literal, Optional, Union, Sequence, ClassVar, Final
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import radians
 
-SCALE: int = 2  # 2 unit in 2d space is 1 unit in the 2d space
-GP_DATA_NAME: str = 'GP_ANNOTATE'
+
+def s_scale(v: float, r: bool = False) -> float:
+    """
+    this is a very strange convert grease pencil annotation location between 2d space to 3d space
+    :param v: value
+    :param r: reverse False: 3d -> 2d, True: 2d -> 3d
+    :return: value
+
+    SCALE: float = 1.1145124817 measure by hand
+    """
+
+    return v / 2 * 1.1145124817 if not r else v * 2 / 1.1145124817
 
 
 def loc3d_2_r2d(location: Union[Vector, Sequence]) -> Vector:
     """Convert 3D space point to 2D space."""
-    return Vector((location[0] / SCALE, location[1] / SCALE))
+    return Vector((s_scale(location[0]), s_scale(location[1])))
 
 
 def r2d_2_loc3d(location: Union[Vector, Sequence]) -> Vector:
     """Convert 2D space point to 3D space."""
-    return Vector((location[0] * SCALE, location[1] * SCALE, 0))
+    return Vector((s_scale(location[0], r=True), s_scale(location[1], r=True)))
 
 
 def np_vertices_from_stroke(stroke: bpy.types.GPencilStroke) -> np.ndarray:
@@ -25,6 +35,19 @@ def np_vertices_from_stroke(stroke: bpy.types.GPencilStroke) -> np.ndarray:
     vertices = np.empty(len(stroke.points) * 3, dtype='f')
     stroke.points.foreach_get('co', vertices)
     return vertices.reshape((len(stroke.points), 3))
+
+
+@dataclass
+class GP_Color:
+
+    @staticmethod
+    def hex_2_rgb(hex_color: str) -> list[float, float, float]:
+        """Convert hex color to rgb color."""
+        if hex_color.startswith('#'):
+            hex = hex_color[1:]
+        else:
+            hex = hex_color
+        return [int(hex[i:i + 2], 16) / 255 for i in (0, 2, 4)]
 
 
 @dataclass
@@ -56,13 +79,13 @@ class GreasePencilBBox:
     def size_2d(self) -> tuple[float, float]:
         """Return the size of the bounding box in 2d space."""
         size = self.size
-        return size[0] / SCALE, size[1] / SCALE
+        return s_scale(size[0]), s_scale(size[1])
 
     @property
     def center_2d(self) -> tuple[float, float]:
         """Return the center of the bounding box in 2d space."""
         center = self.center
-        return center[0] / SCALE, center[1] / SCALE
+        return s_scale(center[0]), s_scale(center[1])
 
     @property
     def bbox_points(self) -> tuple[tuple[float, float], ...]:
@@ -146,7 +169,27 @@ class GreasePencilBBox:
         return (self.min_x, self.max_y), (self.max_x, self.max_y), (self.min_x, self.min_y), (self.max_x, self.min_y)
 
 
-class GPD_Creator:
+class GreasePencilCache:
+    tmp_objs: ClassVar[list[bpy.types.Object]] = []
+
+    @classmethod
+    def cleanup(cls):
+        for obj in cls.tmp_objs:
+            try:
+                bpy.data.objects.remove(obj)
+            except:
+                pass
+        cls.tmp_objs.clear()
+
+    @classmethod
+    def del_later(cls, obj: Optional[bpy.types.Object] = None, obj_list: Optional[list[bpy.types.Object]] = None):
+        if obj:
+            cls.tmp_objs.append(obj)
+        if obj_list:
+            cls.tmp_objs.extend(obj_list)
+
+
+class GreasePencilDataFactory(GreasePencilCache):
     """Grease Pencil Data Factory"""
 
     @classmethod
@@ -154,7 +197,16 @@ class GPD_Creator:
         bpy.ops.object.convert(target='GPENCIL', seams=False, faces=False, offset=0.01)
 
     @staticmethod
-    def from_text(text: str, size: int = 100) -> bpy.types.GreasePencil:
+    def empty() -> bpy.types.GreasePencil:
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.gpencil_add(type='EMPTY')
+        obj = bpy.context.object
+        gp_data = obj.data
+        GreasePencilDataFactory.del_later(obj)
+        return gp_data
+
+    @staticmethod
+    def from_text(text: str, size: int = 100, hex_color: str = '#E7E7E7') -> bpy.types.GreasePencil:
         """
         Create a text object in the scene.
         :param text:  the text to display
@@ -165,15 +217,18 @@ class GPD_Creator:
         obj = bpy.context.object
         text_data = obj.data
         text_data.body = text
-        text_data.size = size * SCALE
+        text_data.size = size
 
         bpy.ops.object.select_all(action='DESELECT')
         obj.select_set(True)
-        GPD_Creator.convert_2_gp()
+        GreasePencilDataFactory.convert_2_gp()
 
         gp_obj = bpy.context.object
         gp_data = gp_obj.data
-        bpy.data.objects.remove(obj)
+        layer = gp_data.layers[0]
+        layer.info = text
+        layer.color = GP_Color.hex_2_rgb(hex_color)
+        GreasePencilDataFactory.del_later(gp_obj)
         return gp_data
 
     @staticmethod
@@ -186,17 +241,17 @@ class GPD_Creator:
         new_obj = obj.copy()
         bpy.context.collection.objects.link(new_obj)
         bpy.context.view_layer.objects.active = new_obj
-        GPD_Creator.convert_2_gp()
+        GreasePencilDataFactory.convert_2_gp()
 
         gp_obj = bpy.context.object
         gp_data = gp_obj.data
-        bpy.data.objects.remove(gp_obj)
+        GreasePencilDataFactory.del_later(gp_obj)
 
         return gp_data
 
 
 @dataclass
-class GreasePencilDataBuilder:
+class GreasePencilDataBuilder(GreasePencilCache):
     """Grease Pencil Data Builder, easy to manipulate grease pencil data.
     usage:
     with GreasePencilDataBuilder(gp_data) as gp_builder:
@@ -213,15 +268,24 @@ class GreasePencilDataBuilder:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """allow to use with statement"""
-        pass
+        self.cleanup()  # remove cache
 
     @property
     def name(self) -> str:
         return self.gp_data.name
 
     @property
-    def layers(self) -> list[str]:
-        return [layer.name for layer in self.gp_data.layers]
+    def layer_names(self) -> list[str]:
+        return [layer.info for layer in self.gp_data.layers]
+
+    def to_2d(self) -> 'GreasePencilDataBuilder':
+        """Convert the grease pencil data to 2D space."""
+        self._set_space('2D')
+        return self
+
+    def to_3d(self) -> 'GreasePencilDataBuilder':
+        self._set_space('3D')
+        return self
 
     def color(self, layer_name: str, hex_color: str) -> 'GreasePencilDataBuilder':
         """Set the color of the grease pencil annotation layer.
@@ -230,41 +294,47 @@ class GreasePencilDataBuilder:
         :return: instance"""
         layer = self.gp_data.layers.get(layer_name, None)
         if layer:
-            layer.color = hex_color
+            layer.color = GP_Color.hex_2_rgb(hex_color)
         return self
 
-    def link_nodegroup(self, nt: bpy.types.NodeTree, ) -> 'GreasePencilDataBuilder':
+    def link(self, context: bpy.types.Context) -> 'GreasePencilDataBuilder':
         """Link the grease pencil data to the node group. So that the grease pencil can be seen in the node editor."""
-        nt.grease_pencils = self.gp_data
+        if context.area.type != 'NODE_EDITOR':
+            raise ValueError('Please switch to the node editor.')
+        if not context.space_data.edit_tree:
+            raise ValueError('Please open a node group.')
+
+        self._link_nodegroup(context.space_data.edit_tree)
         return self
 
-    def move(self, layer_name: str, v: Vector) -> 'GreasePencilDataBuilder':
+    def move(self, layer_name_or_index: Union[str, int], v: Vector) -> 'GreasePencilDataBuilder':
         """Move the grease pencil data."""
-        layer = self._get_layer(layer_name)
 
-        with self._edit_space(layer_name):
+        layer = self._get_layer(layer_name_or_index)
+
+        with self._edit_space(layer_name_or_index):
             for frame in layer.frames:
                 for stroke in frame.strokes:
                     self._move_stroke(stroke, v)
 
         return self
 
-    def scale(self, layer_name: str, scale: Vector, pivot: Vector) -> 'GreasePencilDataBuilder':
+    def scale(self, layer_name_or_index: Union[str, int], scale: Vector, pivot: Vector) -> 'GreasePencilDataBuilder':
         """Scale the grease pencil data."""
-        layer = self._get_layer(layer_name)
+        layer = self._get_layer(layer_name_or_index)
 
-        with self._edit_space(layer_name):
+        with self._edit_space(layer_name_or_index):
             for frame in layer.frames:
                 for stroke in frame.strokes:
                     self._scale_stroke(stroke, scale, pivot)
 
         return self
 
-    def rotate(self, layer_name: str, degree: int, pivot: Vector) -> 'GreasePencilDataBuilder':
+    def rotate(self, layer_name_or_index: Union[str, int], degree: int, pivot: Vector) -> 'GreasePencilDataBuilder':
         """Rotate the grease pencil data."""
-        layer = self._get_layer(layer_name)
+        layer = self._get_layer(layer_name_or_index)
 
-        with self._edit_space(layer_name):
+        with self._edit_space(layer_name_or_index):
             for frame in layer.frames:
                 for stroke in frame.strokes:
                     self._rotate_stroke(stroke, degree, pivot)
@@ -284,32 +354,43 @@ class GreasePencilDataBuilder:
         tmp_obj.select_set(True)
         bpy.ops.object.join()
         self.gp_data = self_obj.data
-        bpy.data.objects.remove(self_obj)
-        bpy.data.objects.remove(tmp_obj)
+        self.del_later(obj_list=[self_obj, tmp_obj])
         return self
 
-    def _get_layer(self, layer_name: str) -> bpy.types.GPencilLayer:
+    def _get_layer(self, layer_name_or_index: Union[int, str]) -> bpy.types.GPencilLayer:
         """Handle the layer."""
-        layer = self.gp_data.layers.get(layer_name, None)
+        if isinstance(layer_name_or_index, int):
+            try:
+                layer = self.gp_data.layers[layer_name_or_index]
+            except:
+                raise ValueError(f'Layer index {layer_name_or_index} not found.')
+        else:
+            layer = self.gp_data.layers.get(layer_name_or_index, None)
         if not layer:
-            raise ValueError(f'Layer {layer_name} not found.')
+            raise ValueError(f'Layer {layer_name_or_index} not found.')
         return layer
 
+    def _link_nodegroup(self, nt: bpy.types.NodeTree, ) -> 'GreasePencilDataBuilder':
+        """Link the grease pencil data to the node group. So that the grease pencil can be seen in the node editor."""
+        nt.grease_pencil = self.gp_data
+        return self
+
     @contextmanager
-    def _edit_space(self, layer_name: Optional[str] = None):
+    def _edit_space(self, layer_name_or_index: Optional[Union[str, int]] = None):
         """Edit the space of the grease pencil strokes."""
-        self._set_space('3D', layer_name)
+        self._set_space('3D', layer_name_or_index)
         yield
-        self._set_space('2D', layer_name)
+        self._set_space('2D', layer_name_or_index)
         self.gp_data.update_tag()
 
     def _set_space(self, type: Literal['2D', '3D'],
-                   layer_name: Optional[str] = None) -> None:
+                   layer_name_or_index: Optional[Union[str, int]] = None) -> None:
         """Convert the space of the grease pencil strokes to 2D or 3D space.
         :param type: The space to convert to, either '2D' or '3D'.
         :param layer_name: The name of the layer to convert. If None, all layers will be converted.
         """
-        singler_layer = self.gp_data.layers.get(layer_name, None) if layer_name else None
+
+        singler_layer = self._get_layer(layer_name_or_index) if layer_name_or_index else None
         space = '3DSPACE' if type == '3D' else '2DSPACE'
 
         def convert_layer(gplayer):
@@ -326,8 +407,9 @@ class GreasePencilDataBuilder:
     @staticmethod
     def _move_stroke(stroke: bpy.types.GPencilStroke, v: Vector):
         """Move the grease pencil data."""
+        move_3d = Vector((s_scale(v[0], r=True), s_scale(v[1], r=True), 0))  # apply scale
         vertices = np_vertices_from_stroke(stroke)
-        vertices += v
+        vertices += move_3d
         stroke.points.foreach_set('co', vertices.ravel())
 
     @staticmethod
