@@ -476,6 +476,10 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         self._link_nodegroup(context.space_data.edit_tree)
         return self
 
+    def move_active(self, v: Vector, vec_type: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+        """Move the active grease pencil layer."""
+        return self.move(self.active_layer_name, v, vec_type)
+
     def move(self, layer_name_or_index: Union[str, int], v: Vector,
              vec_type: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Move the grease pencil data.

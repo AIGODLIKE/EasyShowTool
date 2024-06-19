@@ -149,8 +149,12 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
     # state
     cursor_shape = 'DEFAULT'
     draw_handle = None
+    press_timer = None
     mouse_pos = (0, 0)
     mouse_pos_prev = (0, 0)
+
+    is_pressing: bool = False
+    key_press: str = None
 
     is_dragging: bool = False
     in_drag_area: bool = False
@@ -179,6 +183,7 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
         self.gp_data_bbox.calc_active_layer_bbox()
         self.gp_data_builder = gpd_build(gp_data)
 
+        self.press_timer = context.window_manager.event_timer_add(0.05, window=context.window)
         self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px, (self, context), 'WINDOW',
                                                                       'POST_PIXEL')
         context.window_manager.modal_handler_add(self)
@@ -188,11 +193,18 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
+        # handle pass
+        if event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE", "MIDDLEMOUSE"}:
+            return {'PASS_THROUGH'}
+        # handle cancel
         if event.type in {'ESC', 'RIGHTMOUSE'}:
             bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
             context.window.cursor_modal_restore()
             context.area.tag_redraw()
+            if self.press_timer:
+                context.window_manager.event_timer_remove(self.press_timer)
             return {'FINISHED'}
+        # handle drag
         if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
             if context.region.type == 'WINDOW':
                 self.is_dragging = True
@@ -206,20 +218,40 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
                 move_from = DPI.r2d_2_v2d(self.mouse_pos_prev)
                 move_to = DPI.r2d_2_v2d(self.mouse_pos)
                 self.delta_vec = Vector((move_to[0] - move_from[0], move_to[1] - move_from[1]))
-                self.gp_data_builder.move(self.gp_data_builder.active_layer_index, self.delta_vec, vec_type='v2d')
+                self.gp_data_builder.move_active(self.delta_vec, vec_type='v2d')
         if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             self.is_dragging = False
             self.drag_stop_pos = self.mouse_pos
             self.update_gp_data(context)
+        # handle key press
         if event.type in {"Q", "E"} and event.value == 'PRESS':  # set active layer
             if event.type == "Q":
                 self.gp_data_builder.active_next_layer()
             elif event.type == "E":
                 self.gp_data_builder.active_prev_layer()
             self.update_gp_data(context)
+        # handle key press timer
+        if event.type in {"W", "A", "S", "D"} and event.value == 'PRESS':
+            self.is_pressing = True
+            self.key_press = event.type
+        if event.type in {"W", "A", "S", "D"} and event.value == 'RELEASE':
+            self.is_pressing = False
 
-        if event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE", "MIDDLEMOUSE"}:
-            return {'PASS_THROUGH'}
+        if event.type == 'TIMER':
+            if self.is_pressing:
+                # using python match case
+                v: int = 2
+                match self.key_press:
+                    case "W":
+                        self.gp_data_builder.move_active((0, v), vec_type='v2d')
+                    case "A":
+                        self.gp_data_builder.move_active((-v, 0), vec_type='v2d')
+                    case "S":
+                        self.gp_data_builder.move_active((0, -v), vec_type='v2d')
+                    case "D":
+                        self.gp_data_builder.move_active((v, 0), vec_type='v2d')
+
+                self.update_gp_data(context)
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
 
