@@ -7,25 +7,58 @@ from dataclasses import dataclass, field
 from math import radians
 
 
-def ui_scale(v: float, r: bool = False) -> float:
-    """
-    convert grease pencil annotation location between 2d space to 3d space
-    :param v: value
-    :param r: reverse False: 3d -> 2d, True: 2d -> 3d
-    :return: value
-    """
-    ui_scale = bpy.context.preferences.system.ui_scale
-    return v / ui_scale if not r else v * ui_scale
+class DPI:
+    """DPI utility class. use to convert between view 2d , region 2d and 3d space."""
 
+    @staticmethod
+    def _size_2(v: float, r: bool = False) -> float:
+        """
+        convert grease pencil annotation location between 2d space to 3d space
+        :param v: value
+        :param r: reverse False: 3d -> 2d, True: 2d -> 3d
+        :return: value
+        """
+        scale = bpy.context.preferences.system.ui_scale
+        return v / scale if not r else v * scale
 
-def loc3d_2_r2d(location: Union[Vector, Sequence]) -> Vector:
-    """Convert 3D space point to 2D space."""
-    return Vector((ui_scale(location[0]), ui_scale(location[1])))
+    @staticmethod
+    def _vec_2(v: Vector, r: bool = False) -> Vector:
+        """
+        convert grease pencil annotation location between 2d space to 3d space
+        :param v: value
+        :param r: reverse False: 3d -> 2d, True: 2d -> 3d
+        :return: value
+        """
+        scale = bpy.context.preferences.system.ui_scale
+        return Vector((v[0] / scale, v[1] / scale, 1)) if not r else Vector((v[0] * scale, v[1] * scale, 1))
 
+    @property
+    def ui_scale(self) -> float:
+        return bpy.context.preferences.system.ui_scale
 
-def r2d_2_loc3d(location: Union[Vector, Sequence]) -> Vector:
-    """Convert 2D space point to 3D space."""
-    return Vector((ui_scale(location[0], r=True), ui_scale(location[1], r=True)))
+    @staticmethod
+    def r2d_2_v2d(location: Union[Vector, Sequence]) -> Vector:
+        """Convert region 2d space point to node editor 2d view."""
+        ui_scale = bpy.context.preferences.system.ui_scale
+        x, y = bpy.context.region.view2d.region_to_view(location[0], location[1])
+        return Vector((x / ui_scale, y / ui_scale))
+
+    @staticmethod
+    def v2d_2_r2d(location: Union[Vector, Sequence]) -> Vector:
+        """Convert node editor 2d view point to region 2d space."""
+        ui_scale = bpy.context.preferences.system.ui_scale
+        x, y = bpy.context.region.view2d.view_to_region(location[0] * ui_scale, location[1] * ui_scale)
+        return Vector((x, y))
+
+    @staticmethod
+    def loc3d_2_v2d(location: Union[Vector, Sequence]) -> Vector:
+        """Convert 3D space point to node editor 2d space."""
+        return Vector((DPI._size_2(location[0]), DPI._size_2(location[1])))
+
+    @staticmethod
+    def v2d_2_loc3d(location: Union[Vector, Sequence]) -> Vector:
+        """Convert 2D space point to 3D space."""
+        return Vector((DPI._size_2(location[0], r=True), DPI._size_2(location[1], r=True)))
 
 
 @dataclass
@@ -42,13 +75,70 @@ class GP_Color:
 
 
 @dataclass
-class GreasePencilBBox:
-    """
-    Calculate the bounding box of the grease pencil annotation.
-    """
+class GreasePencilProperty:
+    """Grease Pencil Property, a base class for grease pencil data."""
     gp_data: bpy.types.GreasePencil
-    indices: ClassVar = ((0, 1, 2), (2, 1, 3))  # The indices of the bounding box points, use for gpu batch drawing
 
+    @property
+    def name(self) -> str:
+        return self.gp_data.name
+
+    @property
+    def active_layer(self) -> bpy.types.GPencilLayer:
+        """Return the active layer."""
+        return self.gp_data.layers.active
+
+    @property
+    def active_layer_name(self) -> str:
+        """Return the active layer name."""
+        return self.active_layer.info
+
+    @active_layer_name.setter
+    def active_layer_name(self, name: str):
+        """Set the active layer name."""
+        self.active_layer.info = name
+
+    @property
+    def active_layer_index(self) -> int:
+        """Return the active layer index."""
+        return self.gp_data.layers.active_index
+
+    @active_layer_index.setter
+    def active_layer_index(self, index: int):
+        """Set the active layer index."""
+        if len(self.gp_data.layers) <= index:
+            raise IndexError(f'Index {index} out of range.')
+        self.gp_data.layers.active_index = index
+
+    @property
+    def layer_names(self) -> list[str]:
+        return [layer.info for layer in self.gp_data.layers]
+
+    def _get_layer(self, layer_name_or_index: Union[int, str]) -> bpy.types.GPencilLayer:
+        """Handle the layer.
+        :param layer_name_or_index: The name or index of the layer.
+        :return: The layer object.
+        """
+        if isinstance(layer_name_or_index, int):
+            try:
+                layer = self.gp_data.layers[layer_name_or_index]
+            except:
+                raise ValueError(f'Layer index {layer_name_or_index} not found.')
+        else:
+            layer = self.gp_data.layers.get(layer_name_or_index, None)
+        if not layer:
+            raise ValueError(f'Layer {layer_name_or_index} not found.')
+        return layer
+
+
+@dataclass
+class GreasePencilBBox(GreasePencilProperty):
+    """
+    Calculate the bounding box of the grease pencil bounding box. useful for drawing the bounding box.
+    """
+    # The indices of the bounding box points, use for gpu batch drawing
+    indices: ClassVar = ((0, 1, 2), (2, 1, 3))
+    # The bounding box max and min values
     max_x: float = 0
     min_x: float = 0
     max_y: float = 0
@@ -67,34 +157,27 @@ class GreasePencilBBox:
         return (self.min_x + self.max_x) / 2, (self.min_y + self.max_y) / 2
 
     @property
-    def size_2d(self) -> tuple[float, float]:
-        """Return the size of the bounding box in 2d space."""
-        size = self.size
-        return ui_scale(size[0]), ui_scale(size[1])
-
-    @property
-    def center_2d(self) -> tuple[float, float]:
-        """Return the center of the bounding box in 2d space."""
-        center = self.center
-        return ui_scale(center[0]), ui_scale(center[1])
-
-    @property
-    def bbox_points(self) -> tuple[tuple[float, float], ...]:
+    def bbox_points_3d(self) -> tuple[tuple[float, float], ...]:
         """Return the bounding box points."""
         self._handle_error()
         return (self.min_x, self.max_y), (self.max_x, self.max_y), (self.min_x, self.min_y), (self.max_x, self.min_y)
 
     @property
-    def bbox_points_2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
-        """Return the bounding box points in 2d space."""
-        return tuple(map(loc3d_2_r2d, self.bbox_points))
+    def bbox_points_v2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+        """Return the bounding box points in node editor view."""
+        return tuple(map(DPI.loc3d_2_v2d, self.bbox_points_3d))
+
+    @property
+    def bbox_points_r2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+        """Return the bounding box points in region 2d space."""
+        return tuple(map(DPI.v2d_2_r2d, self.bbox_points_v2d))
 
     def _handle_error(self):
         if not hasattr(self, 'max_x'):
             raise ValueError('Please call calc_bbox() first.')
 
     @staticmethod
-    def _calc_stroke_bbox(stroke: bpy.types.GPencilStroke) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _calc_stroke_bbox(stroke: bpy.types.GPencilStroke) -> tuple[float, float, float, float]:
         """
         Calculate the bounding box of a stroke.
         :param stroke:
@@ -104,29 +187,35 @@ class GreasePencilBBox:
             max_xyz_id = np.argmax(vertices, axis=0)
             min_xyz_id = np.argmin(vertices, axis=0)
 
-        return vertices, max_xyz_id, min_xyz_id
-
-    @staticmethod
-    def _calc_max_min(vertices: np.ndarray) -> tuple[float, float, float, float]:
-        """
-        Calculate the max and min of the vertices.
-        :param vertices:
-        :return:
-        """
-        max_xyz_id = np.argmax(vertices, axis=0)
-        min_xyz_id = np.argmin(vertices, axis=0)
-
-        max_x = float(vertices[max_xyz_id[0], 0])
-        max_y = float(vertices[max_xyz_id[1], 1])
-        min_x = float(vertices[min_xyz_id[0], 0])
-        min_y = float(vertices[min_xyz_id[1], 1])
+            max_x = float(vertices[max_xyz_id[0], 0])
+            max_y = float(vertices[max_xyz_id[1], 1])
+            min_x = float(vertices[min_xyz_id[0], 0])
+            min_y = float(vertices[min_xyz_id[1], 1])
 
         return max_x, min_x, max_y, min_y
 
-    def calc_bbox(self, layer_name: str, frame: int = 0) -> tuple[tuple[float, float], ...]:
+    def calc_active_layer_bbox(self, frame: int = 0) -> tuple[tuple[float, float], ...]:
+        """
+        Calculate the bounding box of the active grease pencil annotation layer.
+        :param frame: calc this frame
+        :return: The bounding box of the grease pencil annotation.
+            return in position of 2d space
+            positions = (
+                (-1, 1), (1, 1),
+                (-1, -1), (1, -1))
+
+            indices = ((0, 1, 2), (2, 1, 3))
+        """
+        layer = self.active_layer
+        if not layer:
+            raise ValueError('Active layer not found.')
+
+        return self.calc_bbox(layer.info, frame)
+
+    def calc_bbox(self, layer_name_or_inedx: Union[str, int], frame: int = 0) -> tuple[tuple[float, float], ...]:
         """
         Calculate the bounding box of the grease pencil annotation.
-        :param layer_name: calc this layer
+        :param layer_name_or_inedx: The name or index of the layer.
         :param frame: calc this frame
         :return: The bounding box of the grease pencil annotation.
             return in position of 2d space
@@ -137,9 +226,9 @@ class GreasePencilBBox:
             indices = ((0, 1, 2), (2, 1, 3))
         """
 
-        layer = self.gp_data.layers.get(layer_name, None)
+        layer = self._get_layer(layer_name_or_inedx)
         if not layer:
-            raise ValueError(f'Layer {layer_name} not found.')
+            raise ValueError(f'Layer {layer_name_or_inedx} not found.')
 
         frame = layer.frames[frame]
         if not frame:
@@ -148,7 +237,7 @@ class GreasePencilBBox:
         x_list = []
         y_list = []
         for stroke in frame.strokes:
-            max_x, min_x, max_y, min_y = self._calc_max_min(stroke)
+            max_x, min_x, max_y, min_y = self._calc_stroke_bbox(stroke)
             x_list.extend([max_x, min_x])
             y_list.extend([max_y, min_y])
 
@@ -162,10 +251,13 @@ class GreasePencilBBox:
 
 class GreasePencilCache:
     """Grease Pencil Cache, cache the grease pencil objects."""
+    # cache the grease pencil objects
+    # this is a class variable, so it will be shared among all instances / subclasses instances
     tmp_objs: ClassVar[list[bpy.types.Object]] = []
 
     @classmethod
     def cleanup(cls):
+        """Remove the cache."""
         for obj in cls.tmp_objs:
             try:
                 bpy.data.objects.remove(obj)
@@ -175,6 +267,7 @@ class GreasePencilCache:
 
     @classmethod
     def del_later(cls, obj: Optional[bpy.types.Object] = None, obj_list: Optional[list[bpy.types.Object]] = None):
+        """Delete the grease pencil object later."""
         if obj:
             cls.tmp_objs.append(obj)
         if obj_list:
@@ -183,6 +276,7 @@ class GreasePencilCache:
 
 class CreateGreasePencilData(GreasePencilCache):
     """Grease Pencil Data Factory, a static class that makes it easy to create grease pencil data.
+    below properties are class variables, using in the convert_2_gp method
     :param seam:  Add seam to the grease pencil data.
     :param faces: Add faces to the grease pencil data.
     :param offset: The offset of the grease pencil data.
@@ -241,7 +335,7 @@ class CreateGreasePencilData(GreasePencilCache):
         new_obj = obj.copy()
         new_obj.data = obj.data.copy()
         bpy.context.collection.objects.link(new_obj)
-        new_obj.scale = (size, size, size)
+        new_obj._size_2 = (size, size, size)
         bpy.context.view_layer.objects.active = new_obj
         bpy.ops.object.select_all(action='DESELECT')
         new_obj.select_set(True)
@@ -258,6 +352,7 @@ class CreateGreasePencilData(GreasePencilCache):
     def from_gp_obj(obj: bpy.types.Object, size: int = 100) -> bpy.types.GreasePencil:
         """
         Create a grease pencil object from a grease pencil object and convert it to grease pencil data.
+        Notice that modifier is not supported. Get evaluated data will crash blender.
         :param obj:  the grease pencil object
         :return:
         """
@@ -282,7 +377,7 @@ class EditGreasePencilStroke():
     @staticmethod
     def _move_stroke(stroke: bpy.types.GPencilStroke, v: Vector):
         """Move the grease pencil data."""
-        move_3d = Vector((ui_scale(v[0], r=True), ui_scale(v[1], r=True), 0))  # apply scale
+        move_3d = Vector((v[0], v[1], 0))
         with EditGreasePencilStroke.stroke_points(stroke) as points:
             points += move_3d
             stroke.points.foreach_set('co', points.ravel())
@@ -308,7 +403,7 @@ class EditGreasePencilStroke():
 
 
 @dataclass
-class BuildGreasePencilData(GreasePencilCache):
+class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
     """Grease Pencil Data Builder, easy to manipulate grease pencil data.
     using with statement will automatically clean up the cache.else you need to call cleanup() manually.
     usage:
@@ -319,7 +414,6 @@ class BuildGreasePencilData(GreasePencilCache):
         .rotate('Layer', 90, Vector((0, 0, 0)))
 
     """
-    gp_data: bpy.types.GreasePencil
     edit: EditGreasePencilStroke = EditGreasePencilStroke()
 
     def __enter__(self):
@@ -329,14 +423,6 @@ class BuildGreasePencilData(GreasePencilCache):
     def __exit__(self, exc_type, exc_val, exc_tb):
         """allow to use with statement"""
         self.cleanup()  # remove cache
-
-    @property
-    def name(self) -> str:
-        return self.gp_data.name
-
-    @property
-    def layer_names(self) -> list[str]:
-        return [layer.info for layer in self.gp_data.layers]
 
     def to_2d(self) -> 'BuildGreasePencilData':
         """show the grease pencil data in 2D space."""
@@ -350,7 +436,7 @@ class BuildGreasePencilData(GreasePencilCache):
 
     def color(self, layer_name_or_index: Union[str, int], hex_color: str) -> 'BuildGreasePencilData':
         """Set the color of the grease pencil annotation layer.
-        :param layer_name: The name of the layer.
+        :param layer_name_or_index: The name or index of the layer.
         :param hex_color: The color in hex format.
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
@@ -368,19 +454,36 @@ class BuildGreasePencilData(GreasePencilCache):
         self._link_nodegroup(context.space_data.edit_tree)
         return self
 
-    def move(self, layer_name_or_index: Union[str, int], v: Vector) -> 'BuildGreasePencilData':
-        """Move the grease pencil data."""
+    def move(self, layer_name_or_index: Union[str, int], v: Vector,
+             vec_type: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+        """Move the grease pencil data.
+        :param layer_name_or_index: The name or index of the layer.
+        :param v: The vector to move.
+        :param vec_type: The type of the vector, either 'v2d', 'r2d', or '3d'.
+        :return: instance
+        """
 
         layer = self._get_layer(layer_name_or_index)
 
+        if vec_type == 'v2d':
+            vec = DPI.v2d_2_loc3d(v)
+        else:
+            vec = v
+
         for frame in layer.frames:
             for stroke in frame.strokes:
-                self.edit._move_stroke(stroke, v)
+                self.edit._move_stroke(stroke, vec)
 
         return self
 
+    # TODO: add support for 2D view space pivot point.
     def scale(self, layer_name_or_index: Union[str, int], scale: Vector, pivot: Vector) -> 'BuildGreasePencilData':
-        """Scale the grease pencil data."""
+        """Scale the grease pencil data.
+        The pivot point should be in 3D space.
+        :param layer_name_or_index: The name or index of the layer.
+        :param scale: The scale vector.
+        :param pivot: The pivot vector.
+        :return: instance"""
         layer = self._get_layer(layer_name_or_index)
 
         for frame in layer.frames:
@@ -390,7 +493,12 @@ class BuildGreasePencilData(GreasePencilCache):
         return self
 
     def rotate(self, layer_name_or_index: Union[str, int], degree: int, pivot: Vector) -> 'BuildGreasePencilData':
-        """Rotate the grease pencil data."""
+        """Rotate the grease pencil data.
+        The pivot point should be in 3D space.
+        :param layer_name_or_index: The name or index of the layer.
+        :param degree: The degree to rotate.
+        :param pivot: The pivot vector.
+        :return: instance"""
         layer = self._get_layer(layer_name_or_index)
 
         for frame in layer.frames:
@@ -415,22 +523,6 @@ class BuildGreasePencilData(GreasePencilCache):
         self.del_later(obj_list=[self_obj, tmp_obj])
         return self
 
-    def _get_layer(self, layer_name_or_index: Union[int, str]) -> bpy.types.GPencilLayer:
-        """Handle the layer.
-        :param layer_name_or_index: The name or index of the layer.
-        :return: The layer object.
-        """
-        if isinstance(layer_name_or_index, int):
-            try:
-                layer = self.gp_data.layers[layer_name_or_index]
-            except:
-                raise ValueError(f'Layer index {layer_name_or_index} not found.')
-        else:
-            layer = self.gp_data.layers.get(layer_name_or_index, None)
-        if not layer:
-            raise ValueError(f'Layer {layer_name_or_index} not found.')
-        return layer
-
     def _link_nodegroup(self, nt: bpy.types.NodeTree, ) -> None:
         """Link the grease pencil data to the node group. So that the grease pencil can be seen in the node editor."""
         nt.grease_pencil = self.gp_data
@@ -439,7 +531,7 @@ class BuildGreasePencilData(GreasePencilCache):
                    layer_name_or_index: Optional[Union[str, int]] = None) -> None:
         """Convert the space of the grease pencil strokes to 2D or 3D space.
         :param type: The space to convert to, either '2D' or '3D'.
-        :param layer_name: The name of the layer to convert. If None, all layers will be converted.
+        :param layer_name_or_index: The name or index of the layer to convert. If None, all layers will be converted.
         """
 
         singler_layer = self._get_layer(layer_name_or_index) if layer_name_or_index else None

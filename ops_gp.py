@@ -1,8 +1,11 @@
 import bpy
 from bpy.props import StringProperty, IntProperty, PointerProperty, FloatVectorProperty
+from mathutils import Vector
 
+from .gp_utils import DPI
 from .gp_utils import CreateGreasePencilData as gpd_create
 from .gp_utils import BuildGreasePencilData as gpd_build
+from .gp_utils import GreasePencilBBox as gpd_bbox
 from .ops_notes import has_edit_tree
 
 
@@ -10,7 +13,7 @@ def enum_add_type_items() -> list[tuple[str, str, str]]:
     """Return the items for the add_type enum property."""
     data: dict = {
         'TEXT': "Text",
-        'MESH': "Mesh Object",
+        'OBJECT': "Object",
     }
     return [(key, value, "") for key, value in data.items()]
 
@@ -45,7 +48,7 @@ class ENN_OT_add_gp(bpy.types.Operator):
         if not gp_data:
             gp_data = gpd_create.empty()
 
-        if self.add_type == 'MESH':
+        if self.add_type == 'OBJECT':
             obj = bpy.data.objects.get(self.obj, None)
             if not obj:
                 return {'CANCELLED'}
@@ -61,7 +64,8 @@ class ENN_OT_add_gp(bpy.types.Operator):
         if not font_gp_data: return {'CANCELLED'}
 
         with gpd_build(gp_data) as gp_data_builder:
-            gp_data_builder.link(context).join(font_gp_data).move(-1, self.location).color(-1, '#E7E7E7').to_2d()
+            gp_data_builder.link(context).join(font_gp_data).move(-1, self.location, vec_type='v2d').color(-1,
+                                                                                                           '#E7E7E7').to_2d()
         return {'FINISHED'}
 
 
@@ -92,11 +96,8 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
         if event.type in {'ESC', 'RIGHTMOUSE'}:
             return {'CANCELLED'}
         if event.type == 'LEFTMOUSE':
-            context.window.cursor_modal_restore()
-            ui_scale = context.preferences.system.ui_scale
-            x, y = context.region.view2d.region_to_view(event.mouse_region_x, event.mouse_region_y)
-            location = x / ui_scale, y / ui_scale
-            self._add(context, location)
+            v2d_loc = DPI.r2d_2_v2d((event.mouse_region_x, event.mouse_region_y))
+            self._add(context, v2d_loc)
             return {'FINISHED'}
         return {'RUNNING_MODAL'}
 
@@ -139,6 +140,77 @@ class ENN_OT_move_gp(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class ENN_OT_move_gp_modal(bpy.types.Operator):
+    bl_idname = "enn.move_gp_modal"
+    bl_label = "Move"
+    bl_description = "Move the selected Grease Pencil Object"
+    bl_options = {'UNDO'}
+
+    # state
+    draw_handle = None
+    mouse_pos = (0, 0)
+    mouse_pos_prev = (0, 0)
+    is_dragging: bool = False
+    drag_start_pos = (0, 0)
+    drag_stop_pos = (0, 0)
+    delta_vec = (0, 0)  # last mouse move vector, in view2d space
+    # data
+    gp_data_bbox: gpd_bbox = None
+    gp_data_builder: gpd_build = None
+    active_layer_index: int = 0
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context)
+
+    def invoke(self, context, event):
+        from .draw_utils import draw_callback_px
+        nt: bpy.types.NodeTree = context.space_data.edit_tree
+        gp_data: bpy.types.GreasePencil = nt.grease_pencil
+
+        self.gp_data_bbox = gpd_bbox(gp_data)
+        self.gp_data_bbox.calc_active_layer_bbox()
+        self.gp_data_builder = gpd_build(gp_data)
+        self.active_layer_index = gp_data.layers.active_index
+
+        self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px, (self, context), 'WINDOW',
+                                                                      'POST_PIXEL')
+        context.window_manager.modal_handler_add(self)
+        context.window.cursor_set('MOVE_X')
+
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context, event):
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
+            context.window.cursor_modal_restore()
+            context.area.tag_redraw()
+            return {'FINISHED'}
+        if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
+            if context.region.type == 'WINDOW':
+                self.is_dragging = True
+                self.drag_start_pos = self.mouse_pos
+            elif context.region.type == 'UI':
+                return {'PASS_THROUGH'}
+        if event.type == 'MOUSEMOVE':
+            self.mouse_pos_prev = self.mouse_pos
+            self.mouse_pos = event.mouse_region_x, event.mouse_region_y
+            if self.is_dragging:
+                move_from = DPI.r2d_2_v2d(self.mouse_pos_prev)
+                move_to = DPI.r2d_2_v2d(self.mouse_pos)
+                self.delta_vec = Vector((move_to[0] - move_from[0], move_to[1] - move_from[1]))
+                self.gp_data_builder.move(self.active_layer_index, self.delta_vec, vec_type='v2d')
+
+        if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
+            self.is_dragging = False
+            self.drag_stop_pos = self.mouse_pos
+            self.gp_data_bbox.calc_active_layer_bbox()
+        if event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
+            return {'PASS_THROUGH'}
+        context.area.tag_redraw()
+        return {'RUNNING_MODAL'}
+
+
 class ENN_PT_gn_edit_panel(bpy.types.Panel):
     bl_label = "Edit Grease Pencil Text"
     bl_idname = "ENN_PT_gn_edit_panel"
@@ -162,25 +234,30 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
         op = box.operator(ENN_OT_add_gp_modal.bl_idname)
         op.add_type = context.window_manager.enn_gp_add_type
 
+        # layout.separator()
+        #
+        # box = layout.box()
+        # box.label(text="Move Active Layer")
+        # row = box.row()
+        # row.prop(context.window_manager, "enn_gp_move_dis")
+        #
+        # dis = context.window_manager.enn_gp_move_dis
+        # col = box.column(align=True)
+        # row = col.row(align=True)
+        # op = row.operator(ENN_OT_move_gp.bl_idname, icon='TRIA_UP')
+        # op.move_vector = (0, dis)
+        # op = row.operator(ENN_OT_move_gp.bl_idname, icon='TRIA_DOWN')
+        # op.move_vector = (0, -dis)
+        # row = col.row(align=True)
+        # op = row.operator(ENN_OT_move_gp.bl_idname, icon='TRIA_LEFT')
+        # op.move_vector = (-dis, 0)
+        # op = row.operator(ENN_OT_move_gp.bl_idname, icon='TRIA_RIGHT')
+        # op.move_vector = (dis, 0)
+
         layout.separator()
-
         box = layout.box()
-        box.label(text="Move Active Layer")
-        row = box.row()
-        row.prop(context.window_manager, "enn_gp_move_dis")
-
-        dis = context.window_manager.enn_gp_move_dis
-        col = box.column(align=True)
-        row = col.row(align=True)
-        op = row.operator(ENN_OT_move_gp.bl_idname, icon='TRIA_UP')
-        op.move_vector = (0, dis)
-        op = row.operator(ENN_OT_move_gp.bl_idname, icon='TRIA_DOWN')
-        op.move_vector = (0, -dis)
-        row = col.row(align=True)
-        op = row.operator(ENN_OT_move_gp.bl_idname, icon='TRIA_LEFT')
-        op.move_vector = (-dis, 0)
-        op = row.operator(ENN_OT_move_gp.bl_idname, icon='TRIA_RIGHT')
-        op.move_vector = (dis, 0)
+        box.label(text="Move Active Layer Modal")
+        box.operator(ENN_OT_move_gp_modal.bl_idname)
 
 
 def header_menu(self, context):
@@ -199,6 +276,7 @@ def register():
     bpy.utils.register_class(ENN_OT_add_gp)
     bpy.utils.register_class(ENN_OT_add_gp_modal)
     bpy.utils.register_class(ENN_OT_move_gp)
+    bpy.utils.register_class(ENN_OT_move_gp_modal)
     bpy.utils.register_class(ENN_PT_gn_edit_panel)
     # bpy.types.NODE_HT_header.append(header_menu)
 
@@ -207,5 +285,6 @@ def unregister():
     bpy.utils.unregister_class(ENN_OT_add_gp)
     bpy.utils.unregister_class(ENN_OT_add_gp_modal)
     bpy.utils.unregister_class(ENN_OT_move_gp)
+    bpy.utils.unregister_class(ENN_OT_move_gp_modal)
     bpy.utils.unregister_class(ENN_PT_gn_edit_panel)
     # bpy.types.NODE_HT_header.remove(header_menu)
