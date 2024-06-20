@@ -1,8 +1,9 @@
 import bpy
 from bpy.props import StringProperty, IntProperty, PointerProperty, FloatVectorProperty
 from mathutils import Vector
+from math import degrees, radians
 
-from .gp_utils import DPI
+from .gp_utils import VecTool
 from .gp_utils import CreateGreasePencilData
 from .gp_utils import BuildGreasePencilData
 from .gp_utils import GreasePencilLayerBBox
@@ -102,7 +103,7 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
         if event.type in {'ESC', 'RIGHTMOUSE'}:
             return {'CANCELLED'}
         if event.type == 'LEFTMOUSE':
-            v2d_loc = DPI.r2d_2_v2d((event.mouse_region_x, event.mouse_region_y))
+            v2d_loc = VecTool.r2d_2_v2d((event.mouse_region_x, event.mouse_region_y))
             self._add(context, v2d_loc)
             return {'FINISHED'}
         return {'RUNNING_MODAL'}
@@ -139,9 +140,35 @@ class ENN_OT_move_gp(bpy.types.Operator):
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
         if not gp_data:
             return {'CANCELLED'}
-        layer_index: int = gp_data.layers.active_index
         with BuildGreasePencilData(gp_data) as gp_data_builder:
-            gp_data_builder.move(layer_index, self.move_vector)
+            gp_data_builder.move_active(self.move_vector)
+        context.area.tag_redraw()
+        return {'FINISHED'}
+
+
+class ENN_OT_rotate_gp(bpy.types.Operator):
+    bl_idname = "enn.rotate_gp"
+    bl_label = "Rotate"
+    bl_description = "Rotate the selected Grease Pencil Object"
+    bl_options = {'UNDO'}
+
+    rotate_angle: bpy.props.IntProperty(name='Rotate Angle', default=30)
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context)
+
+    def execute(self, context):
+        nt: bpy.types.NodeTree = context.space_data.edit_tree
+        gp_data: bpy.types.GreasePencil = nt.grease_pencil
+        if not gp_data:
+            return {'CANCELLED'}
+        layer_index: int = gp_data.layers.active_index
+        bbox = GreasePencilLayerBBox(gp_data)
+        bbox.calc_active_layer_bbox()
+        pivot = bbox.center
+        with BuildGreasePencilData(gp_data) as gp_data_builder:
+            gp_data_builder.rotate_active(self.rotate_angle, pivot)
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -174,6 +201,8 @@ class ENN_OT_gp_modal(bpy.types.Operator):
     gp_data_bbox: GreasePencilLayerBBox = None  # bbox of the gp data
     gp_data_builder: BuildGreasePencilData = None  # builder of the gp data
     active_layer_index: int = 0
+
+    # debug
 
     @classmethod
     def poll(cls, context):
@@ -225,9 +254,9 @@ class ENN_OT_gp_modal(bpy.types.Operator):
                 self.detect_mouse_pos()
                 self.drag_init = True
 
-            move_from = DPI.r2d_2_v2d(self.mouse_pos_prev)
-            move_to = DPI.r2d_2_v2d(self.mouse_pos)
-            self.delta_vec = Vector((move_to[0] - move_from[0], move_to[1] - move_from[1]))
+            pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
+            cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
+            self.delta_vec = Vector((cur_v2d[0] - pre_v2d[0], cur_v2d[1] - pre_v2d[1]))
 
             if not self.is_dragging:
                 self.detect_mouse_pos()
@@ -259,8 +288,8 @@ class ENN_OT_gp_modal(bpy.types.Operator):
                         if self.on_corner[1] == self.gp_data_bbox.min_y:
                             delta_y = -delta_y
 
-                        scale_x = 1 + delta_x / size_x_v2d
-                        scale_y = 1 + delta_y / size_y_v2d
+                        scale_x = 1 + delta_x / size_x_v2d / 2
+                        scale_y = 1 + delta_y / size_y_v2d / 2
 
                         unit_scale = scale_x if abs(delta_x) > abs(delta_y) else scale_y  # scale by the larger delta
                         vec_scale = Vector((unit_scale, unit_scale, 0)) if event.shift else Vector(
@@ -269,7 +298,16 @@ class ENN_OT_gp_modal(bpy.types.Operator):
                     self.gp_data_builder.scale_active(vec_scale, pivot, space='v2d')
                 # rotate mode
                 elif self.on_corner_extrude:
-                    pass
+                    pivot = self.gp_data_bbox.center
+                    pivot_r2d = self.gp_data_bbox.center_r2d
+
+                    vec_1 = (Vector(self.mouse_pos) - Vector(pivot_r2d))
+                    vec_2 = Vector(self.mouse_pos_prev) - Vector(pivot_r2d)
+                    # clockwise or counterclockwise
+                    angle = VecTool.rotation_direction(vec_1, vec_2) * vec_1.angle(vec_2)
+                    self.gp_data_builder.rotate_active(degrees(angle), pivot)
+
+
                 # move mode
                 elif self.in_drag_area:  # move only when in drag area
                     self.gp_data_builder.move_active(self.delta_vec, space='v2d')
@@ -330,7 +368,7 @@ class ENN_OT_gp_modal(bpy.types.Operator):
     def detect_mouse_pos(self):
         self.on_edge_center = self.gp_data_bbox.near_edge_center(self.mouse_pos, radius=20)
         self.on_corner = self.gp_data_bbox.near_corners(self.mouse_pos, radius=20)
-        self.on_corner_extrude = self.gp_data_bbox.near_corners_extrude(self.mouse_pos, radius=20)
+        self.on_corner_extrude = self.gp_data_bbox.near_corners_extrude(self.mouse_pos, extrude=20, radius=15)
         self.in_drag_area = self.gp_data_bbox.in_area(self.mouse_pos, feather=0)
 
     def update_gp_data(self, context):
@@ -362,6 +400,11 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
         op = box.operator(ENN_OT_add_gp_modal.bl_idname)
         op.add_type = context.window_manager.enn_gp_add_type
 
+        # op = layout.operator(ENN_OT_move_gp.bl_idname)
+        # op.move_vector = (50, 50)
+        # op = layout.operator(ENN_OT_rotate_gp.bl_idname)
+        # op.rotate_angle = 30
+
         layout.separator()
         box = layout.box()
         box.label(text="Move Active Layer Modal")
@@ -381,6 +424,7 @@ def register():
     register_class(ENN_OT_add_gp)
     register_class(ENN_OT_add_gp_modal)
     register_class(ENN_OT_move_gp)
+    register_class(ENN_OT_rotate_gp)
     register_class(ENN_OT_gp_modal)
     register_class(ENN_PT_gn_edit_panel)
 
@@ -391,5 +435,6 @@ def unregister():
     unregister_class(ENN_OT_add_gp)
     unregister_class(ENN_OT_add_gp_modal)
     unregister_class(ENN_OT_move_gp)
+    unregister_class(ENN_OT_rotate_gp)
     unregister_class(ENN_OT_gp_modal)
     unregister_class(ENN_PT_gn_edit_panel)
