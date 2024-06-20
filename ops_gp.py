@@ -65,8 +65,13 @@ class ENN_OT_add_gp(bpy.types.Operator):
         if not font_gp_data: return {'CANCELLED'}
 
         with gpd_build(gp_data) as gp_data_builder:
-            gp_data_builder.link(context).join(font_gp_data).move(-1, self.location, space='v2d').color(-1,
-                                                                                                        '#E7E7E7').to_2d()
+            gp_data_builder.link(context) \
+                .join(font_gp_data) \
+                .move(-1, self.location, space='v2d') \
+                .color(-1, '#E7E7E7') \
+                .to_2d()
+            gp_data_builder.active_layer_index = -1
+
         return {'FINISHED'}
 
 
@@ -105,13 +110,13 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
     def _add(self, context, location):
         if self.add_type == 'TEXT':
             bpy.ops.enn.add_gp('EXEC_DEFAULT',
-                               add_type='TEXT',
+                               add_type=self.add_type,
                                text=context.window_manager.enn_gp_text,
                                size=context.window_manager.enn_gp_size,
                                location=location)
         elif self.add_type == 'OBJECT':
             bpy.ops.enn.add_gp('EXEC_DEFAULT',
-                               add_type='MESH',
+                               add_type=self.add_type,
                                size=context.window_manager.enn_gp_size,
                                obj=context.window_manager.enn_gp_obj.name,
                                location=location)
@@ -211,8 +216,9 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
             if context.region.type == 'WINDOW':
                 self.is_pressing = True
                 layer_index = gpd_layers.in_layer_area(self.gp_data_builder.gp_data, self.mouse_pos)
-                if layer_index:
+                if layer_index is not None:
                     self.gp_data_builder.active_layer_index = layer_index
+                    print(self.gp_data_builder.active_layer_index)
                     self.update_gp_data(context)
                     self.in_drag_area = True
 
@@ -247,8 +253,7 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
             self.is_pressing = False
         if event.type == 'TIMER':
             if self.is_pressing:
-                # using python match case
-                v: int = 2
+                v: int = 10  # move distance
                 match self.key_press:
                     case "W":
                         self.gp_data_builder.move_active((0, v), space='v2d')

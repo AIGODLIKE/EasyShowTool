@@ -108,10 +108,10 @@ class GreasePencilProperty:
         """Set the active layer index."""
         if index < 0:
             self.gp_data.layers.active_index = len(self.gp_data.layers) - 1
-        elif index >= len(self.gp_data.layers):
-            self.gp_data.layers.active_index = 0
-        else:
+        elif 0 <= index < len(self.gp_data.layers):
             self.gp_data.layers.active_index = index
+        else:
+            self.gp_data.layers.active_index = 0
 
     def active_next_layer(self):
         """Set the next layer as active."""
@@ -285,9 +285,10 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         points = self.bbox_points_r2d if space == 'r2d' else self.bbox_points_v2d
         top_left, top_right, bottom_left, bottom_right = points
 
-        top_left = (top_left[0] - feather, top_left[1] + feather)
-        top_right = (top_right[0] + feather, top_right[1] + feather)
-        bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
+        if feather != 0:
+            top_left = (top_left[0] - feather, top_left[1] + feather)
+            top_right = (top_right[0] + feather, top_right[1] + feather)
+            bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
 
         if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
             return True
@@ -297,7 +298,7 @@ class GreasePencilLayerBBox(GreasePencilProperty):
 @dataclass
 class GreasePencilLayers(GreasePencilProperty):
     @staticmethod
-    def in_layer_area(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather: int = 5,
+    def in_layer_area(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather: int = 0,
                       space: Literal['r2d', 'v2d'] = 'r2d') -> Union[int, None]:
         """check if the pos is in the area defined by the points
         :param pos: the position to check, in v2d space
@@ -307,10 +308,10 @@ class GreasePencilLayers(GreasePencilProperty):
         """
         bboxs: list[GreasePencilLayerBBox] = [GreasePencilLayerBBox(gp_data, layer) for layer in
                                               gp_data.layers]
-        print(bboxs)
         for i, bbox in enumerate(bboxs):
             bbox.calc_bbox(i)
             if bbox.in_area(pos, feather, space):
+                print(f'In layer {bbox.gp_data.layers[i].info}')
                 return bbox.last_layer_index
 
         return None
@@ -402,7 +403,7 @@ class CreateGreasePencilData(GreasePencilCache):
         new_obj = obj.copy()
         new_obj.data = obj.data.copy()
         bpy.context.collection.objects.link(new_obj)
-        new_obj._size_2 = (size, size, size)
+        new_obj.scale = (size, size, size)
         bpy.context.view_layer.objects.active = new_obj
         bpy.ops.object.select_all(action='DESELECT')
         new_obj.select_set(True)
