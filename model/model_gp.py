@@ -12,31 +12,19 @@ from .utils import VecTool, ColorTool
 class MouseDetectModel:
     """MouseDetectModel Model, a base class for detect mouse position with 2d grease pencil annotation."""
 
-    def __init__(self, bbox_model: 'GreasePencilLayerBBox'):
+    bbox_model: 'GreasePencilLayerBBox' = None
+
+    def bind_to(self, bbox_model: 'GreasePencilLayerBBox') -> 'MouseDetectModel':
         self.bbox_model = bbox_model
         self.bbox_model.detect_model = self
-
-    # @staticmethod
-    # def is_point_in_area(pos: Union[Sequence, Vector], points: list[Union[Sequence, Vector]],
-    #                      feather: int = 10) -> bool:
-    #     """Check if the point is in the area defined by the top left and bottom right points."""
-    #     top_left, top_right, bottom_left, bottom_right = points
-    #     x, y = pos
-    #     if feather != 0:
-    #         top_left = (top_left[0] - feather, top_left[1] + feather)
-    #         top_right = (top_right[0] + feather, top_right[1] + feather)
-    #         bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
-    #
-    #     if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
-    #         return True
-    #     return False
+        return self
 
     @staticmethod
     def is_point_near_point(pos: Union[Sequence, Vector], point: Union[Sequence, Vector], distance: int = 20) -> bool:
         """Check if the point is near the target point."""
         return (Vector(pos) - Vector(point)).length < distance
 
-    def in_area(self, pos: Union[Sequence, Vector], feather: int = 10, space: Literal['r2d', 'v2d'] = 'r2d') -> bool:
+    def in_area(self, pos: Union[Sequence, Vector], feather: int = 0, space: Literal['r2d', 'v2d'] = 'r2d') -> bool:
         """check if the pos is in the area defined by the points
         :param pos: the position to check, in v2d/r2d space
         :param points: the points defining the area
@@ -367,7 +355,7 @@ class GreasePencilLayers(GreasePencilProperty):
                                               gp_data.layers]
         for i, bbox in enumerate(bboxs):
             bbox.calc_bbox(i)
-            mouse_detect = MouseDetectModel(bbox)
+            mouse_detect = MouseDetectModel().bind_to(bbox)
             if mouse_detect.in_area(pos, feather, space):
                 # print(f'In layer {bbox.gp_data.layers[i].info}')
                 return bbox.last_layer_index
@@ -576,6 +564,15 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         elif res < 0:
             res = 360 + res
         self._rotate_degree = res
+
+    def set_active_layer(self, layer_name_or_index: Union[str, int]) -> 'BuildGreasePencilData':
+        """Set the active grease pencil annotation layer."""
+        self.active_layer_index = layer_name_or_index
+        return self
+
+    def color_active(self, hex_color: str) -> 'BuildGreasePencilData':
+        """Set the color of the active grease pencil annotation layer."""
+        return self.color(self.active_layer_index, hex_color)
 
     def color(self, layer_name_or_index: Union[str, int], hex_color: str) -> 'BuildGreasePencilData':
         """Set the color of the grease pencil annotation layer.

@@ -21,7 +21,6 @@ class DragGreasePencilModel:
 
     def handle_drag(self, context, event):
         """Handle the drag event in the modal."""
-        self.update_mouse_pos(context, event)
         # scale mode
         if self.on_edge_center or self.on_corner:  # scale only when near point
             self.on_drag_scale(event)
@@ -30,15 +29,13 @@ class DragGreasePencilModel:
             self.on_drag_rotate()
         # move mode
         elif self.in_drag_area:
-            self.update_gp_data(context)
             self.on_drag_move()
 
     def update_mouse_pos(self, context, event):
-        """Handle the mouse move event in the modal."""
+        """Update the mouse position and the delta vector. Prepare for the handle_drag."""
         self.mouse_pos_prev = self.mouse_pos
         self.mouse_pos = event.mouse_region_x, event.mouse_region_y
         self.update_gp_data(context)
-
         pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
         cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
         self.delta_vec = Vector((cur_v2d[0] - pre_v2d[0], cur_v2d[1] - pre_v2d[1]))
@@ -70,8 +67,8 @@ class DragGreasePencilModel:
             if self.on_corner[1] == self.gp_data_bbox.min_y:
                 delta_y = -delta_y
 
-            scale_x = 1 + delta_x / size_x_v2d / 2
-            scale_y = 1 + delta_y / size_y_v2d / 2
+            scale_x = 1 + delta_x / size_x_v2d
+            scale_y = 1 + delta_y / size_y_v2d
 
             unit_scale = scale_x if abs(delta_x) > abs(delta_y) else scale_y  # scale by the larger delta
             vec_scale = Vector((unit_scale, unit_scale, 0)) if event.shift else Vector(
@@ -94,8 +91,8 @@ class DragGreasePencilModel:
         # move only when in drag area
         self.gp_data_builder.move_active(self.delta_vec, space='v2d')
 
-    def detect(self):
-        """Update the mouse position and the near points."""
+    def detect_near_widgets(self):
+        """Detect the near points and areas of the Grease Pencil Object."""
         detect_model = self.gp_data_bbox.detect_model
         self.on_edge_center = detect_model.near_edge_center(self.mouse_pos, radius=20)
         self.on_corner = detect_model.near_corners(self.mouse_pos, radius=20)
@@ -103,6 +100,6 @@ class DragGreasePencilModel:
         self.in_drag_area = detect_model.in_area(self.mouse_pos, feather=0)
 
     def update_gp_data(self, context):
-        """Update the Grease Pencil Data."""
+        """Update the Grease Pencil Data. Some data may be changed in the modal."""
         self.gp_data_bbox.calc_active_layer_bbox()
         _ = self.gp_data_bbox.bbox_points_3d
