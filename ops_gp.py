@@ -5,7 +5,8 @@ from mathutils import Vector
 from .gp_utils import DPI
 from .gp_utils import CreateGreasePencilData as gpd_create
 from .gp_utils import BuildGreasePencilData as gpd_build
-from .gp_utils import GreasePencilBBox as gpd_bbox
+from .gp_utils import GreasePencilLayerBBox as gpd_bbox
+from .gp_utils import GreasePencilLayers as gpd_layers
 from .ops_notes import has_edit_tree
 
 
@@ -64,8 +65,8 @@ class ENN_OT_add_gp(bpy.types.Operator):
         if not font_gp_data: return {'CANCELLED'}
 
         with gpd_build(gp_data) as gp_data_builder:
-            gp_data_builder.link(context).join(font_gp_data).move(-1, self.location, vec_type='v2d').color(-1,
-                                                                                                           '#E7E7E7').to_2d()
+            gp_data_builder.link(context).join(font_gp_data).move(-1, self.location, space='v2d').color(-1,
+                                                                                                        '#E7E7E7').to_2d()
         return {'FINISHED'}
 
 
@@ -218,11 +219,12 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
                 move_from = DPI.r2d_2_v2d(self.mouse_pos_prev)
                 move_to = DPI.r2d_2_v2d(self.mouse_pos)
                 self.delta_vec = Vector((move_to[0] - move_from[0], move_to[1] - move_from[1]))
-                self.gp_data_builder.move_active(self.delta_vec, vec_type='v2d')
+                self.gp_data_builder.move_active(self.delta_vec, space='v2d')
         if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             self.is_dragging = False
             self.drag_stop_pos = self.mouse_pos
             self.update_gp_data(context)
+
         # handle key press
         if event.type in {"Q", "E"} and event.value == 'PRESS':  # set active layer
             if event.type == "Q":
@@ -236,20 +238,19 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
             self.key_press = event.type
         if event.type in {"W", "A", "S", "D"} and event.value == 'RELEASE':
             self.is_pressing = False
-
         if event.type == 'TIMER':
             if self.is_pressing:
                 # using python match case
                 v: int = 2
                 match self.key_press:
                     case "W":
-                        self.gp_data_builder.move_active((0, v), vec_type='v2d')
+                        self.gp_data_builder.move_active((0, v), space='v2d')
                     case "A":
-                        self.gp_data_builder.move_active((-v, 0), vec_type='v2d')
+                        self.gp_data_builder.move_active((-v, 0), space='v2d')
                     case "S":
-                        self.gp_data_builder.move_active((0, -v), vec_type='v2d')
+                        self.gp_data_builder.move_active((0, -v), space='v2d')
                     case "D":
-                        self.gp_data_builder.move_active((v, 0), vec_type='v2d')
+                        self.gp_data_builder.move_active((v, 0), space='v2d')
 
                 self.update_gp_data(context)
         context.area.tag_redraw()

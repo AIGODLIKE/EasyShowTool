@@ -47,7 +47,7 @@ class DPI:
     def v2d_2_r2d(location: Union[Vector, Sequence]) -> Vector:
         """Convert node editor 2d view point to region 2d space."""
         ui_scale = bpy.context.preferences.system.ui_scale
-        x, y = bpy.context.region.view2d.view_to_region(location[0] * ui_scale, location[1] * ui_scale)
+        x, y = bpy.context.region.view2d.view_to_region(location[0] * ui_scale, location[1] * ui_scale, clip=False)
         return Vector((x, y))
 
     @staticmethod
@@ -84,14 +84,14 @@ class GreasePencilProperty:
         return self.gp_data.name
 
     @property
-    def active_layer(self) -> bpy.types.GPencilLayer:
-        """Return the active layer."""
-        return self.gp_data.layers.active
-
-    @property
     def active_layer_name(self) -> str:
         """Return the active layer name."""
         return self.active_layer.info
+
+    @property
+    def active_layer(self) -> bpy.types.GPencilLayer:
+        """Return the active layer."""
+        return self.gp_data.layers.active
 
     @active_layer_name.setter
     def active_layer_name(self, name: str):
@@ -143,7 +143,7 @@ class GreasePencilProperty:
 
 
 @dataclass
-class GreasePencilBBox(GreasePencilProperty):
+class GreasePencilLayerBBox(GreasePencilProperty):
     """
     Calculate the bounding box of the grease pencil bounding box. useful for drawing the bounding box.
     """
@@ -154,6 +154,8 @@ class GreasePencilBBox(GreasePencilProperty):
     min_x: float = 0
     max_y: float = 0
     min_y: float = 0
+    #
+    last_layer_index: int = None
 
     @property
     def size(self) -> tuple[float, float]:
@@ -198,6 +200,7 @@ class GreasePencilBBox(GreasePencilProperty):
     @property
     def bbox_points_r2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
         """Return the bounding box points in region 2d space."""
+
         return tuple(map(DPI.v2d_2_r2d, self.bbox_points_v2d))
 
     @staticmethod
@@ -269,6 +272,48 @@ class GreasePencilBBox(GreasePencilProperty):
         self.min_x = min(x_list)
         self.max_y = max(y_list)
         self.min_y = min(y_list)
+        self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
+
+    def in_area(self, pos: Union[Sequence, Vector], feather: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> bool:
+        """check if the pos is in the area defined by the points
+        :param pos: the position to check, in v2d space
+        :param points: the points defining the area
+        :param feather: the feather to expand the area, unit: pixel
+        :return: True if the pos is in the area, False otherwise
+        """
+        x, y = pos
+        points = self.bbox_points_r2d if space == 'r2d' else self.bbox_points_v2d
+        top_left, top_right, bottom_left, bottom_right = points
+
+        top_left = (top_left[0] - feather, top_left[1] + feather)
+        top_right = (top_right[0] + feather, top_right[1] + feather)
+        bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
+
+        if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
+            return True
+        return False
+
+
+@dataclass
+class GreasePencilLayers(GreasePencilProperty):
+    @staticmethod
+    def in_layer_area(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather: int = 20,
+                      space: Literal['r2d', 'v2d'] = 'r2d') -> Union[int, None]:
+        """check if the pos is in the area defined by the points
+        :param pos: the position to check, in v2d space
+        :param points: the points defining the area
+        :param feather: the feather to expand the area, unit: pixel
+        :return: True if the pos is in the area, False otherwise
+        """
+        bboxs: list[GreasePencilLayerBBox] = [GreasePencilLayerBBox(gp_data, layer) for layer in
+                                              gp_data.layers]
+        for i, bbox in enumerate(bboxs):
+            bbox.calc_bbox(i)
+
+        for bbox in bboxs.reverse():  # top first
+            if bbox.in_area(pos, feather, space):
+                return bbox.last_layer_index
+        return False
 
 
 class GreasePencilCache:
@@ -448,12 +493,12 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
     def to_2d(self) -> 'BuildGreasePencilData':
         """show the grease pencil data in 2D space."""
-        self._set_space('2D')
+        self._set_display_mode('2D')
         return self
 
     def to_3d(self) -> 'BuildGreasePencilData':
         """show the grease pencil data in 3D space."""
-        self._set_space('3D')
+        self._set_display_mode('3D')
         return self
 
     def color(self, layer_name_or_index: Union[str, int], hex_color: str) -> 'BuildGreasePencilData':
@@ -476,22 +521,22 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         self._link_nodegroup(context.space_data.edit_tree)
         return self
 
-    def move_active(self, v: Vector, vec_type: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+    def move_active(self, v: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Move the active grease pencil layer."""
-        return self.move(self.active_layer_name, v, vec_type)
+        return self.move(self.active_layer_name, v, space)
 
     def move(self, layer_name_or_index: Union[str, int], v: Vector,
-             vec_type: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+             space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Move the grease pencil data.
         :param layer_name_or_index: The name or index of the layer.
         :param v: The vector to move.
-        :param vec_type: The type of the vector, either 'v2d', 'r2d', or '3d'.
+        :param space: The type of the vector, either 'v2d', 'r2d', or '3d'.
         :return: instance
         """
 
         layer = self._get_layer(layer_name_or_index)
 
-        if vec_type == 'v2d':
+        if space == 'v2d':
             vec = DPI.v2d_2_loc3d(v)
         else:
             vec = v
@@ -553,9 +598,9 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """Link the grease pencil data to the node group. So that the grease pencil can be seen in the node editor."""
         nt.grease_pencil = self.gp_data
 
-    def _set_space(self, type: Literal['2D', '3D'],
-                   layer_name_or_index: Optional[Union[str, int]] = None) -> None:
-        """Convert the space of the grease pencil strokes to 2D or 3D space.
+    def _set_display_mode(self, type: Literal['2D', '3D'],
+                          layer_name_or_index: Optional[Union[str, int]] = None) -> None:
+        """Convert the display_mode of the grease pencil strokes to 2D or 3D space.
         :param type: The space to convert to, either '2D' or '3D'.
         :param layer_name_or_index: The name or index of the layer to convert. If None, all layers will be converted.
         """

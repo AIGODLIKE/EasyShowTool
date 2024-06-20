@@ -3,16 +3,10 @@ import bpy
 from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
 from typing import Sequence, Union
-from .gp_utils import GreasePencilBBox
+from .gp_utils import GreasePencilLayerBBox
 
 shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-indices = GreasePencilBBox.indices
-
-
-def clamp_points(points: list[Vector]) -> list[Vector]:
-    """clamp the point to the region"""
-    width, height = bpy.context.region.width, bpy.context.region.height
-    return [(max(0, min(width, x)), max(0, min(height, y))) for x, y in points]
+indices = GreasePencilLayerBBox.indices
 
 
 def in_area(pos: Union[Sequence, Vector], points: list[Vector], feather: int = 20) -> bool:
@@ -54,9 +48,9 @@ def draw_callback_px(self, context) -> None:
     gpu.state.line_width_set(2)
     gpu.state.point_size_set(20)
     gpu.state.blend_set('ALPHA')
-    gp_data_bbox: GreasePencilBBox = self.gp_data_bbox
+    gp_data_bbox: GreasePencilLayerBBox = self.gp_data_bbox
 
-    top_left, top_right, bottom_left, bottom_right = clamp_points(gp_data_bbox.bbox_points_r2d)
+    top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
     points = [top_left, top_right, bottom_left, bottom_right]
     coords = [top_left, top_right, bottom_right, bottom_left, top_left]
 
@@ -89,7 +83,7 @@ def draw_callback_px(self, context) -> None:
 
     if self.is_dragging:
         delta = (self.mouse_pos[0] - self.drag_start_pos[0], self.mouse_pos[1] - self.drag_start_pos[1])
-        points = clamp_points([(x + delta[0], y + delta[1]) for x, y in points])
+        points = [(x + delta[0], y + delta[1]) for x, y in points]
         coords = [points[0], points[1], points[3], points[2], points[0]]
 
         # draw the drag area
