@@ -6,97 +6,98 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from math import radians
 
+from .utils import VecTool, ColorTool
 
-class VecTool:
-    """Vec utility class. use to convert between view 2d , region 2d and 3d space."""
+
+class MouseDetectModel:
+    """MouseDetectModel Model, a base class for detect mouse position with 2d grease pencil annotation."""
+
+    def __init__(self, bbox_model: 'GreasePencilLayerBBox'):
+        self.bbox_model = bbox_model
+        self.bbox_model.detect_model = self
 
     @staticmethod
-    def _size_2(v: float, r: bool = False) -> float:
+    def is_point_in_area(pos: Union[Sequence, Vector], points: list[Union[Sequence, Vector]],
+                         feather: int = 10) -> bool:
+        """Check if the point is in the area defined by the top left and bottom right points."""
+        top_left, top_right, bottom_left, bottom_right = points
+        x, y = pos
+        if feather != 0:
+            top_left = (top_left[0] - feather, top_left[1] + feather)
+            top_right = (top_right[0] + feather, top_right[1] + feather)
+            bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
+
+        if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
+            return True
+        return False
+
+    @staticmethod
+    def is_point_near_point(pos: Union[Sequence, Vector], point: Union[Sequence, Vector], distance: int = 20) -> bool:
+        """Check if the point is near the target point."""
+        return (Vector(pos) - Vector(point)).length < distance
+
+    def in_area(self, pos: Union[Sequence, Vector], feather: int = 10, space: Literal['r2d', 'v2d'] = 'r2d') -> bool:
+        """check if the pos is in the area defined by the points
+        :param pos: the position to check, in v2d/r2d space
+        :param points: the points defining the area
+        :param feather: the feather to expand the area, unit: pixel
+        :return: True if the pos is in the area, False otherwise
         """
-        convert grease pencil annotation location between 2d space to 3d space
-        :param v: value
-        :param r: reverse False: 3d -> 2d, True: 2d -> 3d
-        :return: value
+        points = self.bbox_model.bbox_points_r2d if space == 'r2d' else self.bbox_model.bbox_points_v2d
+        return self.is_point_in_area(pos, points, feather)
+
+    def near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
+            Union[Vector, None]:
+        """check if the pos is near the edge center of the area defined by the points
+        :param pos: the position to check
+        :param points: the points defining the area
+        :param feather: the feather to expand the area, unit: pixel
+        :return: True if the pos is near the edge center, False otherwise
         """
-        scale = bpy.context.preferences.system.ui_scale
-        return v / scale if not r else v * scale
+        vec_pos = Vector((pos[0], pos[1]))
+        points = self.bbox_model.edge_center_points_r2d if space == 'r2d' else self.bbox_model.edge_center_points_v2d
+        for point in points:
+            vec_point = Vector(point)
+            if (vec_pos - vec_point).length < radius:
+                return vec_point
+        return None
 
-    @staticmethod
-    def _vec_2(v: Vector, r: bool = False) -> Vector:
+    def near_corners(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
+            Union[Vector, None]:
+        """check if the pos is near the corners of the area defined by the bounding box points
+        :param pos: the position to check
+        :param points: the points defining the area
+        :param feather: the feather to expand the area, unit: pixel
+        :return: True if the pos is near the corners, False otherwise
         """
-        convert grease pencil annotation location between 2d space to 3d space
-        :param v: value
-        :param r: reverse False: 3d -> 2d, True: 2d -> 3d
-        :return: value
+        vec_pos = Vector((pos[0], pos[1]))
+        points = self.bbox_model.bbox_points_r2d if space == 'r2d' else self.bbox_model.bbox_points_v2d
+        for point in points:
+            vec_point = Vector(point)
+            if (vec_pos - vec_point).length < radius:
+                return vec_point
+        return None
+
+    def near_corners_extrude(self, pos: Union[Sequence, Vector], extrude: int = 15, radius: int = 15) -> Union[
+        Vector, None]:
+
+        """check if the pos is near the the corner point extrude outward by 45 deg
+        :param pos: the position to check
+        :param extrude: the extrude distance
+        :param radius: the radius of the extrude point
+        :return: True if the pos is near the corners, False otherwise
         """
-        scale = bpy.context.preferences.system.ui_scale
-        return Vector((v[0] / scale, v[1] / scale, 1)) if not r else Vector((v[0] * scale, v[1] * scale, 1))
-
-    @property
-    def ui_scale(self) -> float:
-        return bpy.context.preferences.system.ui_scale
-
-    @staticmethod
-    def r2d_2_v2d(location: Union[Vector, Sequence]) -> Vector:
-        """Convert region 2d space point to node editor 2d view."""
-        ui_scale = bpy.context.preferences.system.ui_scale
-        x, y = bpy.context.region.view2d.region_to_view(location[0], location[1])
-        return Vector((x / ui_scale, y / ui_scale))
-
-    @staticmethod
-    def v2d_2_r2d(location: Union[Vector, Sequence]) -> Vector:
-        """Convert node editor 2d view point to region 2d space."""
-        ui_scale = bpy.context.preferences.system.ui_scale
-        x, y = bpy.context.region.view2d.view_to_region(location[0] * ui_scale, location[1] * ui_scale, clip=False)
-        return Vector((x, y))
-
-    @staticmethod
-    def loc3d_2_v2d(location: Union[Vector, Sequence]) -> Vector:
-        """Convert 3D space point to node editor 2d space."""
-        return Vector((VecTool._size_2(location[0]), VecTool._size_2(location[1])))
-
-    @staticmethod
-    def v2d_2_loc3d(location: Union[Vector, Sequence]) -> Vector:
-        """Convert 2D space point to 3D space."""
-        return Vector((VecTool._size_2(location[0], r=True), VecTool._size_2(location[1], r=True)))
-
-    @staticmethod
-    def rotation_direction(v1: Union[Vector, Sequence], v2: Union[Vector, Sequence]) -> int:
-        """Return the rotation direction of two vectors.
-        CounterClockwise: 1
-        Clockwise: -1
-        """
-        cross_z = v1[0] * v2[1] - v1[1] * v2[0]
-        return 1 if cross_z >= 0 else -1
-
-
-@dataclass(slots=True)
-class GP_Color:
-    """Grease Pencil Color utility class."""
-    white: Final[str] = '#FFFFFF'  # white color
-    orange: Final[str] = '#ED9E5C'  # object color
-    green_geo: Final[str] = '#00D6A3'  # geometry color
-    green_int: Final[str] = '#598C5C'  # interface color
-    blue: Final[str] = '#598AC3'  # string color
-    purple_vec: Final[str] = '#6363C7'  # vector color
-    purple_img: Final[str] = '#633863'  # image color
-    grey: Final[str] = '#A1A1A1'  # float color
-    pink_bool: Final[str] = '#CCA6D6'  # boolean color
-    pink_mat: Final[str] = '#EB7582'  # material color
-
-    @staticmethod
-    def hex_2_rgb(hex_color: str) -> list[float, float, float]:
-        """Convert hex color to rgb color."""
-        if hex_color.startswith('#'):
-            hex = hex_color[1:]
-        else:
-            hex = hex_color
-        return [int(hex[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        vec_pos = Vector((pos[0], pos[1]))
+        points = self.bbox_model.corner_extrude_points_r2d(extrude)
+        for point in points:
+            if (vec_pos - point).length < radius:
+                return point
+        return None
 
 
 @dataclass
 class GreasePencilProperty:
-    """Grease Pencil Property, a base class for grease pencil data."""
+    """Grease Pencil Property, a base class for grease pencil data get/set"""
     gp_data: bpy.types.GreasePencil
 
     @property
@@ -176,6 +177,7 @@ class GreasePencilLayerBBox(GreasePencilProperty):
     min_y: float = 0
     #
     last_layer_index: int = None
+    detect_model: Optional['MouseDetectModel'] = None  # avoid circular import
 
     @property
     def size(self) -> tuple[float, float]:
@@ -339,74 +341,6 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         self.min_y = min(y_list)
         self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
 
-    def in_area(self, pos: Union[Sequence, Vector], feather: int = 10, space: Literal['r2d', 'v2d'] = 'r2d') -> bool:
-        """check if the pos is in the area defined by the points
-        :param pos: the position to check, in v2d/r2d space
-        :param points: the points defining the area
-        :param feather: the feather to expand the area, unit: pixel
-        :return: True if the pos is in the area, False otherwise
-        """
-        x, y = pos
-        points = self.bbox_points_r2d if space == 'r2d' else self.bbox_points_v2d
-        top_left, top_right, bottom_left, bottom_right = points
-
-        if feather != 0:
-            top_left = (top_left[0] - feather, top_left[1] + feather)
-            top_right = (top_right[0] + feather, top_right[1] + feather)
-            bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
-
-        if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
-            return True
-        return False
-
-    def near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
-            Union[Vector, None]:
-        """check if the pos is near the edge center of the area defined by the points
-        :param pos: the position to check
-        :param points: the points defining the area
-        :param feather: the feather to expand the area, unit: pixel
-        :return: True if the pos is near the edge center, False otherwise
-        """
-        vec_pos = Vector((pos[0], pos[1]))
-        points = self.edge_center_points_r2d if space == 'r2d' else self.edge_center_points_v2d
-        for point in points:
-            vec_point = Vector(point)
-            if (vec_pos - vec_point).length < radius:
-                return vec_point
-        return None
-
-    def near_corners(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
-            Union[Vector, None]:
-        """check if the pos is near the corners of the area defined by the bounding box points
-        :param pos: the position to check
-        :param points: the points defining the area
-        :param feather: the feather to expand the area, unit: pixel
-        :return: True if the pos is near the corners, False otherwise
-        """
-        vec_pos = Vector((pos[0], pos[1]))
-        points = self.bbox_points_r2d if space == 'r2d' else self.bbox_points_v2d
-        for point in points:
-            vec_point = Vector(point)
-            if (vec_pos - vec_point).length < radius:
-                return vec_point
-        return None
-
-    def near_corners_extrude(self, pos: Union[Sequence, Vector], extrude: int = 15, radius: int = 15) -> Union[
-        Vector, None]:
-
-        """check if the pos is near the the corner point extrude outward by 45 deg
-        :param pos: the position to check
-        :param extrude: the extrude distance
-        :param radius: the radius of the extrude point
-        :return: True if the pos is near the corners, False otherwise
-        """
-        vec_pos = Vector((pos[0], pos[1]))
-        points = self.corner_extrude_points_r2d(extrude)
-        for point in points:
-            if (vec_pos - point).length < radius:
-                return point
-        return None
-
 
 @dataclass
 class GreasePencilLayers(GreasePencilProperty):
@@ -423,7 +357,8 @@ class GreasePencilLayers(GreasePencilProperty):
                                               gp_data.layers]
         for i, bbox in enumerate(bboxs):
             bbox.calc_bbox(i)
-            if bbox.in_area(pos, feather, space):
+            mouse_detect = MouseDetectModel(bbox)
+            if mouse_detect.in_area(pos, feather, space):
                 # print(f'In layer {bbox.gp_data.layers[i].info}')
                 return bbox.last_layer_index
 
@@ -639,7 +574,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
         if layer:
-            layer.color = GP_Color.hex_2_rgb(hex_color)
+            layer.color = ColorTool.hex_2_rgb(hex_color)
         return self
 
     def link(self, context: bpy.types.Context) -> 'BuildGreasePencilData':

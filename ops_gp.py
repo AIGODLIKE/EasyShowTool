@@ -1,13 +1,13 @@
 import bpy
 from bpy.props import StringProperty, IntProperty, PointerProperty, FloatVectorProperty
 from mathutils import Vector
-from math import degrees, radians
 
-from .gp_utils import VecTool
-from .gp_utils import CreateGreasePencilData
-from .gp_utils import BuildGreasePencilData
-from .gp_utils import GreasePencilLayerBBox
-from .gp_utils import GreasePencilLayers as GreasePencilLayers
+from .model.utils import VecTool
+from .model.model_drag import DragGreasePencilModel
+from .model.model_gp import CreateGreasePencilData, MouseDetectModel
+from .model.model_gp import BuildGreasePencilData
+from .model.model_gp import GreasePencilLayerBBox
+from .model.model_gp import GreasePencilLayers
 from .ops_notes import has_edit_tree
 
 
@@ -173,34 +173,56 @@ class ENN_OT_rotate_gp(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class ENN_OT_gp_set_active_layer(bpy.types.Operator):
+    bl_idname = "enn.gp_set_active_layer"
+    bl_label = "Set Active Layer"
+    bl_description = "Set the active layer of the Grease Pencil Object"
+    bl_options = {'UNDO'}
+
+    mouse_pos: tuple[int, int] = (0, 0)
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context)
+
+    def invoke(self, context, event):
+        self.mouse_pos = event.mouse_region_x, event.mouse_region_y
+        return self.execute(context)
+
+    def execute(self, context):
+        nt: bpy.types.NodeTree = context.space_data.edit_tree
+        gp_data: bpy.types.GreasePencil = nt.grease_pencil
+        if not gp_data: return {'CANCELLED'}
+        bbox = GreasePencilLayerBBox(gp_data)
+        MouseDetectModel(bbox)
+
+        layer_index = GreasePencilLayers.in_layer_area(gp_data, self.mouse_pos)
+        if layer_index is None:
+            return {'CANCELLED'}
+        else:
+            bbox.active_layer_index = layer_index
+            bbox.calc_active_layer_bbox()
+        context.area.tag_redraw()
+
+        return {'FINISHED'}
+
+
 class ENN_OT_gp_modal(bpy.types.Operator):
     bl_idname = "enn.gp_modal"
     bl_label = "Transform"
     bl_description = "Move the selected Grease Pencil Object"
     bl_options = {'UNDO'}
 
+    # model
+    drag_model: DragGreasePencilModel = None
     # state
-    cursor_shape = 'DEFAULT'
     draw_handle = None  # draw handle
     press_timer = None  # timer for detect long press
-    mouse_pos = (0, 0)  # mouse position in the current frame
-    mouse_pos_prev = (0, 0)  # mouse position in the previous frame
 
     is_pressing: bool = False
     press_value: str = None  # key press
 
-    drag_init: bool = False  # drag start
     is_dragging: bool = False  # dragging
-    in_drag_area: bool = False  # in drag area
-    on_edge_center: Vector = None  # has near point on edge center, used for single axis scale
-    on_corner: Vector = None  # has near point on corner, used for both axis scale
-    on_corner_extrude: Vector = None  # has near point on corner extrude, used for rotate
-
-    delta_vec = (0, 0)  # last mouse move vector, in view2d space
-    # data
-    gp_data_bbox: GreasePencilLayerBBox = None  # bbox of the gp data
-    gp_data_builder: BuildGreasePencilData = None  # builder of the gp data
-    active_layer_index: int = 0
 
     # debug
 
@@ -213,168 +235,53 @@ class ENN_OT_gp_modal(bpy.types.Operator):
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
 
-        self.gp_data_bbox = GreasePencilLayerBBox(gp_data)
-        self.gp_data_bbox.calc_active_layer_bbox()
-        self.gp_data_builder = BuildGreasePencilData(gp_data)
+        self.drag_model = DragGreasePencilModel(gp_data_bbox=GreasePencilLayerBBox(gp_data),
+                                                gp_data_builder=BuildGreasePencilData(gp_data),
+                                                mouse_pos=(0, 0),
+                                                mouse_pos_prev=(0, 0),
+                                                delta_vec=Vector((0, 0)))
+        MouseDetectModel(self.drag_model.gp_data_bbox)
 
         self.press_timer = context.window_manager.event_timer_add(0.05, window=context.window)
         self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px, (self, context), 'WINDOW',
                                                                       'POST_PIXEL')
+        self.drag_model.update_gp_data(context)
+
         context.window_manager.modal_handler_add(self)
-        # if self.cursor_shape != 'HAND':
-        #     context.window.cursor_modal_set('HAND')
-        #     self.cursor_shape = 'HAND'
+
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
-        # handle pass
+        # handle drag
         if self._handle_pass_through(event):
             return {'PASS_THROUGH'}
-        # handle cancel
-        if self._handle_cancel(context, event):
+        if self._handle_finish(context, event):
             return {'FINISHED'}
 
-        # handle drag
-        if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
-            if context.region.type == 'WINDOW':
-                self.is_pressing = True
-                layer_index = GreasePencilLayers.in_layer_area(self.gp_data_builder.gp_data, self.mouse_pos)
-                if layer_index is not None:
-                    self.gp_data_builder.active_layer_index = layer_index
-                    self.update_gp_data(context)
-                    self.in_drag_area = True
-
-            elif context.region.type == 'UI':
-                return {'PASS_THROUGH'}
         if event.type == 'MOUSEMOVE':
-            self.mouse_pos_prev = self.mouse_pos
-            self.mouse_pos = event.mouse_region_x, event.mouse_region_y
-            self.update_gp_data(context)
-            if not self.drag_init:
-                self.detect_mouse_pos()
-                self.drag_init = True
+            self.drag_model.handle_mouse_move_event(context, event)
+            self.drag_model.handle_drag(event)
 
-            pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
-            cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
-            self.delta_vec = Vector((cur_v2d[0] - pre_v2d[0], cur_v2d[1] - pre_v2d[1]))
-
-            if not self.is_dragging:
-                self.detect_mouse_pos()
-            else:
-                # scale mode
-                if self.on_edge_center or self.on_corner:  # scale only when near point
-                    pivot = self.gp_data_bbox.center
-                    pivot_r2d = self.gp_data_bbox.center_r2d
-                    size_x_v2d, size_y_v2d = self.gp_data_bbox.size_v2d
-
-                    delta_x, delta_y = (self.delta_vec * 2).xy
-                    if self.mouse_pos[0] < pivot_r2d[0]:  # if on the left side
-                        delta_x = -delta_x
-                    if self.mouse_pos[1] < pivot_r2d[1]:  # if on the bottom side
-                        delta_y = -delta_y
-
-                    if self.on_edge_center:  # scale only one axis
-
-                        scale_x = 1 + delta_x / size_x_v2d
-                        scale_y = 1 + delta_y / size_y_v2d
-
-                        if self.on_edge_center[0] == pivot_r2d[0]:
-                            vec_scale = Vector((1, scale_y, 0))
-                        else:
-                            vec_scale = Vector((scale_x, 1, 0))
-                    else:  # scale both axis
-                        if self.on_corner[0] == self.gp_data_bbox.min_x:
-                            delta_x = -delta_x
-                        if self.on_corner[1] == self.gp_data_bbox.min_y:
-                            delta_y = -delta_y
-
-                        scale_x = 1 + delta_x / size_x_v2d / 2
-                        scale_y = 1 + delta_y / size_y_v2d / 2
-
-                        unit_scale = scale_x if abs(delta_x) > abs(delta_y) else scale_y  # scale by the larger delta
-                        vec_scale = Vector((unit_scale, unit_scale, 0)) if event.shift else Vector(
-                            (scale_x, scale_y, 0))
-
-                    self.gp_data_builder.scale_active(vec_scale, pivot, space='v2d')
-                # rotate mode
-                elif self.on_corner_extrude:
-                    pivot = self.gp_data_bbox.center
-                    pivot_r2d = self.gp_data_bbox.center_r2d
-
-                    vec_1 = (Vector(self.mouse_pos) - Vector(pivot_r2d))
-                    vec_2 = Vector(self.mouse_pos_prev) - Vector(pivot_r2d)
-                    # clockwise or counterclockwise
-                    angle = VecTool.rotation_direction(vec_1, vec_2) * vec_1.angle(vec_2)
-                    self.gp_data_builder.rotate_active(degrees(angle), pivot)
-
-
-                # move mode
-                elif self.in_drag_area:  # move only when in drag area
-                    self.gp_data_builder.move_active(self.delta_vec, space='v2d')
-
-        # handle key press
-        if event.type in {"Q", "E"} and event.value == 'PRESS':  # set active layer
-            if event.type == "Q":
-                self.gp_data_builder.active_next_layer()
-            elif event.type == "E":
-                self.gp_data_builder.active_prev_layer()
-            self.update_gp_data(context)
-
-        self._handle_key_press(event)
-        self._handle_timer(context, event)
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
 
-    def _handle_timer(self, context, event):
-        if event.type == 'TIMER':
-            if not self.is_pressing:
-                self.is_dragging = False
+    def _finish(self, context):
+        bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
+        context.window.cursor_modal_restore()
+        context.area.tag_redraw()
+        if self.press_timer:
+            context.window_manager.event_timer_remove(self.press_timer)
+            self.press_timer = None
 
-                return {"RUNNING_MODAL"}
-            if self.press_value in {"UP_ARROW", "LEFT_ARROW", "DOWN_ARROW", "RIGHT_ARROW"}:
-                DIS: int = 10
-                m: dict = {
-                    "UP_ARROW": (0, DIS),
-                    "LEFT_ARROW": (-DIS, 0),
-                    "DOWN_ARROW": (0, -DIS),
-                    "RIGHT_ARROW": (DIS, 0),
-                }
-                self.gp_data_builder.move_active(m[self.press_value], space='v2d')
-                self.update_gp_data(context)
-            elif self.press_value == "LEFTMOUSE":
-                self.is_dragging = True
-
-    def _handle_cancel(self, context, event) -> bool:
+    def _handle_finish(self, context, event) -> bool:
         if event.type in {'ESC', 'RIGHTMOUSE'}:
-            bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
-            context.window.cursor_modal_restore()
-            context.area.tag_redraw()
-            if self.press_timer:
-                context.window_manager.event_timer_remove(self.press_timer)
+            self._finish(context)
             return True
 
     def _handle_pass_through(self, event) -> bool:
         if event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE", "MIDDLEMOUSE"}:
             return True
         return False
-
-    def _handle_key_press(self, event):
-        if event.value == 'PRESS':
-            self.is_pressing = True
-            self.press_value = event.type
-        if event.value == 'RELEASE':
-            self.is_pressing = False
-
-    def detect_mouse_pos(self):
-        self.on_edge_center = self.gp_data_bbox.near_edge_center(self.mouse_pos, radius=20)
-        self.on_corner = self.gp_data_bbox.near_corners(self.mouse_pos, radius=20)
-        self.on_corner_extrude = self.gp_data_bbox.near_corners_extrude(self.mouse_pos, extrude=20, radius=15)
-        self.in_drag_area = self.gp_data_bbox.in_area(self.mouse_pos, feather=0)
-
-    def update_gp_data(self, context):
-        self.gp_data_bbox.calc_active_layer_bbox()
-        _ = self.gp_data_bbox.bbox_points_3d  # update the 3d bbox
-        context.area.tag_redraw()
 
 
 class ENN_PT_gn_edit_panel(bpy.types.Panel):
@@ -411,8 +318,35 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
         box.operator(ENN_OT_gp_modal.bl_idname)
 
 
+class ENN_TL_grease_pencil_tool(bpy.types.WorkSpaceTool):
+    bl_idname = "enn.grease_pencil_tool"
+    bL_idname_fallback = "node.select_box"
+    bl_space_type = 'NODE_EDITOR'
+    bl_context_mode = None
+    bl_label = "Draw"
+    bl_icon = "ops.gpencil.stroke_new"
+    # bl_widget = "PH_GZG_place_tool"
+    bl_keymap = (
+        (ENN_OT_gp_set_active_layer.bl_idname,
+         {"type": "LEFTMOUSE", "value": "CLICK"},
+         {"properties": []},  # [("deselect_all", True)]
+         ),
+
+        (ENN_OT_gp_modal.bl_idname,
+         {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False},
+         {"properties": []}),
+
+        (ENN_OT_gp_modal.bl_idname,
+         {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": True},
+         {"properties": []}),
+    )
+
+    def draw_settings(context, layout, tool):
+        pass
+
+
 def register():
-    from bpy.utils import register_class
+    from bpy.utils import register_class, register_tool
 
     bpy.types.WindowManager.enn_gp_size = bpy.props.IntProperty(name="Size", default=100, subtype='PIXEL')
     bpy.types.WindowManager.enn_gp_add_type = bpy.props.EnumProperty(items=lambda self, context: enum_add_type_items())
@@ -423,18 +357,24 @@ def register():
     bpy.types.WindowManager.enn_gp_move_dis = bpy.props.IntProperty(name='Distance', default=50)
     register_class(ENN_OT_add_gp)
     register_class(ENN_OT_add_gp_modal)
+    register_class(ENN_OT_gp_set_active_layer)
     register_class(ENN_OT_move_gp)
     register_class(ENN_OT_rotate_gp)
     register_class(ENN_OT_gp_modal)
     register_class(ENN_PT_gn_edit_panel)
 
+    register_tool(ENN_TL_grease_pencil_tool, separator=True)
+
 
 def unregister():
-    from bpy.utils import unregister_class
+    from bpy.utils import unregister_class, unregister_tool
 
     unregister_class(ENN_OT_add_gp)
     unregister_class(ENN_OT_add_gp_modal)
+    unregister_class(ENN_OT_gp_set_active_layer)
     unregister_class(ENN_OT_move_gp)
     unregister_class(ENN_OT_rotate_gp)
     unregister_class(ENN_OT_gp_modal)
     unregister_class(ENN_PT_gn_edit_panel)
+
+    unregister_tool(ENN_TL_grease_pencil_tool)
