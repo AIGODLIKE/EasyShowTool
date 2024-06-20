@@ -1,6 +1,7 @@
 import bpy
 from bpy.props import StringProperty, IntProperty, PointerProperty, FloatVectorProperty
 from mathutils import Vector
+from typing import ClassVar
 
 from .model.utils import VecTool
 from .model.model_drag import DragGreasePencilModel
@@ -177,54 +178,96 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
     bl_idname = "enn.gp_set_active_layer"
     bl_label = "Set Active Layer"
     bl_description = "Set the active layer of the Grease Pencil Object"
-    bl_options = {'UNDO'}
+    # bl_options = {'UNDO'}
 
-    mouse_pos: tuple[int, int] = (0, 0)
+    draw_handle: ClassVar = None
+    drag_model: ClassVar[DragGreasePencilModel] = None
+    is_dragging: bool = False
+    # call stop
+    stop: ClassVar[bool] = False
 
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context)
 
     def invoke(self, context, event):
-        self.mouse_pos = event.mouse_region_x, event.mouse_region_y
-        return self.execute(context)
-
-    def execute(self, context):
+        self.__class__.stop = False
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
         if not gp_data: return {'CANCELLED'}
         bbox = GreasePencilLayerBBox(gp_data)
         MouseDetectModel(bbox)
 
-        layer_index = GreasePencilLayers.in_layer_area(gp_data, self.mouse_pos)
+        try:
+            layer_index = GreasePencilLayers.in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
+        except ReferenceError:  # ctrl z
+            layer_index = None
         if layer_index is None:
             return {'CANCELLED'}
         else:
             bbox.active_layer_index = layer_index
             bbox.calc_active_layer_bbox()
+            drag_model = DragGreasePencilModel(gp_data_bbox=bbox,
+                                               gp_data_builder=BuildGreasePencilData(gp_data), )
+            self.__class__.drag_model = drag_model
+            MouseDetectModel(self.drag_model.gp_data_bbox)
+
+            self.add_draw_handle(context)
+        context.window_manager.modal_handler_add(self)
         context.area.tag_redraw()
+        return {'RUNNING_MODAL'}
 
-        return {'FINISHED'}
+    def remove_draw_handle(self):
+        if self.draw_handle:
+            bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
+            self.__class__.draw_handle = None
+
+    def add_draw_handle(self, context):
+        from .draw_utils import draw_callback_px
+        self.remove_draw_handle()
+        self.__class__.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px,
+                                                                                (self, context),
+                                                                                'WINDOW', 'POST_PIXEL')
+
+    def modal(self, context, event):
+        if event.type == 'MOUSEMOVE':
+            try:
+                self.drag_model.update_mouse_pos(context, event)
+                self.drag_model.detect()
+            except ReferenceError:
+                self.__class__.stop = True
+        # active tool is not drag tool
+        if self.stop or event.type in {'ESC', 'RIGHTMOUSE'}:
+            self.remove_draw_handle()
+            context.area.tag_redraw()
+            return {'FINISHED'}
+        context.area.tag_redraw()
+        return {'PASS_THROUGH'}
 
 
-class ENN_OT_gp_modal(bpy.types.Operator):
-    bl_idname = "enn.gp_modal"
+#
+# from bl_ui.space_toolsystem_common import (
+#         ToolSelectPanelHelper,
+#         ToolDef,
+#     )
+#
+# def get_active_tool(space_type = 'NODE_EDITOR',context_mode = None):
+#     cls = ToolSelectPanelHelper._tool_class_from_space_type(space_type)
+#     tools = cls._tools[context_mode]
+#     return
+
+
+class ENN_OT_gp_drag_modal(bpy.types.Operator):
+    bl_idname = "enn.gp_drag_modal"
     bl_label = "Transform"
-    bl_description = "Move the selected Grease Pencil Object"
+    bl_description = "Move the active Grease Pencil Layer"
     bl_options = {'UNDO'}
 
     # model
     drag_model: DragGreasePencilModel = None
-    # state
     draw_handle = None  # draw handle
-    press_timer = None  # timer for detect long press
-
-    is_pressing: bool = False
-    press_value: str = None  # key press
-
-    is_dragging: bool = False  # dragging
-
-    # debug
+    # is dragging
+    is_dragging: bool = False
 
     @classmethod
     def poll(cls, context):
@@ -236,45 +279,35 @@ class ENN_OT_gp_modal(bpy.types.Operator):
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
 
         self.drag_model = DragGreasePencilModel(gp_data_bbox=GreasePencilLayerBBox(gp_data),
-                                                gp_data_builder=BuildGreasePencilData(gp_data),
-                                                mouse_pos=(0, 0),
-                                                mouse_pos_prev=(0, 0),
-                                                delta_vec=Vector((0, 0)))
+                                                gp_data_builder=BuildGreasePencilData(gp_data))
         MouseDetectModel(self.drag_model.gp_data_bbox)
 
-        self.press_timer = context.window_manager.event_timer_add(0.05, window=context.window)
         self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px, (self, context), 'WINDOW',
                                                                       'POST_PIXEL')
-        self.drag_model.update_gp_data(context)
-
         context.window_manager.modal_handler_add(self)
-
+        self.is_dragging = True
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
-        # handle drag
+        if event.type == 'MOUSEMOVE':
+            self.is_dragging = True
+            self.drag_model.detect()
+            self.drag_model.handle_drag(context, event)
+
         if self._handle_pass_through(event):
             return {'PASS_THROUGH'}
         if self._handle_finish(context, event):
             return {'FINISHED'}
-
-        if event.type == 'MOUSEMOVE':
-            self.drag_model.handle_mouse_move_event(context, event)
-            self.drag_model.handle_drag(event)
 
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
 
     def _finish(self, context):
         bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
-        context.window.cursor_modal_restore()
         context.area.tag_redraw()
-        if self.press_timer:
-            context.window_manager.event_timer_remove(self.press_timer)
-            self.press_timer = None
 
     def _handle_finish(self, context, event) -> bool:
-        if event.type in {'ESC', 'RIGHTMOUSE'}:
+        if event.type in {'ESC', 'RIGHTMOUSE'} or (event.type == 'LEFTMOUSE' and event.value == 'RELEASE'):
             self._finish(context)
             return True
 
@@ -315,7 +348,7 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
         layout.separator()
         box = layout.box()
         box.label(text="Move Active Layer Modal")
-        box.operator(ENN_OT_gp_modal.bl_idname)
+        box.operator(ENN_OT_gp_drag_modal.bl_idname)
 
 
 class ENN_TL_grease_pencil_tool(bpy.types.WorkSpaceTool):
@@ -332,13 +365,14 @@ class ENN_TL_grease_pencil_tool(bpy.types.WorkSpaceTool):
          {"properties": []},  # [("deselect_all", True)]
          ),
 
-        (ENN_OT_gp_modal.bl_idname,
+        (ENN_OT_gp_drag_modal.bl_idname,
          {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False},
          {"properties": []}),
 
-        (ENN_OT_gp_modal.bl_idname,
+        (ENN_OT_gp_drag_modal.bl_idname,
          {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": True},
          {"properties": []}),
+
     )
 
     def draw_settings(context, layout, tool):
@@ -360,7 +394,7 @@ def register():
     register_class(ENN_OT_gp_set_active_layer)
     register_class(ENN_OT_move_gp)
     register_class(ENN_OT_rotate_gp)
-    register_class(ENN_OT_gp_modal)
+    register_class(ENN_OT_gp_drag_modal)
     register_class(ENN_PT_gn_edit_panel)
 
     register_tool(ENN_TL_grease_pencil_tool, separator=True)
@@ -374,7 +408,7 @@ def unregister():
     unregister_class(ENN_OT_gp_set_active_layer)
     unregister_class(ENN_OT_move_gp)
     unregister_class(ENN_OT_rotate_gp)
-    unregister_class(ENN_OT_gp_modal)
+    unregister_class(ENN_OT_gp_drag_modal)
     unregister_class(ENN_PT_gn_edit_panel)
 
     unregister_tool(ENN_TL_grease_pencil_tool)

@@ -16,20 +16,20 @@ class MouseDetectModel:
         self.bbox_model = bbox_model
         self.bbox_model.detect_model = self
 
-    @staticmethod
-    def is_point_in_area(pos: Union[Sequence, Vector], points: list[Union[Sequence, Vector]],
-                         feather: int = 10) -> bool:
-        """Check if the point is in the area defined by the top left and bottom right points."""
-        top_left, top_right, bottom_left, bottom_right = points
-        x, y = pos
-        if feather != 0:
-            top_left = (top_left[0] - feather, top_left[1] + feather)
-            top_right = (top_right[0] + feather, top_right[1] + feather)
-            bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
-
-        if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
-            return True
-        return False
+    # @staticmethod
+    # def is_point_in_area(pos: Union[Sequence, Vector], points: list[Union[Sequence, Vector]],
+    #                      feather: int = 10) -> bool:
+    #     """Check if the point is in the area defined by the top left and bottom right points."""
+    #     top_left, top_right, bottom_left, bottom_right = points
+    #     x, y = pos
+    #     if feather != 0:
+    #         top_left = (top_left[0] - feather, top_left[1] + feather)
+    #         top_right = (top_right[0] + feather, top_right[1] + feather)
+    #         bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
+    #
+    #     if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
+    #         return True
+    #     return False
 
     @staticmethod
     def is_point_near_point(pos: Union[Sequence, Vector], point: Union[Sequence, Vector], distance: int = 20) -> bool:
@@ -43,8 +43,18 @@ class MouseDetectModel:
         :param feather: the feather to expand the area, unit: pixel
         :return: True if the pos is in the area, False otherwise
         """
+        x, y = pos
         points = self.bbox_model.bbox_points_r2d if space == 'r2d' else self.bbox_model.bbox_points_v2d
-        return self.is_point_in_area(pos, points, feather)
+        top_left, top_right, bottom_left, bottom_right = points
+
+        if feather != 0:
+            top_left = (top_left[0] - feather, top_left[1] + feather)
+            top_right = (top_right[0] + feather, top_right[1] + feather)
+            bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
+
+        if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
+            return True
+        return False
 
     def near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
             Union[Vector, None]:

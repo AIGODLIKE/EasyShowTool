@@ -9,9 +9,9 @@ class DragGreasePencilModel:
     gp_data_bbox: GreasePencilLayerBBox
     gp_data_builder: BuildGreasePencilData
     # mouse
-    mouse_pos: tuple[int, int]
-    mouse_pos_prev: tuple[int, int]
-    delta_vec: Vector
+    mouse_pos: tuple[int, int] = (0, 0)
+    mouse_pos_prev: tuple[int, int] = (0, 0)
+    delta_vec: Vector = Vector((0, 0))
     # state / on points
     on_edge_center: Vector = None
     on_corner: Vector = None
@@ -19,20 +19,21 @@ class DragGreasePencilModel:
     # state
     in_drag_area: bool = False
 
-    def handle_drag(self, event):
+    def handle_drag(self, context, event):
         """Handle the drag event in the modal."""
+        self.update_mouse_pos(context, event)
         # scale mode
         if self.on_edge_center or self.on_corner:  # scale only when near point
             self.on_drag_scale(event)
-
         # rotate mode
         elif self.on_corner_extrude:
             self.on_drag_rotate()
         # move mode
         elif self.in_drag_area:
+            self.update_gp_data(context)
             self.on_drag_move()
 
-    def handle_mouse_move_event(self, context, event):
+    def update_mouse_pos(self, context, event):
         """Handle the mouse move event in the modal."""
         self.mouse_pos_prev = self.mouse_pos
         self.mouse_pos = event.mouse_region_x, event.mouse_region_y
@@ -93,13 +94,13 @@ class DragGreasePencilModel:
         # move only when in drag area
         self.gp_data_builder.move_active(self.delta_vec, space='v2d')
 
-    def update_mouse_pos(self):
+    def detect(self):
         """Update the mouse position and the near points."""
-        detect = self.gp_data_bbox.detect_model
-        self.on_edge_center = detect.near_edge_center(self.mouse_pos, radius=20)
-        self.on_corner = detect.near_corners(self.mouse_pos, radius=20)
-        self.on_corner_extrude = detect.near_corners_extrude(self.mouse_pos, extrude=20, radius=15)
-        self.in_drag_area = detect.in_area(self.mouse_pos, feather=0)
+        detect_model = self.gp_data_bbox.detect_model
+        self.on_edge_center = detect_model.near_edge_center(self.mouse_pos, radius=20)
+        self.on_corner = detect_model.near_corners(self.mouse_pos, radius=20)
+        self.on_corner_extrude = detect_model.near_corners_extrude(self.mouse_pos, extrude=20, radius=15)
+        self.in_drag_area = detect_model.in_area(self.mouse_pos, feather=0)
 
     def update_gp_data(self, context):
         """Update the Grease Pencil Data."""

@@ -61,13 +61,16 @@ def draw_callback_px(self, context) -> None:
 
     if self.is_dragging:
         # draw the drag area
-        # color = (1, 1, 1, 0.2)
-        # shader.uniform_float("color", color)
-        # batch = batch_for_shader(shader, 'TRIS', {"pos": points}, indices=indices)
-        # batch.draw(shader)
+        color = (1, 1, 1, 0.2)
+        shader.uniform_float("color", color)
+        batch = batch_for_shader(shader, 'TRIS', {"pos": points}, indices=indices)
+        batch.draw(shader)
 
         # draw the bbox
-        color = (1, 1, 1, 0.5)
+        color = (0, 1, 0, 0.5)
         batch = batch_for_shader(shader, 'LINE_STRIP', {"pos": coords})
         shader.uniform_float("color", color)
         batch.draw(shader)
+
+    batch = batch_for_shader(shader, 'POINTS', {"pos": [drag_model.mouse_pos]})
+    batch.draw(shader)
