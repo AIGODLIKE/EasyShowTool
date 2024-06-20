@@ -237,6 +237,17 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         """Return the edge center points of the bounding box in region 2d space."""
         return tuple(map(DPI.v2d_2_r2d, self.edge_center_points_v2d))
 
+    def corner_extrude_points_r2d(self, extrude: int = 10) -> tuple[Union[tuple[float, float], Vector], ...]:
+        """Return the corner extrude points of the bounding box.
+        :param extrude: the extrude distance
+        this is not a property because it needs an extrude distance"""
+        points = self.bbox_points_r2d
+        extrude_vecs = [Vector((-extrude, extrude)), Vector((extrude, extrude)), Vector((-extrude, -extrude)),
+                        Vector((extrude, -extrude))]  # top_left, top_right, bottom_left, bottom_right
+        new_points = [Vector(point) + vec for point, vec in zip(points, extrude_vecs)]
+
+        return new_points
+
     @staticmethod
     def _calc_stroke_bbox(stroke: bpy.types.GPencilStroke) -> tuple[float, float, float, float]:
         """
@@ -328,7 +339,7 @@ class GreasePencilLayerBBox(GreasePencilProperty):
             return True
         return False
 
-    def near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 10, space: Literal['r2d', 'v2d'] = 'r2d') -> \
+    def near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
             Union[Vector, None]:
         """check if the pos is near the edge center of the area defined by the points
         :param pos: the position to check
@@ -344,7 +355,7 @@ class GreasePencilLayerBBox(GreasePencilProperty):
                 return vec_point
         return None
 
-    def near_corners(self, pos: Union[Sequence, Vector], radius: int = 10, space: Literal['r2d', 'v2d'] = 'r2d') -> \
+    def near_corners(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
             Union[Vector, None]:
         """check if the pos is near the corners of the area defined by the bounding box points
         :param pos: the position to check
@@ -358,6 +369,22 @@ class GreasePencilLayerBBox(GreasePencilProperty):
             vec_point = Vector(point)
             if (vec_pos - vec_point).length < radius:
                 return vec_point
+        return None
+
+    def near_corners_extrude(self, pos: Union[Sequence, Vector], extrude: int = 20, radius: int = 10) -> Union[
+        Vector, None]:
+
+        """check if the pos is near the the corner point extrude outward by 45 deg
+        :param pos: the position to check
+        :param extrude: the extrude distance
+        :param radius: the radius of the extrude point
+        :return: True if the pos is near the corners, False otherwise
+        """
+        vec_pos = Vector((pos[0], pos[1]))
+        points = self.corner_extrude_points_r2d(extrude)
+        for point in points:
+            if (vec_pos - point).length < radius:
+                return point
         return None
 
 
@@ -453,7 +480,7 @@ class CreateGreasePencilData(GreasePencilCache):
         CreateGreasePencilData.convert_2_gp()
 
         gp_obj = bpy.context.object
-        gp_data = gp_obj.data
+        gp_data:bpy.types.GreasePencil = gp_obj.data
         layer = gp_data.layers[0]
         layer.info = text
         CreateGreasePencilData.del_later(gp_obj)
@@ -618,7 +645,6 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """Scale the active grease pencil layer."""
         return self.scale(self.active_layer_name, scale, pivot)
 
-    # TODO: add support for 2D view space pivot point.
     def scale(self, layer_name_or_index: Union[str, int], scale: Vector, pivot: Vector,
               space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Scale the grease pencil data.

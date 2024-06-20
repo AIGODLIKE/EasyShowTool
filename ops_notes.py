@@ -79,7 +79,7 @@ class ENN_OT_edit_note(bpy.types.Operator):
 
         bpy.ops.screen.userpref_show("INVOKE_AREA")
         screen = bpy.context.window_manager.windows[-1].screen
-        area = screen.areas[0]
+        area: bpy.types.Area = screen.areas[0]
         area.ui_type = 'TEXT_EDITOR'
         area.spaces[0].text = text
         area.spaces[0].show_syntax_highlight = False
@@ -94,12 +94,17 @@ def header_menu(self, context):
 
 
 def register():
-    bpy.utils.register_class(ENN_OT_add_note)
-    bpy.utils.register_class(ENN_OT_edit_note)
+    from bpy.utils import register_class
+
+    register_class(ENN_OT_add_note)
+    register_class(ENN_OT_edit_note)
+
     bpy.types.NODE_HT_header.append(header_menu)
 
 
 def unregister():
+    from bpy.utils import unregister_class
     bpy.types.NODE_HT_header.remove(header_menu)
-    bpy.utils.unregister_class(ENN_OT_add_note)
-    bpy.utils.unregister_class(ENN_OT_edit_note)
+
+    unregister_class(ENN_OT_add_note)
+    unregister_class(ENN_OT_edit_note)

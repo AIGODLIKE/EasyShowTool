@@ -1,12 +1,22 @@
 import gpu
+import gpu.state
+import gpu.shader
 import bpy
 from gpu_extras.batch import batch_for_shader
+from gpu_extras.presets import draw_circle_2d
+
 from mathutils import Vector
 from typing import Sequence, Union
 from .gp_utils import GreasePencilLayerBBox
 
 shader = gpu.shader.from_builtin('UNIFORM_COLOR')
 indices = GreasePencilLayerBBox.indices
+
+
+# import draw_circle
+def draw_cursor():
+    # 2D drawing code here
+    pass
 
 
 def draw_callback_px(self, context) -> None:
@@ -44,6 +54,8 @@ def draw_callback_px(self, context) -> None:
             shader.uniform_float("color", color_hover)
             batch = batch_for_shader(shader, 'POINTS', {"pos": points})
             batch.draw(shader)
+        if self.on_corner_extrude:
+            draw_circle_2d(self.on_corner_extrude, (1, 0, 0, 0.8), radius=20, segments=32)
 
     if self.is_dragging:
         # draw the drag area
