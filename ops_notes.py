@@ -68,6 +68,8 @@ class ENN_OT_edit_note(bpy.types.Operator):
             return False
         if context.space_data.edit_tree.nodes.active.text is None:
             return False
+        if context.space_data.edit_tree.nodes.active.select is False:
+            return False
         return True
 
     def execute(self, context):
