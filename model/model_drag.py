@@ -1,7 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from mathutils import Vector
 from math import degrees
 from .model_gp import VecTool, GreasePencilLayerBBox, BuildGreasePencilData
+from ..public_path import get_pref
 
 
 @dataclass
@@ -18,6 +19,10 @@ class DragGreasePencilModel:
     on_corner_extrude: Vector = None
     # state
     in_drag_area: bool = False
+    # pref, detect edge
+    d_edge: int = field(default_factory=lambda: get_pref().gp_detect_edge_px)
+    d_corner: int = field(default_factory=lambda: get_pref().gp_detect_corner_px)
+    d_rotate: int = field(default_factory=lambda: get_pref().gp_detect_rotate_px)
 
     def handle_drag(self, context, event):
         """Handle the drag event in the modal."""
@@ -94,9 +99,9 @@ class DragGreasePencilModel:
     def detect_near_widgets(self):
         """Detect the near points and areas of the Grease Pencil Object."""
         detect_model = self.gp_data_bbox.detect_model
-        self.on_edge_center = detect_model.near_edge_center(self.mouse_pos, radius=20)
-        self.on_corner = detect_model.near_corners(self.mouse_pos, radius=20)
-        self.on_corner_extrude = detect_model.near_corners_extrude(self.mouse_pos, extrude=20, radius=15)
+        self.on_edge_center = detect_model.near_edge_center(self.mouse_pos, radius=self.d_edge)
+        self.on_corner = detect_model.near_corners(self.mouse_pos, radius=self.d_corner)
+        self.on_corner_extrude = detect_model.near_corners_extrude(self.mouse_pos, extrude=20, radius=self.d_rotate)
         self.in_drag_area = detect_model.in_area(self.mouse_pos, feather=0)
 
     def update_gp_data(self, context):

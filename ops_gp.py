@@ -178,8 +178,10 @@ class ENN_OT_rotate_gp(bpy.types.Operator):
         context.area.tag_redraw()
         return {'FINISHED'}
 
+class DragProperty:
+    is_dragging: ClassVar[bool] = False
 
-class ENN_OT_gp_set_active_layer(bpy.types.Operator):
+class ENN_OT_gp_set_active_layer(bpy.types.Operator,DragProperty):
     bl_idname = "enn.gp_set_active_layer"
     bl_label = "Set Active Layer"
     bl_description = "Set the active layer of the Grease Pencil Object"
@@ -187,7 +189,6 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
 
     draw_handle: ClassVar = None
     drag_model: ClassVar[DragGreasePencilModel] = None
-    is_dragging: bool = False
     # call stop
     stop: ClassVar[bool] = False
 
@@ -242,7 +243,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
             except ReferenceError:
                 self.__class__.stop = True
         # active tool is not drag tool
-        if self.stop or event.type in {'ESC', 'RIGHTMOUSE'}:
+        if self.stop or event.type in {'ESC', 'RIGHTMOUSE'} or self.is_dragging:
             self.remove_draw_handle()
             context.area.tag_redraw()
             return {'FINISHED'}
@@ -262,7 +263,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
 #     return
 
 
-class ENN_OT_gp_drag_modal(bpy.types.Operator):
+class ENN_OT_gp_drag_modal(bpy.types.Operator,DragProperty):
     bl_idname = "enn.gp_drag_modal"
     bl_label = "Transform"
     bl_description = "Move the active Grease Pencil Layer"
@@ -272,7 +273,6 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
     drag_model: DragGreasePencilModel = None
     draw_handle = None  # draw handle
     # is dragging
-    is_dragging: bool = False
     drag_init: bool = False
 
     @classmethod
@@ -292,13 +292,14 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
                                                                       'POST_PIXEL')
         context.window_manager.modal_handler_add(self)
         self.drag_model.update_mouse_pos(context, event)
-        self.is_dragging = True
+        self.__class__.is_dragging = True
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
             self.drag_model.update_mouse_pos(context, event)
             if not self.drag_init:
+                self.__class__.is_dragging = True
                 self.drag_model.detect_near_widgets()
                 self.drag_init = True
             self.drag_model.handle_drag(context, event)
@@ -312,6 +313,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def _finish(self, context):
+        self.__class__.is_dragging = False
         bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
         context.area.tag_redraw()
 
