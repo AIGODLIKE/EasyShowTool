@@ -163,9 +163,24 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         return self.max_x - self.min_x, self.max_y - self.min_y
 
     @property
+    def size_v2d(self) -> Vector:
+        """Return the 2d view size of the bounding box."""
+        return DPI.loc3d_2_v2d(self.size)
+
+    @property
     def center(self) -> tuple[float, float]:
         """Return the 3d center of the bounding box."""
         return (self.min_x + self.max_x) / 2, (self.min_y + self.max_y) / 2
+
+    @property
+    def center_v2d(self) -> Vector:
+        """Return the 2d view center of the bounding box."""
+        return DPI.loc3d_2_v2d(self.center)
+
+    @property
+    def center_r2d(self) -> Vector:
+        """Return the 2d region center of the bounding box."""
+        return DPI.v2d_2_r2d(self.center_v2d)
 
     @property
     def top_left(self) -> tuple[float, float]:
@@ -202,6 +217,25 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         """Return the bounding box points in region 2d space."""
 
         return tuple(map(DPI.v2d_2_r2d, self.bbox_points_v2d))
+
+    @property
+    def edge_center_points(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+        """Return the edge center points of the bounding box."""
+        top_center = (self.max_x + self.min_x) / 2, self.max_y
+        bottom_center = (self.max_x + self.min_x) / 2, self.min_y
+        left_center = self.min_x, (self.max_y + self.min_y) / 2
+        right_center = self.max_x, (self.max_y + self.min_y) / 2
+        return top_center, bottom_center, left_center, right_center
+
+    @property
+    def edge_center_points_v2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+        """Return the edge center points of the bounding box in node editor view."""
+        return tuple(map(DPI.loc3d_2_v2d, self.edge_center_points))
+
+    @property
+    def edge_center_points_r2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+        """Return the edge center points of the bounding box in region 2d space."""
+        return tuple(map(DPI.v2d_2_r2d, self.edge_center_points_v2d))
 
     @staticmethod
     def _calc_stroke_bbox(stroke: bpy.types.GPencilStroke) -> tuple[float, float, float, float]:
@@ -274,9 +308,9 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         self.min_y = min(y_list)
         self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
 
-    def in_area(self, pos: Union[Sequence, Vector], feather: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> bool:
+    def in_area(self, pos: Union[Sequence, Vector], feather: int = 10, space: Literal['r2d', 'v2d'] = 'r2d') -> bool:
         """check if the pos is in the area defined by the points
-        :param pos: the position to check, in v2d space
+        :param pos: the position to check, in v2d/r2d space
         :param points: the points defining the area
         :param feather: the feather to expand the area, unit: pixel
         :return: True if the pos is in the area, False otherwise
@@ -293,6 +327,38 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
             return True
         return False
+
+    def near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 10, space: Literal['r2d', 'v2d'] = 'r2d') -> \
+            Union[Vector, None]:
+        """check if the pos is near the edge center of the area defined by the points
+        :param pos: the position to check
+        :param points: the points defining the area
+        :param feather: the feather to expand the area, unit: pixel
+        :return: True if the pos is near the edge center, False otherwise
+        """
+        vec_pos = Vector((pos[0], pos[1]))
+        points = self.edge_center_points_r2d if space == 'r2d' else self.edge_center_points_v2d
+        for point in points:
+            vec_point = Vector(point)
+            if (vec_pos - vec_point).length < radius:
+                return vec_point
+        return None
+
+    def near_corners(self, pos: Union[Sequence, Vector], radius: int = 10, space: Literal['r2d', 'v2d'] = 'r2d') -> \
+            Union[Vector, None]:
+        """check if the pos is near the corners of the area defined by the bounding box points
+        :param pos: the position to check
+        :param points: the points defining the area
+        :param feather: the feather to expand the area, unit: pixel
+        :return: True if the pos is near the corners, False otherwise
+        """
+        vec_pos = Vector((pos[0], pos[1]))
+        points = self.bbox_points_r2d if space == 'r2d' else self.bbox_points_v2d
+        for point in points:
+            vec_point = Vector(point)
+            if (vec_pos - vec_point).length < radius:
+                return vec_point
+        return None
 
 
 @dataclass
@@ -548,8 +614,13 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
         return self
 
+    def scale_active(self, scale: Vector, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+        """Scale the active grease pencil layer."""
+        return self.scale(self.active_layer_name, scale, pivot)
+
     # TODO: add support for 2D view space pivot point.
-    def scale(self, layer_name_or_index: Union[str, int], scale: Vector, pivot: Vector) -> 'BuildGreasePencilData':
+    def scale(self, layer_name_or_index: Union[str, int], scale: Vector, pivot: Vector,
+              space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Scale the grease pencil data.
         The pivot point should be in 3D space.
         :param layer_name_or_index: The name or index of the layer.
@@ -558,9 +629,14 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
 
+        if space == 'v2d':
+            vec_pivot = DPI.v2d_2_loc3d(pivot)
+        else:
+            vec_pivot = pivot
+
         for frame in layer.frames:
             for stroke in frame.strokes:
-                self.edit._scale_stroke(stroke, scale, pivot)
+                self.edit._scale_stroke(stroke, scale, vec_pivot)
 
         return self
 
