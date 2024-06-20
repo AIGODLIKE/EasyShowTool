@@ -296,7 +296,6 @@ class ENN_OT_gp_modal(bpy.types.Operator):
         if event.type == 'TIMER':
             if not self.is_pressing:
                 self.is_dragging = False
-                self.in_drag_area = False
 
                 return {"RUNNING_MODAL"}
             if self.key_press in {"UP_ARROW", "LEFT_ARROW", "DOWN_ARROW", "RIGHT_ARROW"}:

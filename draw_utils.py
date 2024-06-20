@@ -31,18 +31,17 @@ def draw_callback_px(self, context) -> None:
         color = (1, 1, 1, 0.8)  # normal color
         color_hover = (1, 0, 0, 0.8)
 
+        if self.in_drag_area:
+            shader.uniform_float("color", color)
+            batch = batch_for_shader(shader, 'POINTS', {"pos": points})
+            batch.draw(shader)
         if self.on_edge_center:
             edge_points = gp_data_bbox.edge_center_points_r2d
             shader.uniform_float("color", color_hover)
             batch = batch_for_shader(shader, 'POINTS', {"pos": edge_points})
             batch.draw(shader)
-
         if self.on_corner:
             shader.uniform_float("color", color_hover)
-            batch = batch_for_shader(shader, 'POINTS', {"pos": points})
-            batch.draw(shader)
-        elif self.in_drag_area:
-            shader.uniform_float("color", color)
             batch = batch_for_shader(shader, 'POINTS', {"pos": points})
             batch.draw(shader)
 
