@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from mathutils import Vector
 from math import degrees
+from typing import Literal
 from .model_gp import VecTool, GreasePencilLayerBBox, BuildGreasePencilData
 from ..public_path import get_pref
 
@@ -23,6 +24,9 @@ class DragGreasePencilModel:
     d_edge: int = field(default_factory=lambda: get_pref().gp_detect_edge_px)
     d_corner: int = field(default_factory=lambda: get_pref().gp_detect_corner_px)
     d_rotate: int = field(default_factory=lambda: get_pref().gp_detect_rotate_px)
+    # snap
+    snap_degree: int = field(default_factory=lambda: get_pref().gp_snap_degree)
+    delta_degree: float = 0
 
     def handle_drag(self, context, event):
         """Handle the drag event in the modal."""
@@ -31,7 +35,7 @@ class DragGreasePencilModel:
             self.on_drag_scale(event)
         # rotate mode
         elif self.on_corner_extrude:
-            self.on_drag_rotate()
+            self.on_drag_rotate(event)
         # move mode
         elif self.in_drag_area:
             self.on_drag_move()
@@ -81,7 +85,7 @@ class DragGreasePencilModel:
 
         self.gp_data_builder.scale_active(vec_scale, pivot, space='v2d')
 
-    def on_drag_rotate(self):
+    def on_drag_rotate(self, event):
         """Rotate the active layer of the Grease Pencil Object when near the corner extrude point."""
         pivot = self.gp_data_bbox.center
         pivot_r2d = self.gp_data_bbox.center_r2d
@@ -89,8 +93,17 @@ class DragGreasePencilModel:
         vec_1 = (Vector(self.mouse_pos) - Vector(pivot_r2d))
         vec_2 = Vector(self.mouse_pos_prev) - Vector(pivot_r2d)
         # clockwise or counterclockwise
-        angle = VecTool.rotation_direction(vec_1, vec_2) * vec_1.angle(vec_2)
-        self.gp_data_builder.rotate_active(degrees(angle), pivot)
+        inverse: Literal[1, -1] = VecTool.rotation_direction(vec_1, vec_2)
+        angle = inverse * vec_1.angle(vec_2)
+        degree = degrees(angle)
+        # snap
+        if not event.shift:
+            self.gp_data_builder.rotate_active(degree, pivot)
+        else:
+            self.delta_degree += abs(degree)
+            if self.delta_degree > self.snap_degree:
+                self.delta_degree = 0
+                self.gp_data_builder.rotate_active(self.snap_degree * inverse, pivot)
 
     def on_drag_move(self):
         # move only when in drag area

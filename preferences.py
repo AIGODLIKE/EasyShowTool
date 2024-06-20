@@ -17,6 +17,8 @@ class Preference(bpy.types.AddonPreferences):
     gp_color_hover: FloatVectorProperty(name='Color Hover', default=(1, 1, 0, 0.8), subtype='COLOR', size=4)
     gp_color_area: FloatVectorProperty(name='Color Area', default=(1, 1, 1, 0.2), subtype='COLOR', size=4)
 
+    gp_snap_degree: IntProperty(name='Snap Degree',default=15)
+
     gp_draw_line_width: IntProperty(default=1, name='Line Width')
 
     gp_draw_drag: BoolProperty(default=False, name='Drag')
@@ -36,6 +38,11 @@ class Preference(bpy.types.AddonPreferences):
         box.prop(self, 'note_width')
         box.prop(self, 'note_height')
         box.prop(self, 'note_default')
+
+        box = layout.box()
+        box.use_property_split = True
+        box.label(text="Grease Pencil Tool")
+        box.prop(self, 'gp_snap_degree')
 
         box = layout.box()
         box.use_property_split = True
