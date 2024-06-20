@@ -39,7 +39,7 @@ def draw_callback_px(self, context) -> None:
         batch.draw(shader)
 
         color = (1, 1, 1, 0.8)  # normal color
-        color_hover = (1, 0, 0, 0.8)
+        color_hover = (1, 1, 0, 0.8)
 
         if self.in_drag_area:
             shader.uniform_float("color", color)
@@ -54,8 +54,9 @@ def draw_callback_px(self, context) -> None:
             shader.uniform_float("color", color_hover)
             batch = batch_for_shader(shader, 'POINTS', {"pos": points})
             batch.draw(shader)
-        if self.on_corner_extrude:
-            draw_circle_2d(self.on_corner_extrude, (1, 0, 0, 0.8), radius=20, segments=32)
+        elif self.on_corner_extrude:
+            draw_circle_2d(self.on_corner_extrude, (1, 0, 0, 0.8), radius=15, segments=32)
+
 
     if self.is_dragging:
         # draw the drag area
