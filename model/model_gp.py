@@ -45,7 +45,7 @@ class MouseDetectModel:
         return False
 
     def near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
-            Union[Vector, None]:
+            Union[tuple[Vector, int], tuple[None, None]]:
         """check if the pos is near the edge center of the area defined by the points
         :param pos: the position to check
         :param points: the points defining the area
@@ -54,14 +54,14 @@ class MouseDetectModel:
         """
         vec_pos = Vector((pos[0], pos[1]))
         points = self.bbox_model.edge_center_points_r2d if space == 'r2d' else self.bbox_model.edge_center_points_v2d
-        for point in points:
+        for i, point in enumerate(points):
             vec_point = Vector(point)
             if (vec_pos - vec_point).length < radius:
-                return vec_point
-        return None
+                return vec_point, i
+        return None, None
 
     def near_corners(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
-            Union[Vector, None]:
+            Union[tuple[Vector, int], tuple[None, None]]:
         """check if the pos is near the corners of the area defined by the bounding box points
         :param pos: the position to check
         :param points: the points defining the area
@@ -70,16 +70,16 @@ class MouseDetectModel:
         """
         vec_pos = Vector((pos[0], pos[1]))
         points = self.bbox_model.bbox_points_r2d if space == 'r2d' else self.bbox_model.bbox_points_v2d
-        for point in points:
+        for i, point in enumerate(points):
             vec_point = Vector(point)
             if (vec_pos - vec_point).length < radius:
-                return vec_point
-        return None
+                return vec_point, i
+        return None, None
 
     def near_corners_extrude(self, pos: Union[Sequence, Vector], extrude: int = 15, radius: int = 15) -> Union[
-        Vector, None]:
+        tuple[Vector, int], tuple[None, None]]:
 
-        """check if the pos is near the the corner point extrude outward by 45 deg
+        """check if the pos is near the corner point extrude outward by 45 deg
         :param pos: the position to check
         :param extrude: the extrude distance
         :param radius: the radius of the extrude point
@@ -87,10 +87,10 @@ class MouseDetectModel:
         """
         vec_pos = Vector((pos[0], pos[1]))
         points = self.bbox_model.corner_extrude_points_r2d(extrude)
-        for point in points:
+        for i, point in enumerate(points):
             if (vec_pos - point).length < radius:
-                return point
-        return None
+                return point, i
+        return None, None
 
 
 @dataclass
@@ -225,6 +225,7 @@ class GreasePencilLayerBBox(GreasePencilProperty):
     @property
     def bbox_points_3d(self) -> tuple[tuple[float, float], ...]:
         """Return the bounding box points."""
+        # top_left, top_right, bottom_left, bottom_right
         return self.top_left, self.top_right, self.bottom_left, self.bottom_right
 
     @property
@@ -239,7 +240,7 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         return tuple(map(VecTool.v2d_2_r2d, self.bbox_points_v2d))
 
     @property
-    def edge_center_points(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def edge_center_points_3d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
         """Return the edge center points of the bounding box."""
         top_center = (self.max_x + self.min_x) / 2, self.max_y
         bottom_center = (self.max_x + self.min_x) / 2, self.min_y
@@ -250,7 +251,7 @@ class GreasePencilLayerBBox(GreasePencilProperty):
     @property
     def edge_center_points_v2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
         """Return the edge center points of the bounding box in node editor view."""
-        return tuple(map(VecTool.loc3d_2_v2d, self.edge_center_points))
+        return tuple(map(VecTool.loc3d_2_v2d, self.edge_center_points_3d))
 
     @property
     def edge_center_points_r2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:

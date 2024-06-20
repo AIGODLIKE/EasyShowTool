@@ -1,9 +1,90 @@
 from dataclasses import dataclass, field
 from mathutils import Vector
 from math import degrees
-from typing import Literal
+from typing import Literal, ClassVar
 from .model_gp import VecTool, GreasePencilLayerBBox, BuildGreasePencilData
 from ..public_path import get_pref
+
+
+@dataclass
+class Coord:
+    order: ClassVar[dict[int, str]] = {
+        0: 'top_left',
+        1: 'top_right',
+        2: 'bottom_left',
+        3: 'bottom_right',
+
+    }
+
+    opp_order: ClassVar[dict[str, str]] = {
+        'top_left': 'bottom_right',
+        'top_right': 'bottom_left',
+        'bottom_left': 'top_right',
+        'bottom_right': 'top_left',
+    }
+
+    @classmethod
+    def opposite(cls, point: int) -> int:
+        p = cls.order[point]
+        for k, v in cls.order.items():
+            if v == cls.opp_order[p]:
+                return k
+
+    @classmethod
+    def point_on_left(cls, point: int) -> bool:
+        return 'left' in cls.order[point]
+
+    @classmethod
+    def point_on_bottom(cls, point: int) -> bool:
+        return 'bottom' in cls.order[point]
+
+    @classmethod
+    def point_on_right(cls, point: int) -> bool:
+        return 'right' in cls.order[point]
+
+    @classmethod
+    def point_on_top(cls, point: int) -> bool:
+        return 'top' in cls.order[point]
+
+
+@dataclass
+class EdgeCenter:
+    order: ClassVar[dict[int, str]] = {
+        0: 'top_center',
+        1: 'bottom_center',
+        2: 'left_center',
+        3: 'right_center',
+    }
+
+    opp_order: ClassVar[dict[str, str]] = {
+        'top_center': 'bottom_center',
+        'bottom_center': 'top_center',
+        'left_center': 'right_center',
+        'right_center': 'left_center',
+    }
+
+    @classmethod
+    def opposite(cls, point: int) -> int:
+        p = cls.order[point]
+        for k, v in cls.order.items():
+            if v == cls.opp_order[p]:
+                return k
+
+    @classmethod
+    def point_on_left(cls, point: int) -> bool:
+        return 'left' in cls.order[point]
+
+    @classmethod
+    def point_on_bottom(cls, point: int) -> bool:
+        return 'bottom' in cls.order[point]
+
+    @classmethod
+    def point_on_right(cls, point: int) -> bool:
+        return 'right' in cls.order[point]
+
+    @classmethod
+    def point_on_top(cls, point: int) -> bool:
+        return 'top' in cls.order[point]
 
 
 @dataclass
@@ -16,8 +97,11 @@ class DragGreasePencilModel:
     delta_vec: Vector = Vector((0, 0))
     # state / on points
     on_edge_center: Vector = None
+    pt_edge_center: int = 0
     on_corner: Vector = None
+    pt_corner: int = 0
     on_corner_extrude: Vector = None
+    pt_corner_extrude: int = 0
     # state
     in_drag_area: bool = False
     # pref, detect edge
@@ -32,7 +116,10 @@ class DragGreasePencilModel:
         """Handle the drag event in the modal."""
         # scale mode
         if self.on_edge_center or self.on_corner:  # scale only when near point
-            self.on_drag_scale(event)
+            if event.ctrl:
+                self.on_drag_scale_both_side(event)
+            else:
+                self.on_drag_scale_one_side(event)
         # rotate mode
         elif self.on_corner_extrude:
             self.on_drag_rotate(event)
@@ -49,7 +136,7 @@ class DragGreasePencilModel:
         cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
         self.delta_vec = Vector((cur_v2d[0] - pre_v2d[0], cur_v2d[1] - pre_v2d[1]))
 
-    def on_drag_scale(self, event):
+    def on_drag_scale_both_side(self, event):
         """Scale the active layer of the Grease Pencil Object when near the edge center or corner."""
         pivot = self.gp_data_bbox.center
         pivot_r2d = self.gp_data_bbox.center_r2d
@@ -85,6 +172,50 @@ class DragGreasePencilModel:
 
         self.gp_data_builder.scale_active(vec_scale, pivot, space='v2d')
 
+    def on_drag_scale_one_side(self, event):
+        pivot_r2d = self.gp_data_bbox.center_r2d
+        delta_x, delta_y = (self.delta_vec).xy
+        size_x_v2d, size_y_v2d = self.gp_data_bbox.size_v2d
+        vec_scale = None
+        if self.on_corner:
+            points = self.gp_data_bbox.bbox_points_3d
+            pivot_index = Coord.opposite(self.pt_corner)
+            pivot = points[pivot_index]
+
+            if Coord.point_on_left(self.pt_corner):
+                delta_x = -delta_x
+            if Coord.point_on_bottom(self.pt_corner):
+                delta_y = -delta_y
+
+            scale_x = 1 + delta_x / size_x_v2d
+            scale_y = 1 + delta_y / size_y_v2d
+
+            vec_scale = Vector((scale_x, scale_y, 0))
+
+        elif self.on_edge_center:
+            points = self.gp_data_bbox.edge_center_points_3d
+            pivot_index = EdgeCenter.opposite(self.pt_edge_center)
+            pivot = points[pivot_index]
+
+            if EdgeCenter.point_on_left(self.pt_edge_center):
+                delta_x = -delta_x
+            if EdgeCenter.point_on_bottom(self.pt_edge_center):
+                delta_y = -delta_y
+
+            scale_x = 1 + delta_x / size_x_v2d
+            scale_y = 1 + delta_y / size_y_v2d
+
+            vec_scale = Vector((scale_x, scale_y, 0))
+
+        if vec_scale:
+            if event.shift:
+                if abs(delta_x) > abs(delta_y):
+                    vec_scale.y = vec_scale.x
+                else:
+                    vec_scale.x = vec_scale.y
+
+            self.gp_data_builder.scale_active(vec_scale, pivot, space='v2d')
+
     def on_drag_rotate(self, event):
         """Rotate the active layer of the Grease Pencil Object when near the corner extrude point."""
         pivot = self.gp_data_bbox.center
@@ -112,9 +243,10 @@ class DragGreasePencilModel:
     def detect_near_widgets(self):
         """Detect the near points and areas of the Grease Pencil Object."""
         detect_model = self.gp_data_bbox.detect_model
-        self.on_edge_center = detect_model.near_edge_center(self.mouse_pos, radius=self.d_edge)
-        self.on_corner = detect_model.near_corners(self.mouse_pos, radius=self.d_corner)
-        self.on_corner_extrude = detect_model.near_corners_extrude(self.mouse_pos, extrude=20, radius=self.d_rotate)
+        self.on_edge_center, self.pt_edge_center = detect_model.near_edge_center(self.mouse_pos, radius=self.d_edge)
+        self.on_corner, self.pt_corner = detect_model.near_corners(self.mouse_pos, radius=self.d_corner)
+        self.on_corner_extrude, self.pt_corner_extrude = detect_model.near_corners_extrude(self.mouse_pos, extrude=20,
+                                                                                           radius=self.d_rotate)
         self.in_drag_area = detect_model.in_area(self.mouse_pos, feather=0)
 
     def update_gp_data(self, context):
