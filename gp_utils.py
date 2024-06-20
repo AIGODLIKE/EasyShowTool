@@ -297,7 +297,7 @@ class GreasePencilLayerBBox(GreasePencilProperty):
 @dataclass
 class GreasePencilLayers(GreasePencilProperty):
     @staticmethod
-    def in_layer_area(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather: int = 20,
+    def in_layer_area(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather: int = 5,
                       space: Literal['r2d', 'v2d'] = 'r2d') -> Union[int, None]:
         """check if the pos is in the area defined by the points
         :param pos: the position to check, in v2d space
@@ -307,13 +307,13 @@ class GreasePencilLayers(GreasePencilProperty):
         """
         bboxs: list[GreasePencilLayerBBox] = [GreasePencilLayerBBox(gp_data, layer) for layer in
                                               gp_data.layers]
+        print(bboxs)
         for i, bbox in enumerate(bboxs):
             bbox.calc_bbox(i)
-
-        for bbox in bboxs.reverse():  # top first
             if bbox.in_area(pos, feather, space):
                 return bbox.last_layer_index
-        return False
+
+        return None
 
 
 class GreasePencilCache:

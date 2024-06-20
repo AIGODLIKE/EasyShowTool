@@ -54,12 +54,6 @@ def draw_callback_px(self, context) -> None:
     points = [top_left, top_right, bottom_left, bottom_right]
     coords = [top_left, top_right, bottom_right, bottom_left, top_left]
 
-    left_center = (top_left[0], (top_left[1] + bottom_left[1]) / 2)
-    right_center = (top_right[0], (top_right[1] + bottom_right[1]) / 2)
-    top_center = ((top_left[0] + top_right[0]) / 2, top_left[1])
-    bottom_center = ((bottom_left[0] + bottom_right[0]) / 2, bottom_left[1])
-    edge_centers = [left_center, right_center, top_center, bottom_center]
-
     if not self.is_dragging:
         # draw the bbox
         color = (1, 1, 1, 0.5)
@@ -71,14 +65,7 @@ def draw_callback_px(self, context) -> None:
         if in_area(self.mouse_pos, points):
             color = (1, 1, 1, 0.8)
             shader.uniform_float("color", color)
-            batch = batch_for_shader(shader, 'POINTS', {"pos": edge_centers})
-            batch.draw(shader)
-
-        # draw the corner points
-        if in_area(self.mouse_pos, points):
-            color = (1, 1, 1, 0.8)
-            shader.uniform_float("color", color)
-            batch = batch_for_shader(shader, 'POINTS', {"pos": edge_centers})
+            batch = batch_for_shader(shader, 'POINTS', {"pos": points})
             batch.draw(shader)
 
     if self.is_dragging:

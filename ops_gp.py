@@ -86,11 +86,11 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
 
     @classmethod
     def description(cls, context, property):
-        return cls.bl_description % cls.add_type
+        return cls.bl_description % property.add_type.title()
 
     def invoke(self, context, event):
         context.window_manager.modal_handler_add(self)
-        context.window.cursor_modal_set('PICK_AREA')
+        context.window.cursor_set('PICK_AREA')
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
@@ -109,7 +109,7 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
                                text=context.window_manager.enn_gp_text,
                                size=context.window_manager.enn_gp_size,
                                location=location)
-        elif self.add_type == 'MESH':
+        elif self.add_type == 'OBJECT':
             bpy.ops.enn.add_gp('EXEC_DEFAULT',
                                add_type='MESH',
                                size=context.window_manager.enn_gp_size,
@@ -184,7 +184,7 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
         self.gp_data_bbox.calc_active_layer_bbox()
         self.gp_data_builder = gpd_build(gp_data)
 
-        self.press_timer = context.window_manager.event_timer_add(0.05, window=context.window)
+        self.press_timer = context.window_manager.event_timer_add(0.1, window=context.window)
         self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px, (self, context), 'WINDOW',
                                                                       'POST_PIXEL')
         context.window_manager.modal_handler_add(self)
@@ -205,23 +205,30 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
             if self.press_timer:
                 context.window_manager.event_timer_remove(self.press_timer)
             return {'FINISHED'}
+
         # handle drag
         if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
             if context.region.type == 'WINDOW':
-                self.is_dragging = True
-                self.drag_start_pos = self.mouse_pos
+                self.is_pressing = True
+                layer_index = gpd_layers.in_layer_area(self.gp_data_builder.gp_data, self.mouse_pos)
+                if layer_index:
+                    self.gp_data_builder.active_layer_index = layer_index
+                    self.update_gp_data(context)
+                    self.in_drag_area = True
+
             elif context.region.type == 'UI':
                 return {'PASS_THROUGH'}
         if event.type == 'MOUSEMOVE':
             self.mouse_pos_prev = self.mouse_pos
             self.mouse_pos = event.mouse_region_x, event.mouse_region_y
-            if self.is_dragging:
+            if self.is_dragging and self.in_drag_area:
                 move_from = DPI.r2d_2_v2d(self.mouse_pos_prev)
                 move_to = DPI.r2d_2_v2d(self.mouse_pos)
                 self.delta_vec = Vector((move_to[0] - move_from[0], move_to[1] - move_from[1]))
                 self.gp_data_builder.move_active(self.delta_vec, space='v2d')
         if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             self.is_dragging = False
+            self.in_drag_area = False
             self.drag_stop_pos = self.mouse_pos
             self.update_gp_data(context)
 
@@ -233,10 +240,10 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
                 self.gp_data_builder.active_prev_layer()
             self.update_gp_data(context)
         # handle key press timer
-        if event.type in {"W", "A", "S", "D"} and event.value == 'PRESS':
+        if event.value == 'PRESS':
             self.is_pressing = True
             self.key_press = event.type
-        if event.type in {"W", "A", "S", "D"} and event.value == 'RELEASE':
+        if event.value == 'RELEASE':
             self.is_pressing = False
         if event.type == 'TIMER':
             if self.is_pressing:
@@ -251,7 +258,9 @@ class ENN_OT_move_gp_modal(bpy.types.Operator):
                         self.gp_data_builder.move_active((0, -v), space='v2d')
                     case "D":
                         self.gp_data_builder.move_active((v, 0), space='v2d')
-
+                    case "LEFTMOUSE":
+                        self.drag_start_pos = self.mouse_pos
+                        self.is_dragging = True
                 self.update_gp_data(context)
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
@@ -280,7 +289,7 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
 
         if context.window_manager.enn_gp_add_type == 'TEXT':
             box.prop(context.window_manager, "enn_gp_text")
-        elif context.window_manager.enn_gp_add_type == 'MESH':
+        elif context.window_manager.enn_gp_add_type == 'OBJECT':
             box.prop(context.window_manager, "enn_gp_obj")
         op = box.operator(ENN_OT_add_gp_modal.bl_idname)
         op.add_type = context.window_manager.enn_gp_add_type
