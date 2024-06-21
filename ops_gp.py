@@ -1,6 +1,7 @@
 import bpy
-from bpy.props import StringProperty, IntProperty, EnumProperty, FloatVectorProperty
+from bpy.props import StringProperty, IntProperty, EnumProperty, FloatVectorProperty, BoolProperty
 from typing import ClassVar
+from mathutils import Vector
 
 from .model.utils import VecTool, ShootAngles
 from .model.model_draw import DrawModel
@@ -28,19 +29,19 @@ class ENN_OT_add_gp(bpy.types.Operator):
     bl_label = "Add"
     bl_options = {'UNDO'}
 
-    add_type: bpy.props.EnumProperty(
-        name='Type',
-        items=lambda _, __: enum_add_type_items(), options={'SKIP_SAVE', 'HIDDEN'}
-    )
+    add_type: bpy.props.EnumProperty(name='Type',
+                                     items=lambda _, __: enum_add_type_items(),
+                                     options={'SKIP_SAVE', 'HIDDEN'})
 
     text: StringProperty(name="Text", default="Hello World")
     size: IntProperty(name="Size", default=100)
     obj: StringProperty(name="Object", default="", options={'SKIP_SAVE', 'HIDDEN'})
-    obj_shot_angle: EnumProperty(name="Shot Orientation", items=lambda _, __: enum_shot_orient_items(),
+    obj_shot_angle: EnumProperty(name="Shot Orientation",
+                                 items=lambda _, __: enum_shot_orient_items(),
                                  options={'SKIP_SAVE', 'HIDDEN'})
 
     location: FloatVectorProperty(size=2, default=(0, 0), options={'SKIP_SAVE', 'HIDDEN'})
-    use_mouse_pos: bpy.props.BoolProperty(default=False, options={'SKIP_SAVE', 'HIDDEN'})
+    use_mouse_pos: BoolProperty(default=False, options={'SKIP_SAVE', 'HIDDEN'})
     # mouse position
     mouse_pos: tuple[int, int] = (0, 0)
 
@@ -52,31 +53,34 @@ class ENN_OT_add_gp(bpy.types.Operator):
         self.mouse_pos = (event.mouse_region_x, event.mouse_region_y)
         return context.window_manager.invoke_props_dialog(self)
 
+    def handle_invalid_input(self) -> bool:
+        if self.add_type == 'OBJECT' and not bpy.data.objects.get(self.obj, None):
+            return True
+        elif self.add_type == 'TEXT' and self.text != '':
+            return True
+        return False
+
     def execute(self, context: bpy.types.Context):
-        nt: bpy.types.NodeTree = context.space_data.edit_tree
-        gp_data: bpy.types.GreasePencil = nt.grease_pencil
+        if not self.handle_invalid_input(): return {'CANCELLED'}
+
         font_gp_data: bpy.types.GreasePencil = None
+        obj: bpy.types.Object = bpy.data.objects.get(self.obj, None)
+        nt: bpy.types.NodeTree = context.space_data.edit_tree
+        vec: Vector = VecTool.r2d_2_v2d(self.mouse_pos) if self.use_mouse_pos else self.location
+        gp_data: bpy.types.GreasePencil = CreateGreasePencilData.empty() if not nt.grease_pencil else nt.grease_pencil
 
-        if not gp_data:
-            gp_data = CreateGreasePencilData.empty()
-
-        if self.add_type == 'OBJECT':
-            obj = bpy.data.objects.get(self.obj, None)
-            if not obj:
-                return {'CANCELLED'}
+        if self.add_type == 'TEXT':
+            font_gp_data = CreateGreasePencilData.from_text(self.text, self.size)
+        elif self.add_type == 'OBJECT':
+            euler = getattr(ShootAngles, self.obj_shot_angle)
             if obj.type == 'MESH':
-                font_gp_data = CreateGreasePencilData.from_mesh_obj(obj,
-                                                                    euler=getattr(ShootAngles, self.obj_shot_angle))
+                font_gp_data = CreateGreasePencilData.from_mesh_obj(obj, euler=euler)
             elif obj.type == 'GPENCIL':
-                font_gp_data = CreateGreasePencilData.from_gp_obj(obj, euler=getattr(ShootAngles, self.obj_shot_angle))
+                font_gp_data = CreateGreasePencilData.from_gp_obj(obj, euler=euler)
             else:
                 return {'CANCELLED'}
-        elif self.add_type == 'TEXT':
-            font_gp_data = CreateGreasePencilData.from_text(self.text, self.size)
 
         if not font_gp_data: return {'CANCELLED'}
-
-        vec = VecTool.r2d_2_v2d(self.mouse_pos) if self.use_mouse_pos else self.location
 
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             gp_data_builder.link(context).join(font_gp_data) \
@@ -171,9 +175,8 @@ class ENN_OT_rotate_gp(bpy.types.Operator):
     def execute(self, context):
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
-        if not gp_data:
-            return {'CANCELLED'}
-        layer_index: int = gp_data.layers.active_index
+        if not gp_data: return {'CANCELLED'}
+
         bbox = GreasePencilLayerBBox(gp_data)
         bbox.calc_active_layer_bbox()
         pivot = bbox.center
