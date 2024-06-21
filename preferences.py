@@ -17,12 +17,12 @@ class Preference(bpy.types.AddonPreferences):
 
     gp_draw_line_width: IntProperty(default=1, name='Line Width')
 
-    gp_draw_drag: BoolProperty(default=False, name='Drag')
-    gp_draw_drag_area: BoolProperty(default=False, name='Drag Area')
+    gp_draw_drag: BoolProperty(default=True, name='Draw Box When Dragging')
+    gp_draw_drag_area: BoolProperty(default=False, name='Drag Box Area When Dragging')
 
-    gp_detect_edge_px: IntProperty(default=20, name='Edge', subtype='PIXEL')
-    gp_detect_corner_px: IntProperty(default=20, name='Corner', subtype='PIXEL')
-    gp_detect_rotate_px: IntProperty(default=20, name='Rotate', subtype='PIXEL')
+    gp_detect_edge_px: IntProperty(default=20, name='Detect Edge Radius', subtype='PIXEL')
+    gp_detect_corner_px: IntProperty(default=20, name='Detect Corner Radius', subtype='PIXEL')
+    gp_detect_rotate_px: IntProperty(default=20, name='Detect Rotate Radius', subtype='PIXEL')
 
     debug_draw: BoolProperty(default=False, name='Debug')
 
