@@ -252,12 +252,12 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator, DragProperty):
             layer_index = None
         if layer_index is None:
             return {'CANCELLED'}
-        else:
-            drag_model.gp_data_bbox.active_layer_index = layer_index
-            drag_model.gp_data_bbox.calc_active_layer_bbox()
-            self.__class__.drag_model = drag_model
 
-            self.add_draw_handle(context)
+        drag_model.gp_data_bbox.active_layer_index = layer_index
+        drag_model.gp_data_bbox.calc_active_layer_bbox()
+        self.__class__.drag_model = drag_model
+
+        self.add_draw_handle(context)
         context.window_manager.modal_handler_add(self)
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}

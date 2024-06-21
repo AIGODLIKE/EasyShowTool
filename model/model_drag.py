@@ -98,7 +98,7 @@ class DragGreasePencilModel:
             vec_scale = Vector((unit_scale, unit_scale, 0)) if event.shift else Vector(
                 (scale_x, scale_y, 0))
 
-        self.gp_data_builder.scale_active(vec_scale, pivot, space='v2d')
+        self.gp_data_builder.scale_active(vec_scale, pivot, space='3d')
 
     def on_drag_scale_one_side(self, event):
         delta_x, delta_y = (self.delta_vec).xy
@@ -122,7 +122,7 @@ class DragGreasePencilModel:
         elif self.on_edge_center:
             points = self.gp_data_bbox.edge_center_points_3d
             pivot_index = EdgeCenter.opposite(self.pt_edge_center)
-            pivot:Vector = points[pivot_index]
+            pivot: Vector = points[pivot_index]
 
             if EdgeCenter.point_on_left(self.pt_edge_center):
                 delta_x = -delta_x
@@ -136,14 +136,15 @@ class DragGreasePencilModel:
         else:
             vec_scale = None
             pivot = None
-        if vec_scale:
-            if event.shift:
-                if abs(delta_x) > abs(delta_y):
-                    vec_scale.y = vec_scale.x
-                else:
-                    vec_scale.x = vec_scale.y
 
-            self.gp_data_builder.scale_active(vec_scale, pivot, space='v2d')
+        if vec_scale is None: return
+        if event.shift:
+            if abs(delta_x) > abs(delta_y):
+                vec_scale.y = vec_scale.x
+            else:
+                vec_scale.x = vec_scale.y
+
+        self.gp_data_builder.scale_active(vec_scale, pivot, space='3d')
 
     def on_drag_rotate(self, event):
         """Rotate the active layer of the Grease Pencil Object when near the corner extrude point."""

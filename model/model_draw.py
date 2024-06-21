@@ -19,27 +19,39 @@ from dataclasses import dataclass, field
 @dataclass
 class DrawModel():
     # data
-    points: Sequence[Vector, Vector, Vector, Vector]
-    edge_points: Sequence[Vector, Vector, Vector, Vector]
-    coords: Sequence[Vector, Vector, Vector, Vector, Vector]  # close the loop, for drawing lines
+    points: list[Vector, Vector, Vector, Vector]
+    edge_points: list[Vector, Vector, Vector, Vector]
+    coords: list[Vector, Vector, Vector, Vector, Vector]  # close the loop, for drawing lines
+
+    # pref
+    line_width: int = field(init=False)
+    debug: bool = field(init=False)
+    drag: bool = field(init=False)
+    drag_area: bool = field(init=False)
+    color: Color = field(init=False)
+    color_hover: Color = field(init=False)
+    color_area: Color = field(init=False)
+    # detect
+    corner_px: int = field(init=False)
+    edge_px: int = field(init=False)
+    rotate_px: int = field(init=False)
 
     # default
-    debug_color: Color = Color((0, 1, 0, 0.5))
+    debug_color: tuple = (1, 0, 0, 1)
     point_size: ClassVar[int] = 20
-    # pref
-    line_width: int = get_pref().gp_draw_line_width
-    debug: bool = get_pref().debug_draw
-    drag: bool = get_pref().gp_draw_drag
-    drag_area: bool = get_pref().gp_draw_drag_area
-    color: Color = get_pref().gp_color
-    color_hover: Color = get_pref().gp_color_hover
-    color_area: Color = get_pref().gp_color_area
-    # detect
-    corner_px: int = get_pref().gp_detect_corner_px
-    edge_px: int = get_pref().gp_detect_edge_px
-    rotate_px: int = get_pref().gp_detect_rotate_px
 
     def __post_init__(self):
+        self.line_width = get_pref().gp_draw_line_width
+        self.debug = get_pref().debug_draw
+        self.drag = get_pref().gp_draw_drag
+        self.drag_area = get_pref().gp_draw_drag_area
+        self.color = get_pref().gp_color
+        self.color_hover = get_pref().gp_color_hover
+        self.color_area = get_pref().gp_color_area
+        self.corner_px = get_pref().gp_detect_corner_px
+        self.edge_px = get_pref().gp_detect_edge_px
+        self.rotate_px = get_pref().gp_detect_rotate_px
+
         gpu.state.line_width_set(self.line_width)
         gpu.state.point_size_set(self.point_size)
         gpu.state.blend_set('ALPHA')
