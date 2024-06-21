@@ -1,96 +1,20 @@
 from dataclasses import dataclass, field
 from mathutils import Vector
 from math import degrees
-from typing import Literal, ClassVar
-from .model_gp import VecTool, GreasePencilLayerBBox, BuildGreasePencilData
+from typing import Literal
+from typing import Optional
+import bpy
+
 from ..public_path import get_pref
-
-
-@dataclass
-class Coord:
-    order: ClassVar[dict[int, str]] = {
-        0: 'top_left',
-        1: 'top_right',
-        2: 'bottom_left',
-        3: 'bottom_right',
-
-    }
-
-    opp_order: ClassVar[dict[str, str]] = {
-        'top_left': 'bottom_right',
-        'top_right': 'bottom_left',
-        'bottom_left': 'top_right',
-        'bottom_right': 'top_left',
-    }
-
-    @classmethod
-    def opposite(cls, point: int) -> int:
-        p = cls.order[point]
-        for k, v in cls.order.items():
-            if v == cls.opp_order[p]:
-                return k
-
-    @classmethod
-    def point_on_left(cls, point: int) -> bool:
-        return 'left' in cls.order[point]
-
-    @classmethod
-    def point_on_bottom(cls, point: int) -> bool:
-        return 'bottom' in cls.order[point]
-
-    @classmethod
-    def point_on_right(cls, point: int) -> bool:
-        return 'right' in cls.order[point]
-
-    @classmethod
-    def point_on_top(cls, point: int) -> bool:
-        return 'top' in cls.order[point]
-
-
-@dataclass
-class EdgeCenter:
-    order: ClassVar[dict[int, str]] = {
-        0: 'top_center',
-        1: 'bottom_center',
-        2: 'left_center',
-        3: 'right_center',
-    }
-
-    opp_order: ClassVar[dict[str, str]] = {
-        'top_center': 'bottom_center',
-        'bottom_center': 'top_center',
-        'left_center': 'right_center',
-        'right_center': 'left_center',
-    }
-
-    @classmethod
-    def opposite(cls, point: int) -> int:
-        p = cls.order[point]
-        for k, v in cls.order.items():
-            if v == cls.opp_order[p]:
-                return k
-
-    @classmethod
-    def point_on_left(cls, point: int) -> bool:
-        return 'left' in cls.order[point]
-
-    @classmethod
-    def point_on_bottom(cls, point: int) -> bool:
-        return 'bottom' in cls.order[point]
-
-    @classmethod
-    def point_on_right(cls, point: int) -> bool:
-        return 'right' in cls.order[point]
-
-    @classmethod
-    def point_on_top(cls, point: int) -> bool:
-        return 'top' in cls.order[point]
+from .utils import Coord, EdgeCenter
+from .model_gp import VecTool, GreasePencilLayerBBox, BuildGreasePencilData
 
 
 @dataclass
 class DragGreasePencilModel:
-    gp_data_bbox: GreasePencilLayerBBox
-    gp_data_builder: BuildGreasePencilData
+    gp_data: bpy.types.GreasePencil
+    gp_data_bbox: GreasePencilLayerBBox = field(init=False)
+    gp_data_builder: BuildGreasePencilData = field(init=False)
     # mouse
     mouse_pos: tuple[int, int] = (0, 0)
     mouse_pos_prev: tuple[int, int] = (0, 0)
@@ -111,6 +35,10 @@ class DragGreasePencilModel:
     # snap
     snap_degree: int = field(default_factory=lambda: get_pref().gp_snap_degree)
     delta_degree: float = 0
+
+    def __post_init__(self):
+        self.gp_data_bbox = GreasePencilLayerBBox(self.gp_data)
+        self.gp_data_builder = BuildGreasePencilData(self.gp_data)
 
     def handle_drag(self, context, event):
         """Handle the drag event in the modal."""
@@ -173,7 +101,6 @@ class DragGreasePencilModel:
         self.gp_data_builder.scale_active(vec_scale, pivot, space='v2d')
 
     def on_drag_scale_one_side(self, event):
-        pivot_r2d = self.gp_data_bbox.center_r2d
         delta_x, delta_y = (self.delta_vec).xy
         size_x_v2d, size_y_v2d = self.gp_data_bbox.size_v2d
         vec_scale = None

@@ -1,5 +1,5 @@
 from mathutils import Vector
-from typing import Sequence, Union, Final
+from typing import Sequence, Union, Final, ClassVar
 import bpy
 from dataclasses import dataclass
 
@@ -89,3 +89,84 @@ class ColorTool:
         else:
             hex = hex_color
         return [int(hex[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+
+
+@dataclass
+class Coord:
+    order: ClassVar[dict[int, str]] = {
+        0: 'top_left',
+        1: 'top_right',
+        2: 'bottom_left',
+        3: 'bottom_right',
+
+    }
+
+    opp_order: ClassVar[dict[str, str]] = {
+        'top_left': 'bottom_right',
+        'top_right': 'bottom_left',
+        'bottom_left': 'top_right',
+        'bottom_right': 'top_left',
+    }
+
+    @classmethod
+    def opposite(cls, point: int) -> int:
+        p = cls.order[point]
+        for k, v in cls.order.items():
+            if v == cls.opp_order[p]:
+                return k
+
+    @classmethod
+    def point_on_left(cls, point: int) -> bool:
+        return 'left' in cls.order[point]
+
+    @classmethod
+    def point_on_bottom(cls, point: int) -> bool:
+        return 'bottom' in cls.order[point]
+
+    @classmethod
+    def point_on_right(cls, point: int) -> bool:
+        return 'right' in cls.order[point]
+
+    @classmethod
+    def point_on_top(cls, point: int) -> bool:
+        return 'top' in cls.order[point]
+
+
+@dataclass
+class EdgeCenter:
+    order: ClassVar[dict[int, str]] = {
+        0: 'top_center',
+        1: 'bottom_center',
+        2: 'left_center',
+        3: 'right_center',
+    }
+
+    opp_order: ClassVar[dict[str, str]] = {
+        'top_center': 'bottom_center',
+        'bottom_center': 'top_center',
+        'left_center': 'right_center',
+        'right_center': 'left_center',
+    }
+
+    @classmethod
+    def opposite(cls, point: int) -> int:
+        p = cls.order[point]
+        for k, v in cls.order.items():
+            if v == cls.opp_order[p]:
+                return k
+
+    @classmethod
+    def point_on_left(cls, point: int) -> bool:
+        return 'left' in cls.order[point]
+
+    @classmethod
+    def point_on_bottom(cls, point: int) -> bool:
+        return 'bottom' in cls.order[point]
+
+    @classmethod
+    def point_on_right(cls, point: int) -> bool:
+        return 'right' in cls.order[point]
+
+    @classmethod
+    def point_on_top(cls, point: int) -> bool:
+        return 'top' in cls.order[point]

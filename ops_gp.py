@@ -178,10 +178,12 @@ class ENN_OT_rotate_gp(bpy.types.Operator):
         context.area.tag_redraw()
         return {'FINISHED'}
 
+
 class DragProperty:
     is_dragging: ClassVar[bool] = False
 
-class ENN_OT_gp_set_active_layer(bpy.types.Operator,DragProperty):
+
+class ENN_OT_gp_set_active_layer(bpy.types.Operator, DragProperty):
     bl_idname = "enn.gp_set_active_layer"
     bl_label = "Set Active Layer"
     bl_description = "Set the active layer of the Grease Pencil Object"
@@ -201,8 +203,8 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator,DragProperty):
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
         if not gp_data: return {'CANCELLED'}
-        bbox = GreasePencilLayerBBox(gp_data)
-        MouseDetectModel().bind_to(bbox)
+        drag_model = DragGreasePencilModel(gp_data=gp_data)
+        MouseDetectModel().bind_to(drag_model.gp_data_bbox)
 
         try:
             layer_index = GreasePencilLayers.in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
@@ -211,12 +213,9 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator,DragProperty):
         if layer_index is None:
             return {'CANCELLED'}
         else:
-            bbox.active_layer_index = layer_index
-            bbox.calc_active_layer_bbox()
-            drag_model = DragGreasePencilModel(gp_data_bbox=bbox,
-                                               gp_data_builder=BuildGreasePencilData(gp_data), )
+            drag_model.gp_data_bbox.active_layer_index = layer_index
+            drag_model.gp_data_bbox.calc_active_layer_bbox()
             self.__class__.drag_model = drag_model
-            MouseDetectModel().bind_to(self.drag_model.gp_data_bbox)
 
             self.add_draw_handle(context)
         context.window_manager.modal_handler_add(self)
@@ -263,7 +262,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator,DragProperty):
 #     return
 
 
-class ENN_OT_gp_drag_modal(bpy.types.Operator,DragProperty):
+class ENN_OT_gp_drag_modal(bpy.types.Operator, DragProperty):
     bl_idname = "enn.gp_drag_modal"
     bl_label = "Transform"
     bl_description = "Move the active Grease Pencil Layer"
@@ -284,8 +283,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator,DragProperty):
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
 
-        self.drag_model = DragGreasePencilModel(gp_data_bbox=GreasePencilLayerBBox(gp_data),
-                                                gp_data_builder=BuildGreasePencilData(gp_data))
+        self.drag_model = DragGreasePencilModel(gp_data=gp_data)
         MouseDetectModel().bind_to(self.drag_model.gp_data_bbox)
 
         self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px, (self, context), 'WINDOW',

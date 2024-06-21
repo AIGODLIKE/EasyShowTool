@@ -489,29 +489,26 @@ class EditGreasePencilStroke():
         stroke.points.foreach_get('co', points)
         yield points.reshape((len(stroke.points), 3))
 
-    @staticmethod
-    def _move_stroke(stroke: bpy.types.GPencilStroke, v: Vector):
+    def _move_stroke(self, stroke: bpy.types.GPencilStroke, v: Vector):
         """Move the grease pencil data."""
         move_3d = Vector((v[0], v[1], 0))
-        with EditGreasePencilStroke.stroke_points(stroke) as points:
+        with self.stroke_points(stroke) as points:
             points += move_3d
             stroke.points.foreach_set('co', points.ravel())
 
-    @staticmethod
-    def _scale_stroke(stroke: bpy.types.GPencilStroke, scale: Vector, pivot: Vector):
+    def _scale_stroke(self, stroke: bpy.types.GPencilStroke, scale: Vector, pivot: Vector):
         """Scale the grease pencil data."""
         scale_3d = Vector((scale[0], scale[1], 1))
         pivot_3d = Vector((pivot[0], pivot[1], 0))
-        with EditGreasePencilStroke.stroke_points(stroke) as points:
+        with self.stroke_points(stroke) as points:
             points = (points - pivot_3d) * scale_3d + pivot_3d
             stroke.points.foreach_set('co', points.ravel())
 
-    @staticmethod
-    def _rotate_stroke(stroke: bpy.types.GPencilStroke, degree: int, pivot: Vector):
+    def _rotate_stroke(self, stroke: bpy.types.GPencilStroke, degree: int, pivot: Vector):
         """Rotate the grease pencil data around the pivot point."""
         pivot_3d = Vector((pivot[0], pivot[1], 0))
         angle = radians(degree)
-        with EditGreasePencilStroke.stroke_points(stroke) as points:
+        with self.stroke_points(stroke) as points:
             # use numpy to calculate the rotation
             points = ((points - pivot_3d) @ np.array([[np.cos(angle), -np.sin(angle), 0],
                                                       [np.sin(angle), np.cos(angle), 0],
