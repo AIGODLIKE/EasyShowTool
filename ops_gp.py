@@ -265,9 +265,8 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
             except AttributeError:  # switch to other tool
                 self.stop = True
         # active tool is not drag tool
-        if self.stop or event.type in {'ESC', 'RIGHTMOUSE'}:
+        if self.stop or event.type in {'ESC', 'RIGHTMOUSE'} or not context.area:
             self.remove_draw_handle()
-            context.area.tag_redraw()
             self.stop = False
             self.__class__.drag_model = None
             return {'FINISHED'}
