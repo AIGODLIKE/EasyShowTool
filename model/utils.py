@@ -70,16 +70,16 @@ class VecTool:
 @dataclass(slots=True)
 class ColorTool:
     """Grease Pencil Color utility class."""
-    white: Final[str] = '#FFFFFF'  # white color
-    orange: Final[str] = '#ED9E5C'  # object color
-    green_geo: Final[str] = '#00D6A3'  # geometry color
-    green_int: Final[str] = '#598C5C'  # interface color
-    blue: Final[str] = '#598AC3'  # string color
-    purple_vec: Final[str] = '#6363C7'  # vector color
-    purple_img: Final[str] = '#633863'  # image color
-    grey: Final[str] = '#A1A1A1'  # float color
-    pink_bool: Final[str] = '#CCA6D6'  # boolean color
-    pink_mat: Final[str] = '#EB7582'  # material color
+    white: ClassVar[str] = '#FFFFFF'  # white color
+    orange: ClassVar[str] = '#ED9E5C'  # object color
+    green_geo: ClassVar[str] = '#00D6A3'  # geometry color
+    green_int: ClassVar[str] = '#598C5C'  # interface color
+    blue: ClassVar[str] = '#598AC3'  # string color
+    purple_vec: ClassVar[str] = '#6363C7'  # vector color
+    purple_img: ClassVar[str] = '#633863'  # image color
+    grey: ClassVar[str] = '#A1A1A1'  # float color
+    pink_bool: ClassVar[str] = '#CCA6D6'  # boolean color
+    pink_mat: ClassVar[str] = '#EB7582'  # material color
 
     @staticmethod
     def hex_2_rgb(hex_color: str) -> list[float, float, float]:
@@ -89,6 +89,10 @@ class ColorTool:
         else:
             hex = hex_color
         return [int(hex[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+
+    @classmethod
+    def get_colors(cls):
+        return {k: v for k, v in cls.__dict__.items() if k[0] != '_' and isinstance(v, str)}
 
 
 @dataclass

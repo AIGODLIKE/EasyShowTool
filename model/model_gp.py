@@ -14,7 +14,7 @@ class MouseDetectModel:
 
     bbox_model: 'GreasePencilLayerBBox' = None
 
-    def bind_to(self, bbox_model: 'GreasePencilLayerBBox') -> 'MouseDetectModel':
+    def _bind_bbox_model(self, bbox_model: 'GreasePencilLayerBBox') -> 'MouseDetectModel':
         self.bbox_model = bbox_model
         self.bbox_model.detect_model = self
         return self
@@ -175,7 +175,10 @@ class GreasePencilLayerBBox(GreasePencilProperty):
     min_y: float = 0
     #
     last_layer_index: int = None
-    detect_model: Optional['MouseDetectModel'] = None  # avoid circular import
+    detect_model: Optional['MouseDetectModel'] = field(init=False)
+
+    def __post_init__(self):
+        self.detect_model = MouseDetectModel()._bind_bbox_model(self)
 
     @property
     def size(self) -> tuple[float, float]:
@@ -356,8 +359,7 @@ class GreasePencilLayers(GreasePencilProperty):
                                               gp_data.layers]
         for i, bbox in enumerate(bboxs):
             bbox.calc_bbox(i)
-            mouse_detect = MouseDetectModel().bind_to(bbox)
-            if mouse_detect.in_area(pos, feather, space):
+            if bbox.detect_model.in_area(pos, feather, space):
                 # print(f'In layer {bbox.gp_data.layers[i].info}')
                 return bbox.last_layer_index
 

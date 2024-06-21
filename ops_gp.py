@@ -204,7 +204,6 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator, DragProperty):
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
         if not gp_data: return {'CANCELLED'}
         drag_model = DragGreasePencilModel(gp_data=gp_data)
-        MouseDetectModel().bind_to(drag_model.gp_data_bbox)
 
         try:
             layer_index = GreasePencilLayers.in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
@@ -284,7 +283,6 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator, DragProperty):
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
 
         self.drag_model = DragGreasePencilModel(gp_data=gp_data)
-        MouseDetectModel().bind_to(self.drag_model.gp_data_bbox)
 
         self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px, (self, context), 'WINDOW',
                                                                       'POST_PIXEL')
