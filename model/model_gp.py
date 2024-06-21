@@ -226,42 +226,42 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         return self.max_x, self.min_y
 
     @property
-    def bbox_points_3d(self) -> tuple[tuple[float, float], ...]:
+    def bbox_points_3d(self) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the bounding box points."""
         # top_left, top_right, bottom_left, bottom_right
-        return self.top_left, self.top_right, self.bottom_left, self.bottom_right
+        return Vector(self.top_left), Vector(self.top_right), Vector(self.bottom_left), Vector(self.bottom_right)
 
     @property
-    def bbox_points_v2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def bbox_points_v2d(self) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the bounding box points in node editor view."""
         return tuple(map(VecTool.loc3d_2_v2d, self.bbox_points_3d))
 
     @property
-    def bbox_points_r2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def bbox_points_r2d(self) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the bounding box points in region 2d space."""
 
         return tuple(map(VecTool.v2d_2_r2d, self.bbox_points_v2d))
 
     @property
-    def edge_center_points_3d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def edge_center_points_3d(self) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the edge center points of the bounding box."""
         top_center = (self.max_x + self.min_x) / 2, self.max_y
         bottom_center = (self.max_x + self.min_x) / 2, self.min_y
         left_center = self.min_x, (self.max_y + self.min_y) / 2
         right_center = self.max_x, (self.max_y + self.min_y) / 2
-        return top_center, bottom_center, left_center, right_center
+        return Vector(top_center), Vector(bottom_center), Vector(left_center), Vector(right_center)
 
     @property
-    def edge_center_points_v2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def edge_center_points_v2d(self) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the edge center points of the bounding box in node editor view."""
         return tuple(map(VecTool.loc3d_2_v2d, self.edge_center_points_3d))
 
     @property
-    def edge_center_points_r2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def edge_center_points_r2d(self) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the edge center points of the bounding box in region 2d space."""
         return tuple(map(VecTool.v2d_2_r2d, self.edge_center_points_v2d))
 
-    def corner_extrude_points_r2d(self, extrude: int = 10) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def corner_extrude_points_r2d(self, extrude: int = 10) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the corner extrude points of the bounding box.
         :param extrude: the extrude distance
         this is not a property because it needs an extrude distance"""
@@ -290,17 +290,10 @@ class GreasePencilLayerBBox(GreasePencilProperty):
 
         return max_x, min_x, max_y, min_y
 
-    def calc_active_layer_bbox(self, frame: int = 0) -> tuple[tuple[float, float], ...]:
+    def calc_active_layer_bbox(self, frame: int = 0) -> None:
         """
         Calculate the bounding box of the active grease pencil annotation layer.
         :param frame: calc this frame
-        :return: The bounding box of the grease pencil annotation.
-            return in position of 2d space
-            positions = (
-                (-1, 1), (1, 1),
-                (-1, -1), (1, -1))
-
-            indices = ((0, 1, 2), (2, 1, 3))
         """
         layer = self.active_layer
         if not layer:
@@ -313,13 +306,6 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         Calculate the bounding box of the grease pencil annotation.
         :param layer_name_or_inedx: The name or index of the layer.
         :param frame: calc this frame
-        :return: The bounding box of the grease pencil annotation.
-            return in position of 2d space
-            positions = (
-                (-1, 1), (1, 1),
-                (-1, -1), (1, -1))
-
-            indices = ((0, 1, 2), (2, 1, 3))
         """
 
         layer = self._get_layer(layer_name_or_inedx)

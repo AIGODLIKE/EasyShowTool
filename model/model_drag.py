@@ -103,7 +103,7 @@ class DragGreasePencilModel:
     def on_drag_scale_one_side(self, event):
         delta_x, delta_y = (self.delta_vec).xy
         size_x_v2d, size_y_v2d = self.gp_data_bbox.size_v2d
-        vec_scale = None
+
         if self.on_corner:
             points = self.gp_data_bbox.bbox_points_3d
             pivot_index = Coord.opposite(self.pt_corner)
@@ -122,7 +122,7 @@ class DragGreasePencilModel:
         elif self.on_edge_center:
             points = self.gp_data_bbox.edge_center_points_3d
             pivot_index = EdgeCenter.opposite(self.pt_edge_center)
-            pivot = points[pivot_index]
+            pivot:Vector = points[pivot_index]
 
             if EdgeCenter.point_on_left(self.pt_edge_center):
                 delta_x = -delta_x
@@ -133,7 +133,9 @@ class DragGreasePencilModel:
             scale_y = 1 + delta_y / size_y_v2d
 
             vec_scale = Vector((scale_x, scale_y, 0))
-
+        else:
+            vec_scale = None
+            pivot = None
         if vec_scale:
             if event.shift:
                 if abs(delta_x) > abs(delta_y):
