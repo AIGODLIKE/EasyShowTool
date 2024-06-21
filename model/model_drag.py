@@ -149,7 +149,11 @@ class DragGreasePencilModel:
             scale_x = 1 + delta_x / size_x_v2d
             scale_y = 1 + delta_y / size_y_v2d
 
-            vec_scale = Vector((scale_x, scale_y, 0))
+            if EdgeCenter.point_on_left(self.pt_edge_center) or EdgeCenter.point_on_right(self.pt_edge_center):
+                vec_scale = Vector((scale_x, 1, 0))
+            else:
+                vec_scale = Vector((1, scale_y, 0))
+
         else:
             vec_scale = None
             pivot = None
