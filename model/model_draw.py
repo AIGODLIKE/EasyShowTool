@@ -28,6 +28,7 @@ class DrawModel:
     debug: bool = field(init=False)
     drag: bool = field(init=False)
     drag_area: bool = field(init=False)
+    # color
     color: Color = field(init=False)
     color_hover: Color = field(init=False)
     color_area: Color = field(init=False)
@@ -37,34 +38,43 @@ class DrawModel:
     rotate_px: int = field(init=False)
 
     # default
-    debug_color: tuple = (1, 0, 0, 1)
+    debug_color: Color = field(init=False)
     point_size: ClassVar[int] = 20
 
     def __post_init__(self):
+        theme = bpy.context.preferences.themes['Default'].view_3d
         self.line_width = get_pref().gp_draw_line_width
         self.debug = get_pref().debug_draw
         self.drag = get_pref().gp_draw_drag
         self.drag_area = get_pref().gp_draw_drag_area
-        self.color = get_pref().gp_color
-        self.color_hover = get_pref().gp_color_hover
-        self.color_area = get_pref().gp_color_area
+
         self.corner_px = get_pref().gp_detect_corner_px
         self.edge_px = get_pref().gp_detect_edge_px
         self.rotate_px = get_pref().gp_detect_rotate_px
+
+        self.color = self.color_alpha(theme.lastsel_point, 0.3)
+        self.color_highlight = self.color_alpha(theme.lastsel_point, 0.8)
+        self.color_hover = self.color_alpha(theme.vertex_select, 0.8)
+        self.color_area = self.color_alpha(theme.face, 0.5)
+        self.debug_color = self.color_alpha(theme.face_back, 0.8)
 
         gpu.state.line_width_set(self.line_width)
         gpu.state.point_size_set(self.point_size)
         gpu.state.blend_set('ALPHA')
 
+    @staticmethod
+    def color_alpha(color: Color, alpha: float) -> tuple:
+        return color[0], color[1], color[2], alpha
+
     def draw_bbox_points(self):
-        shader.uniform_float("color", self.color)
+        shader.uniform_float("color", self.color_highlight)
         batch = batch_for_shader(shader, 'POINTS', {"pos": self.points})
         batch.draw(shader)
 
-    def draw_bbox_edge(self):
+    def draw_bbox_edge(self, highlight: bool = False):
         gpu.state.point_size_set(10)
         batch = batch_for_shader(shader, 'LINE_STRIP', {"pos": self.coords})
-        shader.uniform_float("color", self.color)
+        shader.uniform_float("color", self.color if not highlight else self.color_highlight)
         batch.draw(shader)
 
     def draw_bbox_area(self):

@@ -37,6 +37,8 @@ class DragGreasePencilModel:
     # snap
     snap_degree: int = field(default_factory=lambda: get_pref().gp_snap_degree)
     delta_degree: float = 0
+    # copy
+    already_copied: bool = False
 
     def __post_init__(self):
         self.bbox_model = GreasePencilLayerBBox(self.gp_data)
@@ -56,7 +58,15 @@ class DragGreasePencilModel:
             self.on_drag_rotate(event)
         # move mode
         elif self.in_drag_area:
+            self.handle_copy(event)
             self.on_drag_move()
+
+    def handle_copy(self, event):
+        """Handle the copy event in the modal."""
+        if not self.already_copied and event.alt:
+            with self.build_model:  # clean up in with statement
+                self.build_model.copy_active().to_2d()
+                self.already_copied = True
 
     def update_mouse_pos(self, context, event):
         """Update the mouse position and the delta vector. Prepare for the handle_drag."""

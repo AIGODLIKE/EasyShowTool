@@ -74,7 +74,6 @@ class EditGreasePencilLayer(EditGreasePencilStroke):
 
     @staticmethod
     def _set_display_mode(layer: bpy.types.GPencilLayer, mode: Literal['2DSPACE', '3DSPACE']):
-        layer.display_mode = mode
         for frame in layer.frames:
             for stroke in frame.strokes:
                 if stroke.display_mode != mode:

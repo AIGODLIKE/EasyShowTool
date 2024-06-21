@@ -225,7 +225,7 @@ def draw_hover_callback_px(self: 'ENN_OT_gp_set_active_layer', context) -> None:
     draw_model.draw_bbox_edge()
 
     if drag_model.in_drag_area:
-        draw_model.draw_bbox_points()
+        draw_model.draw_bbox_edge(highlight=True)
     if drag_model.on_edge_center:
         draw_model.draw_scale_edge_widget()
     if drag_model.on_corner:
@@ -375,7 +375,8 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
 
     def _finish(self, context):
         ENN_OT_gp_set_active_layer.is_dragging = False
-        ENN_OT_gp_set_active_layer.drag_model.update_gp_data(context)
+        if ENN_OT_gp_set_active_layer.drag_model:
+            ENN_OT_gp_set_active_layer.drag_model.update_gp_data(context)
         bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
         context.area.tag_redraw()
 
@@ -434,9 +435,28 @@ class ENN_TL_grease_pencil_tool(bpy.types.WorkSpaceTool):
          {"type": 'LEFTMOUSE', "value": 'CLICK', "shift": True, "ctrl": False},
          {"properties": [('use_mouse_pos', True), ('add_type', 'TEXT')]}
          ),
+
+        # normal mode drag
         (ENN_OT_gp_drag_modal.bl_idname,
          {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False, "ctrl": False},
          {"properties": []}),
+        # copy mode drag
+        (ENN_OT_gp_drag_modal.bl_idname,
+         {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False, "ctrl": False, "alt": True},
+         {"properties": []}),
+
+        # different enter event with drag
+        (ENN_OT_gp_drag_modal.bl_idname,
+         {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": True, "ctrl": False},
+         {"properties": []}),
+        (ENN_OT_gp_drag_modal.bl_idname,
+         {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False, "ctrl": True},
+         {"properties": []}),
+        (ENN_OT_gp_drag_modal.bl_idname,
+         {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": True, "ctrl": True},
+         {"properties": []}),
+
+        # delete
         (ENN_OT_remove_gp.bl_idname,
          {"type": 'X', "value": 'PRESS', "ctrl": False, "alt": False, "shift": False},
          {"properties": []}),

@@ -313,6 +313,25 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         self.del_later(obj_list=[self_obj, tmp_obj])
         return self
 
+    def copy_active(self) -> 'BuildGreasePencilData':
+        """Copy the active grease pencil layer."""
+        self_obj = bpy.data.objects.new('tmp', self.gp_data)
+        self_tmp_data = bpy.data.grease_pencils.new('tmp')
+        tmp_obj = bpy.data.objects.new('tmp', self_tmp_data)
+        bpy.context.collection.objects.link(self_obj)
+        bpy.context.collection.objects.link(tmp_obj)
+        bpy.context.view_layer.objects.active = self_obj
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        self_obj.select_set(True)
+        tmp_obj.select_set(True)
+        bpy.ops.gpencil.layer_duplicate_object(only_active=True)  # new layer will be send to the bottom
+        self_temp_layer = self_tmp_data.layers[0]
+        self_temp_layer.color = self.active_layer.color
+        self.gp_data = self_obj.data
+        self.del_later(obj_list=[self_obj, tmp_obj])
+        return self.join(self_tmp_data)
+
     def move_active(self, v: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Move the active grease pencil layer."""
         return self.move(self.active_layer_name, v, space)
