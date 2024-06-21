@@ -4,8 +4,9 @@ from mathutils import Vector
 from typing import ClassVar
 
 from .model.utils import VecTool
+from .model.model_draw import DrawModel
 from .model.model_drag import DragGreasePencilModel
-from .model.model_gp import CreateGreasePencilData, MouseDetectModel
+from .model.model_gp import CreateGreasePencilData
 from .model.model_gp import BuildGreasePencilData
 from .model.model_gp import GreasePencilLayerBBox
 from .model.model_gp import GreasePencilLayers
@@ -179,6 +180,46 @@ class ENN_OT_rotate_gp(bpy.types.Operator):
         return {'FINISHED'}
 
 
+def draw_hover_callback_px(self, context) -> None:
+    drag_model: DragGreasePencilModel = self.drag_model
+    gp_data_bbox: GreasePencilLayerBBox = drag_model.gp_data_bbox
+
+    top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
+    points = [top_left, top_right, bottom_left, bottom_right]
+    coords = [top_left, top_right, bottom_right, bottom_left, top_left]  # close the loop
+
+    draw_model: DrawModel = DrawModel(points, gp_data_bbox.edge_center_points_r2d, coords)
+
+    draw_model.draw_bbox_edge()
+    if drag_model.in_drag_area:
+        draw_model.draw_bbox_points()
+    if drag_model.on_edge_center:
+        draw_model.draw_scale_edge_widget()
+    if drag_model.on_corner:
+        draw_model.draw_scale_corner_widget()
+    elif drag_model.on_corner_extrude:
+        draw_model.draw_rotate_widget()
+
+
+def draw_callback_px(self, context) -> None:
+    drag_model: DragGreasePencilModel = self.drag_model
+    gp_data_bbox: GreasePencilLayerBBox = drag_model.gp_data_bbox
+
+    top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
+    points = [top_left, top_right, bottom_left, bottom_right]
+    coords = [top_left, top_right, bottom_right, bottom_left, top_left]  # close the loop
+
+    draw_model: DrawModel = DrawModel(points, gp_data_bbox.edge_center_points_r2d, coords)
+
+    if draw_model.drag_area:
+        draw_model.draw_bbox_area()
+    if draw_model.drag:
+        draw_model.draw_bbox_edge()
+
+    if draw_model.debug:
+        draw_model.draw_debug(self.mouse_pos)
+
+
 class DragProperty:
     is_dragging: ClassVar[bool] = False
 
@@ -227,9 +268,8 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator, DragProperty):
             self.__class__.draw_handle = None
 
     def add_draw_handle(self, context):
-        from .draw_utils import draw_callback_px
         self.remove_draw_handle()
-        self.__class__.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px,
+        self.__class__.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_hover_callback_px,
                                                                                 (self, context),
                                                                                 'WINDOW', 'POST_PIXEL')
 
@@ -249,18 +289,6 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator, DragProperty):
         return {'PASS_THROUGH'}
 
 
-#
-# from bl_ui.space_toolsystem_common import (
-#         ToolSelectPanelHelper,
-#         ToolDef,
-#     )
-#
-# def get_active_tool(space_type = 'NODE_EDITOR',context_mode = None):
-#     cls = ToolSelectPanelHelper._tool_class_from_space_type(space_type)
-#     tools = cls._tools[context_mode]
-#     return
-
-
 class ENN_OT_gp_drag_modal(bpy.types.Operator, DragProperty):
     bl_idname = "enn.gp_drag_modal"
     bl_label = "Transform"
@@ -278,12 +306,10 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator, DragProperty):
         return has_edit_tree(context)
 
     def invoke(self, context, event):
-        from .draw_utils import draw_callback_px
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
 
         self.drag_model = DragGreasePencilModel(gp_data=gp_data)
-
         self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px, (self, context), 'WINDOW',
                                                                       'POST_PIXEL')
         context.window_manager.modal_handler_add(self)

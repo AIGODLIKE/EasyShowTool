@@ -594,9 +594,33 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         self._link_nodegroup(context.space_data.edit_tree)
         return self
 
+    def join(self, other_gp_data: bpy.types.GreasePencil) -> 'BuildGreasePencilData':
+        """Join the grease pencil data."""
+        self_obj = bpy.data.objects.new('tmp', self.gp_data)
+        tmp_obj = bpy.data.objects.new('tmp', other_gp_data)
+        bpy.context.collection.objects.link(self_obj)
+        bpy.context.collection.objects.link(tmp_obj)
+        bpy.context.view_layer.objects.active = self_obj
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        self_obj.select_set(True)
+        tmp_obj.select_set(True)
+        bpy.ops.object.join()
+        self.gp_data = self_obj.data
+        self.del_later(obj_list=[self_obj, tmp_obj])
+        return self
+
     def move_active(self, v: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Move the active grease pencil layer."""
         return self.move(self.active_layer_name, v, space)
+
+    def scale_active(self, scale: Vector, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+        """Scale the active grease pencil layer."""
+        return self.scale(self.active_layer_name, scale, pivot, space)
+
+    def rotate_active(self, degree: int, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+        """Rotate the active grease pencil layer."""
+        return self.rotate(self.active_layer_name, degree, pivot, space)
 
     def move(self, layer_name_or_index: Union[str, int], v: Vector,
              space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
@@ -620,10 +644,6 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
         return self
 
-    def scale_active(self, scale: Vector, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
-        """Scale the active grease pencil layer."""
-        return self.scale(self.active_layer_name, scale, pivot)
-
     def scale(self, layer_name_or_index: Union[str, int], scale: Vector, pivot: Vector,
               space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Scale the grease pencil data.
@@ -645,10 +665,6 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
         return self
 
-    def rotate_active(self, degree: int, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
-        """Rotate the active grease pencil layer."""
-        return self.rotate(self.active_layer_name, degree, pivot, space)
-
     def rotate(self, layer_name_or_index: Union[str, int], degree: int, pivot: Vector,
                space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Rotate the grease pencil data.
@@ -668,22 +684,6 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
             for stroke in frame.strokes:
                 self.edit._rotate_stroke(stroke, degree, vec_pivot)
         self.rotate_degree = degree
-        return self
-
-    def join(self, other_gp_data: bpy.types.GreasePencil) -> 'BuildGreasePencilData':
-        """Join the grease pencil data."""
-        self_obj = bpy.data.objects.new('tmp', self.gp_data)
-        tmp_obj = bpy.data.objects.new('tmp', other_gp_data)
-        bpy.context.collection.objects.link(self_obj)
-        bpy.context.collection.objects.link(tmp_obj)
-        bpy.context.view_layer.objects.active = self_obj
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
-        self_obj.select_set(True)
-        tmp_obj.select_set(True)
-        bpy.ops.object.join()
-        self.gp_data = self_obj.data
-        self.del_later(obj_list=[self_obj, tmp_obj])
         return self
 
     def _link_nodegroup(self, nt: bpy.types.NodeTree, ) -> None:
