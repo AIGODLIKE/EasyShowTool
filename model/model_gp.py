@@ -1,12 +1,12 @@
 import bpy
 import numpy as np
-from mathutils import Vector, Matrix
+from mathutils import Vector, Euler
 from typing import Literal, Optional, Union, Sequence, ClassVar, Final
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from math import radians
 
-from .utils import VecTool, ColorTool
+from .utils import VecTool, ColorTool, ShootAngles
 
 
 class MouseDetectModel:
@@ -429,10 +429,21 @@ class CreateGreasePencilData(GreasePencilCache):
         return gp_data
 
     @staticmethod
-    def from_mesh_obj(obj: bpy.types.Object, size: int = 100) -> bpy.types.GreasePencil:
+    def apply_transform(obj: bpy.types.Object):
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True, isolate_users=True)
+
+    @staticmethod
+    def from_mesh_obj(obj: bpy.types.Object, size: int = 100,
+                      euler: ShootAngles = ShootAngles.TOP) -> bpy.types.GreasePencil:
         """
         Create a grease pencil object from a mesh object and convert it to grease pencil data.
         :param obj:  the mesh object
+        :param size:  in pixels
+        :param euler:  the rotation of the grease pencil object
         :return:
         """
         new_obj = obj.copy()
@@ -440,11 +451,10 @@ class CreateGreasePencilData(GreasePencilCache):
         bpy.context.collection.objects.link(new_obj)
         new_obj.scale = (size, size, size)
         bpy.context.view_layer.objects.active = new_obj
-        bpy.ops.object.select_all(action='DESELECT')
-        new_obj.select_set(True)
-        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        CreateGreasePencilData.apply_transform(new_obj)
+        new_obj.rotation_euler = euler.value
+        CreateGreasePencilData.apply_transform(new_obj)
         CreateGreasePencilData.convert_2_gp()
-
         gp_obj = bpy.context.object
         gp_data = gp_obj.data
         CreateGreasePencilData.del_later(gp_obj)
@@ -452,7 +462,8 @@ class CreateGreasePencilData(GreasePencilCache):
         return gp_data
 
     @staticmethod
-    def from_gp_obj(obj: bpy.types.Object, size: int = 100) -> bpy.types.GreasePencil:
+    def from_gp_obj(obj: bpy.types.Object, size: int = 100,
+                    euler: ShootAngles = ShootAngles.TOP) -> bpy.types.GreasePencil:
         """
         Create a grease pencil object from a grease pencil object and convert it to grease pencil data.
         Notice that modifier is not supported. Get evaluated data will crash blender.
@@ -460,6 +471,14 @@ class CreateGreasePencilData(GreasePencilCache):
         :return:
         """
         gp_data = obj.data.copy()
+        new_obj = bpy.data.objects.new('tmp', gp_data)
+        bpy.context.collection.objects.link(new_obj)
+        bpy.context.view_layer.objects.active = new_obj
+        CreateGreasePencilData.apply_transform(new_obj)
+        new_obj.rotation_euler = euler.value
+        CreateGreasePencilData.apply_transform(new_obj)
+        CreateGreasePencilData.del_later(new_obj)
+
         with BuildGreasePencilData(gp_data) as gp_builder:
             for layer in gp_builder.gp_data.layers:
                 gp_builder.scale(layer.info, Vector((size, size, 1)), Vector((0, 0, 0)))
@@ -581,7 +600,8 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         return self
 
     def join(self, other_gp_data: bpy.types.GreasePencil) -> 'BuildGreasePencilData':
-        """Join the grease pencil data."""
+        """Join the grease pencil data.
+        """
         self_obj = bpy.data.objects.new('tmp', self.gp_data)
         tmp_obj = bpy.data.objects.new('tmp', other_gp_data)
         bpy.context.collection.objects.link(self_obj)

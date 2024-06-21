@@ -1,15 +1,11 @@
 import bpy
-from bpy.props import StringProperty, IntProperty, PointerProperty, FloatVectorProperty
-from mathutils import Vector
+from bpy.props import StringProperty, IntProperty, EnumProperty, FloatVectorProperty
 from typing import ClassVar
 
-from .model.utils import VecTool
+from .model.utils import VecTool, ShootAngles
 from .model.model_draw import DrawModel
 from .model.model_drag import DragGreasePencilModel
-from .model.model_gp import CreateGreasePencilData
-from .model.model_gp import BuildGreasePencilData
-from .model.model_gp import GreasePencilLayerBBox
-from .model.model_gp import GreasePencilLayers
+from .model.model_gp import CreateGreasePencilData, BuildGreasePencilData, GreasePencilLayerBBox, GreasePencilLayers
 from .ops_notes import has_edit_tree
 
 
@@ -22,6 +18,11 @@ def enum_add_type_items() -> list[tuple[str, str, str]]:
     return [(key, value, "") for key, value in data.items()]
 
 
+def enum_shot_orient_items() -> list[tuple[str, str, str]]:
+    """Return the items for the shot_orient enum property."""
+    return [(euler.name, euler.name.replace('_', ' ').title(), '') for euler in ShootAngles]
+
+
 class ENN_OT_add_gp(bpy.types.Operator):
     bl_idname = "enn.add_gp"
     bl_label = "Add"
@@ -29,15 +30,19 @@ class ENN_OT_add_gp(bpy.types.Operator):
 
     add_type: bpy.props.EnumProperty(
         name='Type',
-        items=lambda self, context: enum_add_type_items(), options={'SKIP_SAVE', 'HIDDEN'}
+        items=lambda _, __: enum_add_type_items(), options={'SKIP_SAVE', 'HIDDEN'}
     )
 
     text: StringProperty(name="Text", default="Hello World")
     size: IntProperty(name="Size", default=100)
     obj: StringProperty(name="Object", default="", options={'SKIP_SAVE', 'HIDDEN'})
+    obj_shot_angle: EnumProperty(name="Shot Orientation", items=lambda _, __: enum_shot_orient_items(),
+                                 options={'SKIP_SAVE', 'HIDDEN'})
 
     location: FloatVectorProperty(size=2, default=(0, 0), options={'SKIP_SAVE', 'HIDDEN'})
-    use_mouse_pos: bpy.props.BoolProperty(default=True, options={'SKIP_SAVE', 'HIDDEN'})
+    use_mouse_pos: bpy.props.BoolProperty(default=False, options={'SKIP_SAVE', 'HIDDEN'})
+    # mouse position
+    mouse_pos: tuple[int, int] = (0, 0)
 
     @classmethod
     def poll(cls, context):
@@ -60,9 +65,10 @@ class ENN_OT_add_gp(bpy.types.Operator):
             if not obj:
                 return {'CANCELLED'}
             if obj.type == 'MESH':
-                font_gp_data = CreateGreasePencilData.from_mesh_obj(obj)
+                font_gp_data = CreateGreasePencilData.from_mesh_obj(obj,
+                                                                    euler=getattr(ShootAngles, self.obj_shot_angle))
             elif obj.type == 'GPENCIL':
-                font_gp_data = CreateGreasePencilData.from_gp_obj(obj)
+                font_gp_data = CreateGreasePencilData.from_gp_obj(obj, euler=getattr(ShootAngles, self.obj_shot_angle))
             else:
                 return {'CANCELLED'}
         elif self.add_type == 'TEXT':
@@ -73,12 +79,8 @@ class ENN_OT_add_gp(bpy.types.Operator):
         vec = VecTool.r2d_2_v2d(self.mouse_pos) if self.use_mouse_pos else self.location
 
         with BuildGreasePencilData(gp_data) as gp_data_builder:
-            gp_data_builder.link(context) \
-                .join(font_gp_data) \
-                .set_active_layer(-1) \
-                .move_active(vec, space='v2d') \
-                .color_active('#E7E7E7') \
-                .to_2d()
+            gp_data_builder.link(context).join(font_gp_data) \
+                .set_active_layer(-1).move_active(vec, space='v2d').color_active('#E7E7E7').to_2d()
 
         return {'FINISHED'}
 
@@ -87,7 +89,7 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
     bl_idname = "enn.add_gp_modal"
     bl_label = "Add"
     bl_description = "Add Grease from %s"
-    bl_options = {'UNDO'}
+    bl_options = {'UNDO', "GRAB_CURSOR", "BLOCKING"}
 
     add_type: bpy.props.EnumProperty(
         items=lambda self, context: enum_add_type_items(),
@@ -127,6 +129,7 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
                                add_type=self.add_type,
                                size=context.window_manager.enn_gp_size,
                                obj=context.window_manager.enn_gp_obj.name,
+                               obj_shot_angle=context.window_manager.enn_gp_obj_shot_angle,
                                location=location)
 
 
@@ -366,6 +369,7 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
             box.prop(context.window_manager, "enn_gp_text")
         elif context.window_manager.enn_gp_add_type == 'OBJECT':
             box.prop(context.window_manager, "enn_gp_obj")
+            box.prop(context.window_manager, "enn_gp_obj_shot_angle")
         op = box.operator(ENN_OT_add_gp_modal.bl_idname)
         op.add_type = context.window_manager.enn_gp_add_type
 
@@ -416,6 +420,9 @@ def register():
     bpy.types.WindowManager.enn_gp_obj = bpy.props.PointerProperty(name='Object', type=bpy.types.Object,
                                                                    poll=lambda self, obj: obj.type in {'MESH',
                                                                                                        'GPENCIL'})
+    bpy.types.WindowManager.enn_gp_obj_shot_angle = bpy.props.EnumProperty(name="Shot Orientation",
+                                                                           items=lambda _, __: enum_shot_orient_items())
+
     bpy.types.WindowManager.enn_gp_move_dis = bpy.props.IntProperty(name='Distance', default=50)
     register_class(ENN_OT_add_gp)
     register_class(ENN_OT_add_gp_modal)

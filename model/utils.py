@@ -1,7 +1,32 @@
-from mathutils import Vector
+from mathutils import Vector, Euler
 from typing import Sequence, Union, Final, ClassVar
 import bpy
 from dataclasses import dataclass
+from enum import Enum
+from math import radians
+
+
+class EulerTool:
+    @staticmethod
+    def to_rad(degrees: Sequence) -> Euler:
+        return Euler((radians(d) for d in degrees), 'XYZ')
+
+    @staticmethod
+    def to_deg(radians: Sequence) -> Euler:
+        return Euler((d for d in radians), 'XYZ')
+
+
+class ShootAngles(Enum):
+    """Euler angles for the shooting.
+    shoot will be on top(xy plane, z up), so the enum members are the angles to rotate the object to face the camera."""
+    TOP_LEFT_FRONT: Euler = Euler(EulerTool.to_rad((-67.8044, -32.8686, -13.4876)), 'XYZ')
+    TOP_LEFT_FRONT_45: Euler = Euler(EulerTool.to_rad((-35.2644, -30, -35.2644)), 'XYZ')
+
+    TOP: Euler = Euler(EulerTool.to_rad((0, 0, 0)), 'XYZ')
+    FRONT: Euler = Euler(EulerTool.to_rad((-90, 0, 0)), 'XYZ')
+    LEFT: Euler = Euler(EulerTool.to_rad((0, -90, 0)), 'XYZ')
+    RIGHT: Euler = Euler(EulerTool.to_rad((0, 90, 0)), 'XYZ')
+    BOTTOM: Euler = Euler(EulerTool.to_rad((0, 180, 0)), 'XYZ')
 
 
 class VecTool:
