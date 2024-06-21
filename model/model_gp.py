@@ -1,102 +1,101 @@
 import bpy
 import numpy as np
-from mathutils import Vector, Matrix
+from mathutils import Vector, Euler
 from typing import Literal, Optional, Union, Sequence, ClassVar, Final
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from math import radians
 
+from .utils import VecTool, ColorTool, ShootAngles
 
-class VecTool:
-    """Vec utility class. use to convert between view 2d , region 2d and 3d space."""
+
+class MouseDetectModel:
+    """MouseDetectModel Model, a base class for detect mouse position with 2d grease pencil annotation."""
+
+    bbox_model: 'GreasePencilLayerBBox' = None
+
+    def _bind_bbox_model(self, bbox_model: 'GreasePencilLayerBBox') -> 'MouseDetectModel':
+        self.bbox_model = bbox_model
+        self.bbox_model.detect_model = self
+        return self
 
     @staticmethod
-    def _size_2(v: float, r: bool = False) -> float:
+    def is_point_near_point(pos: Union[Sequence, Vector], point: Union[Sequence, Vector], distance: int = 20) -> bool:
+        """Check if the point is near the target point."""
+        return (Vector(pos) - Vector(point)).length < distance
+
+    def in_area(self, pos: Union[Sequence, Vector], feather: int = 0, space: Literal['r2d', 'v2d'] = 'r2d') -> bool:
+        """check if the pos is in the area defined by the points
+        :param pos: the position to check, in v2d/r2d space
+        :param points: the points defining the area
+        :param feather: the feather to expand the area, unit: pixel
+        :return: True if the pos is in the area, False otherwise
         """
-        convert grease pencil annotation location between 2d space to 3d space
-        :param v: value
-        :param r: reverse False: 3d -> 2d, True: 2d -> 3d
-        :return: value
+        x, y = pos
+        points = self.bbox_model.bbox_points_r2d if space == 'r2d' else self.bbox_model.bbox_points_v2d
+        top_left, top_right, bottom_left, bottom_right = points
+
+        if feather != 0:
+            top_left = (top_left[0] - feather, top_left[1] + feather)
+            top_right = (top_right[0] + feather, top_right[1] + feather)
+            bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
+
+        if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
+            return True
+        return False
+
+    def near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
+            Union[tuple[Vector, int], tuple[None, None]]:
+        """check if the pos is near the edge center of the area defined by the points
+        :param pos: the position to check
+        :param points: the points defining the area
+        :param feather: the feather to expand the area, unit: pixel
+        :return: True if the pos is near the edge center, False otherwise
         """
-        scale = bpy.context.preferences.system.ui_scale
-        return v / scale if not r else v * scale
+        vec_pos = Vector((pos[0], pos[1]))
+        points = self.bbox_model.edge_center_points_r2d if space == 'r2d' else self.bbox_model.edge_center_points_v2d
+        for i, point in enumerate(points):
+            vec_point = Vector(point)
+            if (vec_pos - vec_point).length < radius:
+                return vec_point, i
+        return None, None
 
-    @staticmethod
-    def _vec_2(v: Vector, r: bool = False) -> Vector:
+    def near_corners(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
+            Union[tuple[Vector, int], tuple[None, None]]:
+        """check if the pos is near the corners of the area defined by the bounding box points
+        :param pos: the position to check
+        :param points: the points defining the area
+        :param feather: the feather to expand the area, unit: pixel
+        :return: True if the pos is near the corners, False otherwise
         """
-        convert grease pencil annotation location between 2d space to 3d space
-        :param v: value
-        :param r: reverse False: 3d -> 2d, True: 2d -> 3d
-        :return: value
+        vec_pos = Vector((pos[0], pos[1]))
+        points = self.bbox_model.bbox_points_r2d if space == 'r2d' else self.bbox_model.bbox_points_v2d
+        for i, point in enumerate(points):
+            vec_point = Vector(point)
+            if (vec_pos - vec_point).length < radius:
+                return vec_point, i
+        return None, None
+
+    def near_corners_extrude(self, pos: Union[Sequence, Vector], extrude: int = 15, radius: int = 15) -> Union[
+        tuple[Vector, int], tuple[None, None]]:
+
+        """check if the pos is near the corner point extrude outward by 45 deg
+        :param pos: the position to check
+        :param extrude: the extrude distance
+        :param radius: the radius of the extrude point
+        :return: True if the pos is near the corners, False otherwise
         """
-        scale = bpy.context.preferences.system.ui_scale
-        return Vector((v[0] / scale, v[1] / scale, 1)) if not r else Vector((v[0] * scale, v[1] * scale, 1))
-
-    @property
-    def ui_scale(self) -> float:
-        return bpy.context.preferences.system.ui_scale
-
-    @staticmethod
-    def r2d_2_v2d(location: Union[Vector, Sequence]) -> Vector:
-        """Convert region 2d space point to node editor 2d view."""
-        ui_scale = bpy.context.preferences.system.ui_scale
-        x, y = bpy.context.region.view2d.region_to_view(location[0], location[1])
-        return Vector((x / ui_scale, y / ui_scale))
-
-    @staticmethod
-    def v2d_2_r2d(location: Union[Vector, Sequence]) -> Vector:
-        """Convert node editor 2d view point to region 2d space."""
-        ui_scale = bpy.context.preferences.system.ui_scale
-        x, y = bpy.context.region.view2d.view_to_region(location[0] * ui_scale, location[1] * ui_scale, clip=False)
-        return Vector((x, y))
-
-    @staticmethod
-    def loc3d_2_v2d(location: Union[Vector, Sequence]) -> Vector:
-        """Convert 3D space point to node editor 2d space."""
-        return Vector((VecTool._size_2(location[0]), VecTool._size_2(location[1])))
-
-    @staticmethod
-    def v2d_2_loc3d(location: Union[Vector, Sequence]) -> Vector:
-        """Convert 2D space point to 3D space."""
-        return Vector((VecTool._size_2(location[0], r=True), VecTool._size_2(location[1], r=True)))
-
-    @staticmethod
-    def rotation_direction(v1: Union[Vector, Sequence], v2: Union[Vector, Sequence]) -> int:
-        """Return the rotation direction of two vectors.
-        CounterClockwise: 1
-        Clockwise: -1
-        """
-        cross_z = v1[0] * v2[1] - v1[1] * v2[0]
-        return 1 if cross_z >= 0 else -1
-
-
-@dataclass(slots=True)
-class GP_Color:
-    """Grease Pencil Color utility class."""
-    white: Final[str] = '#FFFFFF'  # white color
-    orange: Final[str] = '#ED9E5C'  # object color
-    green_geo: Final[str] = '#00D6A3'  # geometry color
-    green_int: Final[str] = '#598C5C'  # interface color
-    blue: Final[str] = '#598AC3'  # string color
-    purple_vec: Final[str] = '#6363C7'  # vector color
-    purple_img: Final[str] = '#633863'  # image color
-    grey: Final[str] = '#A1A1A1'  # float color
-    pink_bool: Final[str] = '#CCA6D6'  # boolean color
-    pink_mat: Final[str] = '#EB7582'  # material color
-
-    @staticmethod
-    def hex_2_rgb(hex_color: str) -> list[float, float, float]:
-        """Convert hex color to rgb color."""
-        if hex_color.startswith('#'):
-            hex = hex_color[1:]
-        else:
-            hex = hex_color
-        return [int(hex[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        vec_pos = Vector((pos[0], pos[1]))
+        points = self.bbox_model.corner_extrude_points_r2d(extrude)
+        for i, point in enumerate(points):
+            if (vec_pos - point).length < radius:
+                return point, i
+        return None, None
 
 
 @dataclass
 class GreasePencilProperty:
-    """Grease Pencil Property, a base class for grease pencil data."""
+    """Grease Pencil Property, a base class for grease pencil data get/set"""
     gp_data: bpy.types.GreasePencil
 
     @property
@@ -176,6 +175,10 @@ class GreasePencilLayerBBox(GreasePencilProperty):
     min_y: float = 0
     #
     last_layer_index: int = None
+    detect_model: Optional['MouseDetectModel'] = field(init=False)
+
+    def __post_init__(self):
+        self.detect_model = MouseDetectModel()._bind_bbox_model(self)
 
     @property
     def size(self) -> tuple[float, float]:
@@ -223,41 +226,42 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         return self.max_x, self.min_y
 
     @property
-    def bbox_points_3d(self) -> tuple[tuple[float, float], ...]:
+    def bbox_points_3d(self) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the bounding box points."""
-        return self.top_left, self.top_right, self.bottom_left, self.bottom_right
+        # top_left, top_right, bottom_left, bottom_right
+        return Vector(self.top_left), Vector(self.top_right), Vector(self.bottom_left), Vector(self.bottom_right)
 
     @property
-    def bbox_points_v2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def bbox_points_v2d(self) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the bounding box points in node editor view."""
         return tuple(map(VecTool.loc3d_2_v2d, self.bbox_points_3d))
 
     @property
-    def bbox_points_r2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def bbox_points_r2d(self) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the bounding box points in region 2d space."""
 
         return tuple(map(VecTool.v2d_2_r2d, self.bbox_points_v2d))
 
     @property
-    def edge_center_points(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def edge_center_points_3d(self) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the edge center points of the bounding box."""
         top_center = (self.max_x + self.min_x) / 2, self.max_y
         bottom_center = (self.max_x + self.min_x) / 2, self.min_y
         left_center = self.min_x, (self.max_y + self.min_y) / 2
         right_center = self.max_x, (self.max_y + self.min_y) / 2
-        return top_center, bottom_center, left_center, right_center
+        return Vector(top_center), Vector(bottom_center), Vector(left_center), Vector(right_center)
 
     @property
-    def edge_center_points_v2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def edge_center_points_v2d(self) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the edge center points of the bounding box in node editor view."""
-        return tuple(map(VecTool.loc3d_2_v2d, self.edge_center_points))
+        return tuple(map(VecTool.loc3d_2_v2d, self.edge_center_points_3d))
 
     @property
-    def edge_center_points_r2d(self) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def edge_center_points_r2d(self) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the edge center points of the bounding box in region 2d space."""
         return tuple(map(VecTool.v2d_2_r2d, self.edge_center_points_v2d))
 
-    def corner_extrude_points_r2d(self, extrude: int = 10) -> tuple[Union[tuple[float, float], Vector], ...]:
+    def corner_extrude_points_r2d(self, extrude: int = 10) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the corner extrude points of the bounding box.
         :param extrude: the extrude distance
         this is not a property because it needs an extrude distance"""
@@ -286,17 +290,10 @@ class GreasePencilLayerBBox(GreasePencilProperty):
 
         return max_x, min_x, max_y, min_y
 
-    def calc_active_layer_bbox(self, frame: int = 0) -> tuple[tuple[float, float], ...]:
+    def calc_active_layer_bbox(self, frame: int = 0) -> None:
         """
         Calculate the bounding box of the active grease pencil annotation layer.
         :param frame: calc this frame
-        :return: The bounding box of the grease pencil annotation.
-            return in position of 2d space
-            positions = (
-                (-1, 1), (1, 1),
-                (-1, -1), (1, -1))
-
-            indices = ((0, 1, 2), (2, 1, 3))
         """
         layer = self.active_layer
         if not layer:
@@ -309,13 +306,6 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         Calculate the bounding box of the grease pencil annotation.
         :param layer_name_or_inedx: The name or index of the layer.
         :param frame: calc this frame
-        :return: The bounding box of the grease pencil annotation.
-            return in position of 2d space
-            positions = (
-                (-1, 1), (1, 1),
-                (-1, -1), (1, -1))
-
-            indices = ((0, 1, 2), (2, 1, 3))
         """
 
         layer = self._get_layer(layer_name_or_inedx)
@@ -339,74 +329,6 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         self.min_y = min(y_list)
         self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
 
-    def in_area(self, pos: Union[Sequence, Vector], feather: int = 10, space: Literal['r2d', 'v2d'] = 'r2d') -> bool:
-        """check if the pos is in the area defined by the points
-        :param pos: the position to check, in v2d/r2d space
-        :param points: the points defining the area
-        :param feather: the feather to expand the area, unit: pixel
-        :return: True if the pos is in the area, False otherwise
-        """
-        x, y = pos
-        points = self.bbox_points_r2d if space == 'r2d' else self.bbox_points_v2d
-        top_left, top_right, bottom_left, bottom_right = points
-
-        if feather != 0:
-            top_left = (top_left[0] - feather, top_left[1] + feather)
-            top_right = (top_right[0] + feather, top_right[1] + feather)
-            bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
-
-        if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
-            return True
-        return False
-
-    def near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
-            Union[Vector, None]:
-        """check if the pos is near the edge center of the area defined by the points
-        :param pos: the position to check
-        :param points: the points defining the area
-        :param feather: the feather to expand the area, unit: pixel
-        :return: True if the pos is near the edge center, False otherwise
-        """
-        vec_pos = Vector((pos[0], pos[1]))
-        points = self.edge_center_points_r2d if space == 'r2d' else self.edge_center_points_v2d
-        for point in points:
-            vec_point = Vector(point)
-            if (vec_pos - vec_point).length < radius:
-                return vec_point
-        return None
-
-    def near_corners(self, pos: Union[Sequence, Vector], radius: int = 20, space: Literal['r2d', 'v2d'] = 'r2d') -> \
-            Union[Vector, None]:
-        """check if the pos is near the corners of the area defined by the bounding box points
-        :param pos: the position to check
-        :param points: the points defining the area
-        :param feather: the feather to expand the area, unit: pixel
-        :return: True if the pos is near the corners, False otherwise
-        """
-        vec_pos = Vector((pos[0], pos[1]))
-        points = self.bbox_points_r2d if space == 'r2d' else self.bbox_points_v2d
-        for point in points:
-            vec_point = Vector(point)
-            if (vec_pos - vec_point).length < radius:
-                return vec_point
-        return None
-
-    def near_corners_extrude(self, pos: Union[Sequence, Vector], extrude: int = 15, radius: int = 15) -> Union[
-        Vector, None]:
-
-        """check if the pos is near the the corner point extrude outward by 45 deg
-        :param pos: the position to check
-        :param extrude: the extrude distance
-        :param radius: the radius of the extrude point
-        :return: True if the pos is near the corners, False otherwise
-        """
-        vec_pos = Vector((pos[0], pos[1]))
-        points = self.corner_extrude_points_r2d(extrude)
-        for point in points:
-            if (vec_pos - point).length < radius:
-                return point
-        return None
-
 
 @dataclass
 class GreasePencilLayers(GreasePencilProperty):
@@ -423,7 +345,7 @@ class GreasePencilLayers(GreasePencilProperty):
                                               gp_data.layers]
         for i, bbox in enumerate(bboxs):
             bbox.calc_bbox(i)
-            if bbox.in_area(pos, feather, space):
+            if bbox.detect_model.in_area(pos, feather, space):
                 # print(f'In layer {bbox.gp_data.layers[i].info}')
                 return bbox.last_layer_index
 
@@ -507,10 +429,21 @@ class CreateGreasePencilData(GreasePencilCache):
         return gp_data
 
     @staticmethod
-    def from_mesh_obj(obj: bpy.types.Object, size: int = 100) -> bpy.types.GreasePencil:
+    def apply_transform(obj: bpy.types.Object):
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True, isolate_users=True)
+
+    @staticmethod
+    def from_mesh_obj(obj: bpy.types.Object, size: int = 100,
+                      euler: ShootAngles = ShootAngles.TOP) -> bpy.types.GreasePencil:
         """
         Create a grease pencil object from a mesh object and convert it to grease pencil data.
         :param obj:  the mesh object
+        :param size:  in pixels
+        :param euler:  the rotation of the grease pencil object
         :return:
         """
         new_obj = obj.copy()
@@ -518,11 +451,10 @@ class CreateGreasePencilData(GreasePencilCache):
         bpy.context.collection.objects.link(new_obj)
         new_obj.scale = (size, size, size)
         bpy.context.view_layer.objects.active = new_obj
-        bpy.ops.object.select_all(action='DESELECT')
-        new_obj.select_set(True)
-        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        CreateGreasePencilData.apply_transform(new_obj)
+        new_obj.rotation_euler = euler.value
+        CreateGreasePencilData.apply_transform(new_obj)
         CreateGreasePencilData.convert_2_gp()
-
         gp_obj = bpy.context.object
         gp_data = gp_obj.data
         CreateGreasePencilData.del_later(gp_obj)
@@ -530,7 +462,8 @@ class CreateGreasePencilData(GreasePencilCache):
         return gp_data
 
     @staticmethod
-    def from_gp_obj(obj: bpy.types.Object, size: int = 100) -> bpy.types.GreasePencil:
+    def from_gp_obj(obj: bpy.types.Object, size: int = 100,
+                    euler: ShootAngles = ShootAngles.TOP) -> bpy.types.GreasePencil:
         """
         Create a grease pencil object from a grease pencil object and convert it to grease pencil data.
         Notice that modifier is not supported. Get evaluated data will crash blender.
@@ -538,6 +471,14 @@ class CreateGreasePencilData(GreasePencilCache):
         :return:
         """
         gp_data = obj.data.copy()
+        new_obj = bpy.data.objects.new('tmp', gp_data)
+        bpy.context.collection.objects.link(new_obj)
+        bpy.context.view_layer.objects.active = new_obj
+        CreateGreasePencilData.apply_transform(new_obj)
+        new_obj.rotation_euler = euler.value
+        CreateGreasePencilData.apply_transform(new_obj)
+        CreateGreasePencilData.del_later(new_obj)
+
         with BuildGreasePencilData(gp_data) as gp_builder:
             for layer in gp_builder.gp_data.layers:
                 gp_builder.scale(layer.info, Vector((size, size, 1)), Vector((0, 0, 0)))
@@ -555,29 +496,26 @@ class EditGreasePencilStroke():
         stroke.points.foreach_get('co', points)
         yield points.reshape((len(stroke.points), 3))
 
-    @staticmethod
-    def _move_stroke(stroke: bpy.types.GPencilStroke, v: Vector):
+    def _move_stroke(self, stroke: bpy.types.GPencilStroke, v: Vector):
         """Move the grease pencil data."""
         move_3d = Vector((v[0], v[1], 0))
-        with EditGreasePencilStroke.stroke_points(stroke) as points:
+        with self.stroke_points(stroke) as points:
             points += move_3d
             stroke.points.foreach_set('co', points.ravel())
 
-    @staticmethod
-    def _scale_stroke(stroke: bpy.types.GPencilStroke, scale: Vector, pivot: Vector):
+    def _scale_stroke(self, stroke: bpy.types.GPencilStroke, scale: Vector, pivot: Vector):
         """Scale the grease pencil data."""
         scale_3d = Vector((scale[0], scale[1], 1))
         pivot_3d = Vector((pivot[0], pivot[1], 0))
-        with EditGreasePencilStroke.stroke_points(stroke) as points:
+        with self.stroke_points(stroke) as points:
             points = (points - pivot_3d) * scale_3d + pivot_3d
             stroke.points.foreach_set('co', points.ravel())
 
-    @staticmethod
-    def _rotate_stroke(stroke: bpy.types.GPencilStroke, degree: int, pivot: Vector):
+    def _rotate_stroke(self, stroke: bpy.types.GPencilStroke, degree: int, pivot: Vector):
         """Rotate the grease pencil data around the pivot point."""
         pivot_3d = Vector((pivot[0], pivot[1], 0))
         angle = radians(degree)
-        with EditGreasePencilStroke.stroke_points(stroke) as points:
+        with self.stroke_points(stroke) as points:
             # use numpy to calculate the rotation
             points = ((points - pivot_3d) @ np.array([[np.cos(angle), -np.sin(angle), 0],
                                                       [np.sin(angle), np.cos(angle), 0],
@@ -632,6 +570,15 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
             res = 360 + res
         self._rotate_degree = res
 
+    def set_active_layer(self, layer_name_or_index: Union[str, int]) -> 'BuildGreasePencilData':
+        """Set the active grease pencil annotation layer."""
+        self.active_layer_index = layer_name_or_index
+        return self
+
+    def color_active(self, hex_color: str) -> 'BuildGreasePencilData':
+        """Set the color of the active grease pencil annotation layer."""
+        return self.color(self.active_layer_index, hex_color)
+
     def color(self, layer_name_or_index: Union[str, int], hex_color: str) -> 'BuildGreasePencilData':
         """Set the color of the grease pencil annotation layer.
         :param layer_name_or_index: The name or index of the layer.
@@ -639,7 +586,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
         if layer:
-            layer.color = GP_Color.hex_2_rgb(hex_color)
+            layer.color = ColorTool.hex_2_rgb(hex_color)
         return self
 
     def link(self, context: bpy.types.Context) -> 'BuildGreasePencilData':
@@ -652,9 +599,34 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         self._link_nodegroup(context.space_data.edit_tree)
         return self
 
+    def join(self, other_gp_data: bpy.types.GreasePencil) -> 'BuildGreasePencilData':
+        """Join the grease pencil data.
+        """
+        self_obj = bpy.data.objects.new('tmp', self.gp_data)
+        tmp_obj = bpy.data.objects.new('tmp', other_gp_data)
+        bpy.context.collection.objects.link(self_obj)
+        bpy.context.collection.objects.link(tmp_obj)
+        bpy.context.view_layer.objects.active = self_obj
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        self_obj.select_set(True)
+        tmp_obj.select_set(True)
+        bpy.ops.object.join()
+        self.gp_data = self_obj.data
+        self.del_later(obj_list=[self_obj, tmp_obj])
+        return self
+
     def move_active(self, v: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Move the active grease pencil layer."""
         return self.move(self.active_layer_name, v, space)
+
+    def scale_active(self, scale: Vector, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+        """Scale the active grease pencil layer."""
+        return self.scale(self.active_layer_name, scale, pivot, space)
+
+    def rotate_active(self, degree: int, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+        """Rotate the active grease pencil layer."""
+        return self.rotate(self.active_layer_name, degree, pivot, space)
 
     def move(self, layer_name_or_index: Union[str, int], v: Vector,
              space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
@@ -678,10 +650,6 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
         return self
 
-    def scale_active(self, scale: Vector, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
-        """Scale the active grease pencil layer."""
-        return self.scale(self.active_layer_name, scale, pivot)
-
     def scale(self, layer_name_or_index: Union[str, int], scale: Vector, pivot: Vector,
               space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Scale the grease pencil data.
@@ -703,10 +671,6 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
         return self
 
-    def rotate_active(self, degree: int, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
-        """Rotate the active grease pencil layer."""
-        return self.rotate(self.active_layer_name, degree, pivot, space)
-
     def rotate(self, layer_name_or_index: Union[str, int], degree: int, pivot: Vector,
                space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Rotate the grease pencil data.
@@ -726,22 +690,6 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
             for stroke in frame.strokes:
                 self.edit._rotate_stroke(stroke, degree, vec_pivot)
         self.rotate_degree = degree
-        return self
-
-    def join(self, other_gp_data: bpy.types.GreasePencil) -> 'BuildGreasePencilData':
-        """Join the grease pencil data."""
-        self_obj = bpy.data.objects.new('tmp', self.gp_data)
-        tmp_obj = bpy.data.objects.new('tmp', other_gp_data)
-        bpy.context.collection.objects.link(self_obj)
-        bpy.context.collection.objects.link(tmp_obj)
-        bpy.context.view_layer.objects.active = self_obj
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
-        self_obj.select_set(True)
-        tmp_obj.select_set(True)
-        bpy.ops.object.join()
-        self.gp_data = self_obj.data
-        self.del_later(obj_list=[self_obj, tmp_obj])
         return self
 
     def _link_nodegroup(self, nt: bpy.types.NodeTree, ) -> None:
