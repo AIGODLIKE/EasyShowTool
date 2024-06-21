@@ -95,8 +95,38 @@ class ColorTool:
         return {k: v for k, v in cls.__dict__.items() if k[0] != '_' and isinstance(v, str)}
 
 
+class PointBase:
+    """Base class for points in the node editor.
+    Helps to determine the order and opposite point of a point."""
+    order: ClassVar[dict[int, str]] = {}
+    opp_order: ClassVar[dict[str, str]] = {}
+
+    @classmethod
+    def opposite(cls, point: int) -> int:
+        p = cls.order[point]
+        for k, v in cls.order.items():
+            if v == cls.opp_order[p]:
+                return k
+
+    @classmethod
+    def point_on_left(cls, point: int) -> bool:
+        return 'left' in cls.order[point]
+
+    @classmethod
+    def point_on_bottom(cls, point: int) -> bool:
+        return 'bottom' in cls.order[point]
+
+    @classmethod
+    def point_on_right(cls, point: int) -> bool:
+        return 'right' in cls.order[point]
+
+    @classmethod
+    def point_on_top(cls, point: int) -> bool:
+        return 'top' in cls.order[point]
+
+
 @dataclass
-class Coord:
+class Coord(PointBase):
     order: ClassVar[dict[int, str]] = {
         0: 'top_left',
         1: 'top_right',
@@ -112,32 +142,9 @@ class Coord:
         'bottom_right': 'top_left',
     }
 
-    @classmethod
-    def opposite(cls, point: int) -> int:
-        p = cls.order[point]
-        for k, v in cls.order.items():
-            if v == cls.opp_order[p]:
-                return k
-
-    @classmethod
-    def point_on_left(cls, point: int) -> bool:
-        return 'left' in cls.order[point]
-
-    @classmethod
-    def point_on_bottom(cls, point: int) -> bool:
-        return 'bottom' in cls.order[point]
-
-    @classmethod
-    def point_on_right(cls, point: int) -> bool:
-        return 'right' in cls.order[point]
-
-    @classmethod
-    def point_on_top(cls, point: int) -> bool:
-        return 'top' in cls.order[point]
-
 
 @dataclass
-class EdgeCenter:
+class EdgeCenter(PointBase):
     order: ClassVar[dict[int, str]] = {
         0: 'top_center',
         1: 'bottom_center',
@@ -151,26 +158,3 @@ class EdgeCenter:
         'left_center': 'right_center',
         'right_center': 'left_center',
     }
-
-    @classmethod
-    def opposite(cls, point: int) -> int:
-        p = cls.order[point]
-        for k, v in cls.order.items():
-            if v == cls.opp_order[p]:
-                return k
-
-    @classmethod
-    def point_on_left(cls, point: int) -> bool:
-        return 'left' in cls.order[point]
-
-    @classmethod
-    def point_on_bottom(cls, point: int) -> bool:
-        return 'bottom' in cls.order[point]
-
-    @classmethod
-    def point_on_right(cls, point: int) -> bool:
-        return 'right' in cls.order[point]
-
-    @classmethod
-    def point_on_top(cls, point: int) -> bool:
-        return 'top' in cls.order[point]

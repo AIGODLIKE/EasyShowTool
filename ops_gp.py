@@ -180,7 +180,9 @@ class ENN_OT_rotate_gp(bpy.types.Operator):
         return {'FINISHED'}
 
 
-def draw_hover_callback_px(self, context) -> None:
+def draw_hover_callback_px(self: 'ENN_OT_gp_set_active_layer', context) -> None:
+    if self.is_dragging:
+        return
     drag_model: DragGreasePencilModel = self.drag_model
     gp_data_bbox: GreasePencilLayerBBox = drag_model.gp_data_bbox
 
@@ -189,8 +191,8 @@ def draw_hover_callback_px(self, context) -> None:
     coords = [top_left, top_right, bottom_right, bottom_left, top_left]  # close the loop
 
     draw_model: DrawModel = DrawModel(points, gp_data_bbox.edge_center_points_r2d, coords)
-
     draw_model.draw_bbox_edge()
+
     if drag_model.in_drag_area:
         draw_model.draw_bbox_points()
     if drag_model.on_edge_center:
@@ -198,33 +200,10 @@ def draw_hover_callback_px(self, context) -> None:
     if drag_model.on_corner:
         draw_model.draw_scale_corner_widget()
     elif drag_model.on_corner_extrude:
-        draw_model.draw_rotate_widget()
+        draw_model.draw_rotate_widget(point=drag_model.on_corner_extrude)
 
 
-def draw_callback_px(self, context) -> None:
-    drag_model: DragGreasePencilModel = self.drag_model
-    gp_data_bbox: GreasePencilLayerBBox = drag_model.gp_data_bbox
-
-    top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
-    points = [top_left, top_right, bottom_left, bottom_right]
-    coords = [top_left, top_right, bottom_right, bottom_left, top_left]  # close the loop
-
-    draw_model: DrawModel = DrawModel(points, gp_data_bbox.edge_center_points_r2d, coords)
-
-    if draw_model.drag_area:
-        draw_model.draw_bbox_area()
-    if draw_model.drag:
-        draw_model.draw_bbox_edge()
-
-    if draw_model.debug:
-        draw_model.draw_debug(self.mouse_pos)
-
-
-class DragProperty:
-    is_dragging: ClassVar[bool] = False
-
-
-class ENN_OT_gp_set_active_layer(bpy.types.Operator, DragProperty):
+class ENN_OT_gp_set_active_layer(bpy.types.Operator):
     bl_idname = "enn.gp_set_active_layer"
     bl_label = "Set Active Layer"
     bl_description = "Set the active layer of the Grease Pencil Object"
@@ -233,7 +212,8 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator, DragProperty):
     draw_handle: ClassVar = None
     drag_model: ClassVar[DragGreasePencilModel] = None
     # call stop
-    stop: ClassVar[bool] = False
+    stop: bool = False
+    is_dragging: ClassVar[bool] = False
 
     @classmethod
     def poll(cls, context):
@@ -279,9 +259,14 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator, DragProperty):
                 self.drag_model.update_mouse_pos(context, event)
                 self.drag_model.detect_near_widgets()
             except ReferenceError:
-                self.__class__.stop = True
+                self.stop = True
         # active tool is not drag tool
-        if self.stop or event.type in {'ESC', 'RIGHTMOUSE'} or self.is_dragging:
+        if event.type == 'LEFTMOUSE':
+            self.__class__.is_dragging = True
+            if event.value == 'RELEASE':
+                self.__class__.is_dragging = False
+
+        if self.stop or event.type in {'ESC', 'RIGHTMOUSE'}:
             self.remove_draw_handle()
             context.area.tag_redraw()
             return {'FINISHED'}
@@ -289,7 +274,26 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator, DragProperty):
         return {'PASS_THROUGH'}
 
 
-class ENN_OT_gp_drag_modal(bpy.types.Operator, DragProperty):
+def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
+    drag_model: DragGreasePencilModel = self.drag_model
+    gp_data_bbox: GreasePencilLayerBBox = drag_model.gp_data_bbox
+
+    top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
+    points = [top_left, top_right, bottom_left, bottom_right]
+    coords = [top_left, top_right, bottom_right, bottom_left, top_left]  # close the loop
+
+    draw_model: DrawModel = DrawModel(points, gp_data_bbox.edge_center_points_r2d, coords)
+
+    if draw_model.drag_area:
+        draw_model.draw_bbox_area()
+    if draw_model.drag:
+        draw_model.draw_bbox_edge()
+
+    if draw_model.debug:
+        draw_model.draw_debug(self.mouse_pos)
+
+
+class ENN_OT_gp_drag_modal(bpy.types.Operator):
     bl_idname = "enn.gp_drag_modal"
     bl_label = "Transform"
     bl_description = "Move the active Grease Pencil Layer"
@@ -310,18 +314,19 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator, DragProperty):
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
 
         self.drag_model = DragGreasePencilModel(gp_data=gp_data)
-        self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_callback_px, (self, context), 'WINDOW',
+        self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_drag_callback_px, (self, context), 'WINDOW',
                                                                       'POST_PIXEL')
         context.window_manager.modal_handler_add(self)
         self.drag_model.update_mouse_pos(context, event)
-        self.__class__.is_dragging = True
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
+        if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
+            ENN_OT_gp_set_active_layer.is_dragging = False
+
         if event.type == 'MOUSEMOVE':
             self.drag_model.update_mouse_pos(context, event)
             if not self.drag_init:
-                self.__class__.is_dragging = True
                 self.drag_model.detect_near_widgets()
                 self.drag_init = True
             self.drag_model.handle_drag(context, event)
@@ -335,7 +340,6 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator, DragProperty):
         return {'RUNNING_MODAL'}
 
     def _finish(self, context):
-        self.__class__.is_dragging = False
         bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
         context.area.tag_redraw()
 
@@ -378,10 +382,10 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
         # op = layout.operator(ENN_OT_rotate_gp.bl_idname)
         # op.rotate_angle = 30
 
-        layout.separator()
-        box = layout.box()
-        box.label(text="Move Active Layer Modal")
-        box.operator(ENN_OT_gp_drag_modal.bl_idname)
+        # layout.separator()
+        # box = layout.box()
+        # box.label(text="Move Active Layer Modal")
+        # box.operator(ENN_OT_gp_drag_modal.bl_idname)
 
 
 class ENN_TL_grease_pencil_tool(bpy.types.WorkSpaceTool):

@@ -72,9 +72,9 @@ class DrawModel():
         batch = batch_for_shader(shader, 'TRIS', {"pos": self.points}, indices=indices)
         batch.draw(shader)
 
-    def draw_rotate_widget(self):
+    def draw_rotate_widget(self, point: Vector):
         gpu.state.point_size_set(self.rotate_px)
-        draw_circle_2d(self.points, self.color_hover, radius=15, segments=32)
+        draw_circle_2d(point, self.color_hover, radius=15, segments=32)
 
     def draw_scale_corner_widget(self):
         gpu.state.point_size_set(self.corner_px)
