@@ -213,14 +213,14 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
     drag_model: ClassVar[DragGreasePencilModel] = None
     # call stop
     stop: bool = False
-    is_dragging: ClassVar[bool] = False
+    is_dragging: ClassVar[bool] = False  # allow to call from other operator
 
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context)
 
     def invoke(self, context, event):
-        self.__class__.stop = False
+        self.stop = False
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
         if not gp_data: return {'CANCELLED'}
@@ -269,6 +269,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         if self.stop or event.type in {'ESC', 'RIGHTMOUSE'}:
             self.remove_draw_handle()
             context.area.tag_redraw()
+            self.stop = False
             return {'FINISHED'}
         context.area.tag_redraw()
         return {'PASS_THROUGH'}
@@ -290,7 +291,7 @@ def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
         draw_model.draw_bbox_edge()
 
     if draw_model.debug:
-        draw_model.draw_debug(self.mouse_pos)
+        draw_model.draw_debug(self.drag_model.mouse_pos)
 
 
 class ENN_OT_gp_drag_modal(bpy.types.Operator):
@@ -331,9 +332,10 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
                 self.drag_init = True
             self.drag_model.handle_drag(context, event)
 
-        if self._handle_pass_through(event):
+        if event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE", "MIDDLEMOUSE"}:
             return {'PASS_THROUGH'}
-        if self._handle_finish(context, event):
+        if event.type in {'ESC', 'RIGHTMOUSE'} or (event.type == 'LEFTMOUSE' and event.value == 'RELEASE'):
+            self._finish(context)
             return {'FINISHED'}
 
         context.area.tag_redraw()
@@ -342,16 +344,6 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
     def _finish(self, context):
         bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
         context.area.tag_redraw()
-
-    def _handle_finish(self, context, event) -> bool:
-        if event.type in {'ESC', 'RIGHTMOUSE'} or (event.type == 'LEFTMOUSE' and event.value == 'RELEASE'):
-            self._finish(context)
-            return True
-
-    def _handle_pass_through(self, event) -> bool:
-        if event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE", "MIDDLEMOUSE"}:
-            return True
-        return False
 
 
 class ENN_PT_gn_edit_panel(bpy.types.Panel):
