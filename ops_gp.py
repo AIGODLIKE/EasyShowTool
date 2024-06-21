@@ -230,6 +230,8 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
             layer_index = GreasePencilLayers.in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
         except ReferenceError:  # ctrl z
             layer_index = None
+        except AttributeError:  # switch to other tool
+            layer_index = None
         if layer_index is None:
             return {'FINISHED'}
 
@@ -258,7 +260,9 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
             try:
                 self.drag_model.update_mouse_pos(context, event)
                 self.drag_model.detect_near_widgets()
-            except ReferenceError:
+            except ReferenceError:  # ctrl z
+                self.stop = True
+            except AttributeError:  # switch to other tool
                 self.stop = True
         # active tool is not drag tool
         if self.stop or event.type in {'ESC', 'RIGHTMOUSE'}:
