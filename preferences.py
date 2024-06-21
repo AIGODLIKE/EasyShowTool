@@ -22,7 +22,7 @@ class Preference(bpy.types.AddonPreferences):
 
     gp_detect_edge_px: IntProperty(default=20, name='Edge', subtype='PIXEL')
     gp_detect_corner_px: IntProperty(default=20, name='Corner', subtype='PIXEL')
-    gp_detect_rotate_px: IntProperty(default=15, name='Rotate', subtype='PIXEL')
+    gp_detect_rotate_px: IntProperty(default=20, name='Rotate', subtype='PIXEL')
 
     debug_draw: BoolProperty(default=False, name='Debug')
 

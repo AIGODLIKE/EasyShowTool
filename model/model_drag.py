@@ -167,7 +167,6 @@ class DragGreasePencilModel:
         """Rotate the active layer of the Grease Pencil Object when near the corner extrude point."""
         pivot: Vector = self.bbox_model.center
         pivot_r2d: Vector = self.bbox_model.center_r2d
-
         vec_1 = Vector(self.mouse_pos) - pivot_r2d
         vec_2 = Vector(self.mouse_pos_prev) - pivot_r2d
         # clockwise or counterclockwise

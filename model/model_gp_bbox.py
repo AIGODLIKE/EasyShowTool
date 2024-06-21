@@ -120,9 +120,9 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         return VecTool.loc3d_2_v2d(self.size)
 
     @property
-    def center(self) -> tuple[float, float]:
+    def center(self) -> Vector:
         """Return the 3d center of the bounding box."""
-        return (self.min_x + self.max_x) / 2, (self.min_y + self.max_y) / 2
+        return Vector(((self.min_x + self.max_x) / 2, (self.min_y + self.max_y) / 2))
 
     @property
     def center_v2d(self) -> Vector:

@@ -386,5 +386,5 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
         vec_pivot = VecTool.v2d_2_loc3d(pivot) if space == 'v2d' else pivot
-        self.edit_layer.rotate_layer(layer, radians(degree), vec_pivot)
+        self.edit_layer.rotate_layer(layer, degree, vec_pivot)
         return self
