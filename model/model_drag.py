@@ -7,14 +7,15 @@ import bpy
 
 from ..public_path import get_pref
 from .utils import Coord, EdgeCenter
-from .model_gp import VecTool, GreasePencilLayerBBox, BuildGreasePencilData
-
+from .model_gp import VecTool, BuildGreasePencilData
+from .model_gp_bbox import GreasePencilLayerBBox,MouseDetectModel
 
 @dataclass
 class DragGreasePencilModel:
     gp_data: bpy.types.GreasePencil
-    gp_data_bbox: GreasePencilLayerBBox = field(init=False)
-    gp_data_builder: BuildGreasePencilData = field(init=False)
+    bbox_model: GreasePencilLayerBBox = field(init=False)
+    build_model: BuildGreasePencilData = field(init=False)
+    detect_model: MouseDetectModel = field(init=False)
     # mouse
     mouse_pos: tuple[int, int] = (0, 0)
     mouse_pos_prev: tuple[int, int] = (0, 0)
@@ -37,8 +38,9 @@ class DragGreasePencilModel:
     delta_degree: float = 0
 
     def __post_init__(self):
-        self.gp_data_bbox = GreasePencilLayerBBox(self.gp_data)
-        self.gp_data_builder = BuildGreasePencilData(self.gp_data)
+        self.bbox_model = GreasePencilLayerBBox(self.gp_data)
+        self.build_model = BuildGreasePencilData(self.gp_data)
+        self.detect_model = self.bbox_model.detect_model
 
     def handle_drag(self, context, event):
         """Handle the drag event in the modal."""
@@ -66,9 +68,9 @@ class DragGreasePencilModel:
 
     def on_drag_scale_both_side(self, event):
         """Scale the active layer of the Grease Pencil Object when near the edge center or corner."""
-        pivot = self.gp_data_bbox.center
-        pivot_r2d = self.gp_data_bbox.center_r2d
-        size_x_v2d, size_y_v2d = self.gp_data_bbox.size_v2d
+        pivot = self.bbox_model.center
+        pivot_r2d = self.bbox_model.center_r2d
+        size_x_v2d, size_y_v2d = self.bbox_model.size_v2d
 
         delta_x, delta_y = (self.delta_vec * 2).xy
         if self.mouse_pos[0] < pivot_r2d[0]:  # if on the left side
@@ -86,9 +88,9 @@ class DragGreasePencilModel:
             else:
                 vec_scale = Vector((scale_x, 1, 0))
         else:  # scale both axis
-            if self.on_corner[0] == self.gp_data_bbox.min_x:
+            if self.on_corner[0] == self.bbox_model.min_x:
                 delta_x = -delta_x
-            if self.on_corner[1] == self.gp_data_bbox.min_y:
+            if self.on_corner[1] == self.bbox_model.min_y:
                 delta_y = -delta_y
 
             scale_x = 1 + delta_x / size_x_v2d
@@ -98,14 +100,14 @@ class DragGreasePencilModel:
             vec_scale = Vector((unit_scale, unit_scale, 0)) if event.shift else Vector(
                 (scale_x, scale_y, 0))
 
-        self.gp_data_builder.scale_active(vec_scale, pivot, space='3d')
+        self.build_model.scale_active(vec_scale, pivot, space='3d')
 
     def on_drag_scale_one_side(self, event):
-        delta_x, delta_y = (self.delta_vec).xy
-        size_x_v2d, size_y_v2d = self.gp_data_bbox.size_v2d
+        delta_x, delta_y = self.delta_vec.xy
+        size_x_v2d, size_y_v2d = self.bbox_model.size_v2d
 
         if self.on_corner:
-            points = self.gp_data_bbox.bbox_points_3d
+            points = self.bbox_model.bbox_points_3d
             pivot_index = Coord.opposite(self.pt_corner)
             pivot = points[pivot_index]
 
@@ -120,7 +122,7 @@ class DragGreasePencilModel:
             vec_scale = Vector((scale_x, scale_y, 0))
 
         elif self.on_edge_center:
-            points = self.gp_data_bbox.edge_center_points_3d
+            points = self.bbox_model.edge_center_points_3d
             pivot_index = EdgeCenter.opposite(self.pt_edge_center)
             pivot: Vector = points[pivot_index]
 
@@ -144,12 +146,12 @@ class DragGreasePencilModel:
             else:
                 vec_scale.x = vec_scale.y
 
-        self.gp_data_builder.scale_active(vec_scale, pivot, space='3d')
+        self.build_model.scale_active(vec_scale, pivot, space='3d')
 
     def on_drag_rotate(self, event):
         """Rotate the active layer of the Grease Pencil Object when near the corner extrude point."""
-        pivot = self.gp_data_bbox.center
-        pivot_r2d = self.gp_data_bbox.center_r2d
+        pivot = self.bbox_model.center
+        pivot_r2d = self.bbox_model.center_r2d
 
         vec_1 = (Vector(self.mouse_pos) - Vector(pivot_r2d))
         vec_2 = Vector(self.mouse_pos_prev) - Vector(pivot_r2d)
@@ -159,27 +161,28 @@ class DragGreasePencilModel:
         degree = degrees(angle)
         # snap
         if not event.shift:
-            self.gp_data_builder.rotate_active(degree, pivot)
+            self.build_model.rotate_active(degree, pivot)
         else:
             self.delta_degree += abs(degree)
             if self.delta_degree > self.snap_degree:
                 self.delta_degree = 0
-                self.gp_data_builder.rotate_active(self.snap_degree * inverse, pivot)
+                self.build_model.rotate_active(self.snap_degree * inverse, pivot)
 
     def on_drag_move(self):
         # move only when in drag area
-        self.gp_data_builder.move_active(self.delta_vec, space='v2d')
+        self.build_model.move_active(self.delta_vec, space='v2d')
 
     def detect_near_widgets(self):
         """Detect the near points and areas of the Grease Pencil Object."""
-        detect_model = self.gp_data_bbox.detect_model
-        self.on_edge_center, self.pt_edge_center = detect_model.near_edge_center(self.mouse_pos, radius=self.d_edge)
-        self.on_corner, self.pt_corner = detect_model.near_corners(self.mouse_pos, radius=self.d_corner)
-        self.on_corner_extrude, self.pt_corner_extrude = detect_model.near_corners_extrude(self.mouse_pos, extrude=20,
-                                                                                           radius=self.d_rotate)
-        self.in_drag_area = detect_model.in_area(self.mouse_pos, feather=0)
+        self.on_edge_center, self.pt_edge_center = self.detect_model.near_edge_center(self.mouse_pos,
+                                                                                      radius=self.d_edge)
+        self.on_corner, self.pt_corner = self.detect_model.near_corners(self.mouse_pos, radius=self.d_corner)
+        self.on_corner_extrude, self.pt_corner_extrude = self.detect_model.near_corners_extrude(self.mouse_pos,
+                                                                                                extrude=20,
+                                                                                                radius=self.d_rotate)
+        self.in_drag_area = self.detect_model.in_area(self.mouse_pos, feather=0)
 
     def update_gp_data(self, context):
         """Update the Grease Pencil Data. Some data may be changed in the modal."""
-        self.gp_data_bbox.calc_active_layer_bbox()
-        _ = self.gp_data_bbox.bbox_points_3d
+        self.bbox_model.calc_active_layer_bbox()
+        _ = self.bbox_model.bbox_points_3d

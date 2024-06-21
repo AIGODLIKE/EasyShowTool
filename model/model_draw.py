@@ -7,7 +7,7 @@ from gpu_extras.batch import batch_for_shader
 from gpu_extras.presets import draw_circle_2d
 from typing import Sequence, Union, ClassVar
 
-from .model_gp import GreasePencilLayerBBox
+from .model_gp_bbox import GreasePencilLayerBBox
 from ..public_path import get_pref
 
 shader = gpu.shader.from_builtin('UNIFORM_COLOR')
@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 
 
 @dataclass
-class DrawModel():
+class DrawModel:
     # data
     points: list[Vector, Vector, Vector, Vector]
     edge_points: list[Vector, Vector, Vector, Vector]

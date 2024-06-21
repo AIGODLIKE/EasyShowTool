@@ -22,6 +22,7 @@ def has_active_node(context: bpy.types.Context, bl_idname: Optional[str] = None)
     return True
 
 
+# noinspection PyPep8Naming
 class ENN_OT_add_note(bpy.types.Operator):
     bl_idname = "enn.add_note"
     bl_label = "Add Note"
@@ -48,13 +49,15 @@ class ENN_OT_add_note(bpy.types.Operator):
         self.move_node(frame_node)
         return {'FINISHED'}
 
-    def move_node(self, node: bpy.types.Node):
+    @staticmethod
+    def move_node(node: bpy.types.Node):
         bpy.ops.node.select_all(action='DESELECT')
         bpy.context.space_data.edit_tree.nodes.active = node
         node.select = True
         bpy.ops.transform.translate('INVOKE_DEFAULT')
 
 
+# noinspection PyPep8Naming
 class ENN_OT_edit_note(bpy.types.Operator):
     bl_idname = "enn.edit_note"
     bl_label = "Edit Note"

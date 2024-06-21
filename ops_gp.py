@@ -6,7 +6,8 @@ from mathutils import Vector
 from .model.utils import VecTool, ShootAngles
 from .model.model_draw import DrawModel
 from .model.model_drag import DragGreasePencilModel
-from .model.model_gp import CreateGreasePencilData, BuildGreasePencilData, GreasePencilLayerBBox, GreasePencilLayers
+from .model.model_gp import CreateGreasePencilData, BuildGreasePencilData
+from .model.model_gp_bbox import GreasePencilLayerBBox, GreasePencilLayers
 from .ops_notes import has_edit_tree
 
 
@@ -24,6 +25,7 @@ def enum_shot_orient_items() -> list[tuple[str, str, str]]:
     return [(euler.name, euler.name.replace('_', ' ').title(), '') for euler in ShootAngles]
 
 
+# noinspection PyPep8Naming
 class ENN_OT_add_gp(bpy.types.Operator):
     bl_idname = "enn.add_gp"
     bl_label = "Add"
@@ -89,6 +91,7 @@ class ENN_OT_add_gp(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# noinspection PyPep8Naming
 class ENN_OT_add_gp_modal(bpy.types.Operator):
     bl_idname = "enn.add_gp_modal"
     bl_label = "Add"
@@ -137,6 +140,7 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
                                location=location)
 
 
+# noinspection PyPep8Naming
 class ENN_OT_move_gp(bpy.types.Operator):
     bl_idname = "enn.move_gp"
     bl_label = "Move"
@@ -160,6 +164,7 @@ class ENN_OT_move_gp(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# noinspection PyPep8Naming
 class ENN_OT_rotate_gp(bpy.types.Operator):
     bl_idname = "enn.rotate_gp"
     bl_label = "Rotate"
@@ -190,7 +195,7 @@ def draw_hover_callback_px(self: 'ENN_OT_gp_set_active_layer', context) -> None:
     if self.is_dragging:
         return
     drag_model: DragGreasePencilModel = self.drag_model
-    gp_data_bbox: GreasePencilLayerBBox = drag_model.gp_data_bbox
+    gp_data_bbox: GreasePencilLayerBBox = drag_model.bbox_model
 
     top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
     points = [top_left, top_right, bottom_left, bottom_right]
@@ -209,6 +214,7 @@ def draw_hover_callback_px(self: 'ENN_OT_gp_set_active_layer', context) -> None:
         draw_model.draw_rotate_widget(point=drag_model.on_corner_extrude)
 
 
+# noinspection PyPep8Naming
 class ENN_OT_gp_set_active_layer(bpy.types.Operator):
     bl_idname = "enn.gp_set_active_layer"
     bl_label = "Set Active Layer"
@@ -241,8 +247,8 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         if layer_index is None:
             return {'FINISHED'}
 
-        drag_model.gp_data_bbox.active_layer_index = layer_index
-        drag_model.gp_data_bbox.calc_active_layer_bbox()
+        drag_model.bbox_model.active_layer_index = layer_index
+        drag_model.bbox_model.calc_active_layer_bbox()
         self.__class__.drag_model = drag_model
 
         self.add_draw_handle(context)
@@ -282,7 +288,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
 
 def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
     drag_model: DragGreasePencilModel = self.drag_model
-    gp_data_bbox: GreasePencilLayerBBox = drag_model.gp_data_bbox
+    gp_data_bbox: GreasePencilLayerBBox = drag_model.bbox_model
 
     top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
     points = [top_left, top_right, bottom_left, bottom_right]
@@ -299,6 +305,7 @@ def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
         draw_model.draw_debug(self.drag_model.mouse_pos)
 
 
+# noinspection PyPep8Naming
 class ENN_OT_gp_drag_modal(bpy.types.Operator):
     bl_idname = "enn.gp_drag_modal"
     bl_label = "Transform"
@@ -352,6 +359,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         context.area.tag_redraw()
 
 
+# noinspection PyPep8Naming
 class ENN_PT_gn_edit_panel(bpy.types.Panel):
     bl_label = "Edit Grease Pencil Text"
     bl_idname = "ENN_PT_gn_edit_panel"
@@ -387,6 +395,7 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
         # box.operator(ENN_OT_gp_drag_modal.bl_idname)
 
 
+# noinspection PyPep8Naming
 class ENN_TL_grease_pencil_tool(bpy.types.WorkSpaceTool):
     bl_idname = "enn.grease_pencil_tool"
     bL_idname_fallback = "node.select_box"
@@ -409,9 +418,6 @@ class ENN_TL_grease_pencil_tool(bpy.types.WorkSpaceTool):
          {"properties": []}),
 
     )
-
-    def draw_settings(context, layout, tool):
-        pass
 
 
 def register():
