@@ -8,7 +8,8 @@ import bpy
 from ..public_path import get_pref
 from .utils import Coord, EdgeCenter
 from .model_gp import VecTool, BuildGreasePencilData
-from .model_gp_bbox import GreasePencilLayerBBox,MouseDetectModel
+from .model_gp_bbox import GreasePencilLayerBBox, MouseDetectModel
+
 
 @dataclass
 class DragGreasePencilModel:
@@ -184,5 +185,11 @@ class DragGreasePencilModel:
 
     def update_gp_data(self, context):
         """Update the Grease Pencil Data. Some data may be changed in the modal."""
+        if self.build_model.is_empty():
+            return
+
+        if self.build_model.active_layer is None:
+            return
+
         self.bbox_model.calc_active_layer_bbox()
         _ = self.bbox_model.bbox_points_3d

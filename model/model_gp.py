@@ -19,20 +19,24 @@ class GreasePencilProperty:
     def name(self) -> str:
         return self.gp_data.name
 
+    def has_active_layer(self) -> bool:
+        """Check if the grease pencil data has an active layer."""
+        return bool(self.gp_data.layers.active)
+
     @property
     def active_layer_name(self) -> str:
         """Return the active layer name."""
         return self.active_layer.info
 
-    @property
-    def active_layer(self) -> bpy.types.GPencilLayer:
-        """Return the active layer."""
-        return self.gp_data.layers.active
-
     @active_layer_name.setter
     def active_layer_name(self, name: str):
         """Set the active layer name."""
         self.active_layer.info = name
+
+    @property
+    def active_layer(self) -> bpy.types.GPencilLayer:
+        """Return the active layer."""
+        return self.gp_data.layers.active
 
     @property
     def active_layer_index(self) -> int:
@@ -42,6 +46,8 @@ class GreasePencilProperty:
     @active_layer_index.setter
     def active_layer_index(self, index: int):
         """Set the active layer index."""
+        if self.is_empty():
+            return
         if index < 0:
             self.gp_data.layers.active_index = len(self.gp_data.layers) - 1
         elif 0 <= index < len(self.gp_data.layers):
@@ -56,6 +62,10 @@ class GreasePencilProperty:
     def active_prev_layer(self):
         """Set the last layer as active."""
         self.active_layer_index -= 1
+
+    def is_empty(self) -> bool:
+        """Check if the grease pencil data is empty."""
+        return not self.gp_data.layers
 
     @property
     def layer_names(self) -> list[str]:
@@ -250,6 +260,17 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
     def set_active_layer(self, layer_name_or_index: Union[str, int]) -> 'BuildGreasePencilData':
         """Set the active grease pencil annotation layer."""
         self.active_layer_index = layer_name_or_index
+        return self
+
+    def remove_active_layer(self) -> 'BuildGreasePencilData':
+        """Delete the active grease pencil annotation layer."""
+        return self.remove_layer(self.active_layer_index)
+
+    def remove_layer(self, layer_name_or_index: Union[str, int]) -> 'BuildGreasePencilData':
+        """Remove the grease pencil annotation layer."""
+        layer = self._get_layer(layer_name_or_index)
+        if layer:
+            self.gp_data.layers.remove(layer)
         return self
 
     def color_active(self, hex_color: str) -> 'BuildGreasePencilData':

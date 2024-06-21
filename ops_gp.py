@@ -28,7 +28,7 @@ def enum_shot_orient_items() -> list[tuple[str, str, str]]:
 # noinspection PyPep8Naming
 class ENN_OT_add_gp(bpy.types.Operator):
     bl_idname = "enn.add_gp"
-    bl_label = "Add"
+    bl_label = "Add Amazing Note"
     bl_options = {'UNDO'}
 
     add_type: bpy.props.EnumProperty(name='Type',
@@ -140,6 +140,25 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
                                location=location)
 
 
+class ENN_OT_remove_gp(bpy.types.Operator):
+    bl_idname = "enn.remove_gp"
+    bl_label = "Remove"
+    bl_description = "Remove the selected Grease Pencil Object"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context)
+
+    def execute(self, context):
+        nt: bpy.types.NodeTree = context.space_data.edit_tree
+        gp_data: bpy.types.GreasePencil = nt.grease_pencil
+        if not gp_data: return {'CANCELLED'}
+        with BuildGreasePencilData(gp_data) as gp_data_builder:
+            gp_data_builder.remove_active_layer()
+        return {'FINISHED'}
+
+
 # noinspection PyPep8Naming
 class ENN_OT_move_gp(bpy.types.Operator):
     bl_idname = "enn.move_gp"
@@ -196,6 +215,7 @@ def draw_hover_callback_px(self: 'ENN_OT_gp_set_active_layer', context) -> None:
         return
     drag_model: DragGreasePencilModel = self.drag_model
     gp_data_bbox: GreasePencilLayerBBox = drag_model.bbox_model
+    if gp_data_bbox.is_empty(): return  # empty data
 
     top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
     points = [top_left, top_right, bottom_left, bottom_right]
@@ -289,6 +309,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
 def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
     drag_model: DragGreasePencilModel = self.drag_model
     gp_data_bbox: GreasePencilLayerBBox = drag_model.bbox_model
+    if gp_data_bbox.is_empty(): return  # empty data
 
     top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
     points = [top_left, top_right, bottom_left, bottom_right]
@@ -410,11 +431,14 @@ class ENN_TL_grease_pencil_tool(bpy.types.WorkSpaceTool):
          {"properties": []},  # [("deselect_all", True)]
          ),
         (ENN_OT_add_gp.bl_idname,
-         {"type": 'LEFTMOUSE', "value": 'CLICK', "shift": True},
+         {"type": 'LEFTMOUSE', "value": 'CLICK', "shift": True, "ctrl": False},
          {"properties": [('use_mouse_pos', True), ('add_type', 'TEXT')]}
          ),
         (ENN_OT_gp_drag_modal.bl_idname,
-         {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False},
+         {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False, "ctrl": False},
+         {"properties": []}),
+        (ENN_OT_remove_gp.bl_idname,
+         {"type": 'X', "value": 'PRESS', "ctrl": False, "alt": False, "shift": False},
          {"properties": []}),
 
     )
@@ -435,6 +459,7 @@ def register():
     bpy.types.WindowManager.enn_gp_move_dis = bpy.props.IntProperty(name='Distance', default=50)
     register_class(ENN_OT_add_gp)
     register_class(ENN_OT_add_gp_modal)
+    register_class(ENN_OT_remove_gp)
     register_class(ENN_OT_gp_set_active_layer)
     register_class(ENN_OT_move_gp)
     register_class(ENN_OT_rotate_gp)
@@ -449,6 +474,7 @@ def unregister():
 
     unregister_class(ENN_OT_add_gp)
     unregister_class(ENN_OT_add_gp_modal)
+    unregister_class(ENN_OT_remove_gp)
     unregister_class(ENN_OT_gp_set_active_layer)
     unregister_class(ENN_OT_move_gp)
     unregister_class(ENN_OT_rotate_gp)
