@@ -231,7 +231,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         except ReferenceError:  # ctrl z
             layer_index = None
         if layer_index is None:
-            return {'CANCELLED'}
+            return {'FINISHED'}
 
         drag_model.gp_data_bbox.active_layer_index = layer_index
         drag_model.gp_data_bbox.calc_active_layer_bbox()
@@ -248,10 +248,10 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
             self.__class__.draw_handle = None
 
     def add_draw_handle(self, context):
-        self.remove_draw_handle()
-        self.__class__.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_hover_callback_px,
-                                                                                (self, context),
-                                                                                'WINDOW', 'POST_PIXEL')
+        if not self.__class__.draw_handle:
+            self.__class__.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_hover_callback_px,
+                                                                                    (self, context),
+                                                                                    'WINDOW', 'POST_PIXEL')
 
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
@@ -261,15 +261,11 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
             except ReferenceError:
                 self.stop = True
         # active tool is not drag tool
-        if event.type == 'LEFTMOUSE':
-            self.__class__.is_dragging = True
-            if event.value == 'RELEASE':
-                self.__class__.is_dragging = False
-
         if self.stop or event.type in {'ESC', 'RIGHTMOUSE'}:
             self.remove_draw_handle()
             context.area.tag_redraw()
             self.stop = False
+            self.__class__.drag_model = None
             return {'FINISHED'}
         context.area.tag_redraw()
         return {'PASS_THROUGH'}
@@ -322,10 +318,9 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
-        if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
-            ENN_OT_gp_set_active_layer.is_dragging = False
 
         if event.type == 'MOUSEMOVE':
+            ENN_OT_gp_set_active_layer.is_dragging = True
             self.drag_model.update_mouse_pos(context, event)
             if not self.drag_init:
                 self.drag_model.detect_near_widgets()
@@ -342,6 +337,8 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def _finish(self, context):
+        ENN_OT_gp_set_active_layer.is_dragging = False
+        ENN_OT_gp_set_active_layer.drag_model.update_gp_data(context)
         bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
         context.area.tag_redraw()
 
