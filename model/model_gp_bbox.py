@@ -260,20 +260,20 @@ class GreasePencilLayerBBox(GreasePencilProperty):
 @dataclass
 class GreasePencilLayers(GreasePencilProperty):
     @staticmethod
-    def in_layer_area(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather: int = 0,
-                      space: Literal['r2d', 'v2d'] = 'r2d') -> Union[int, None]:
+    def in_layer_area(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather: int = 0, ) -> Union[
+        int, None]:
+
         """check if the pos is in the area defined by the points
         :param gp_data: the grease pencil data
         :param pos: the position to check
         :param feather: the feather to expand the area, unit: pixel
-        :param space: the space of the pos, r2d or v2d
         :return: index of the layer if the pos is in the area, None otherwise
         """
         bboxs: list[GreasePencilLayerBBox] = [GreasePencilLayerBBox(gp_data, layer) for layer in
                                               gp_data.layers]
         for i, bbox in enumerate(bboxs):
             bbox.calc_bbox(i)
-            if bbox.detect_model.in_area(pos, feather, space):
+            if bbox.detect_model.in_area(pos, feather):
                 # print(f'In layer {bbox.gp_data.layers[i].info}')
                 return bbox.last_layer_index
 
