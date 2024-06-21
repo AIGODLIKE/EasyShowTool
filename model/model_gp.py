@@ -65,7 +65,10 @@ class GreasePencilProperty:
 
     def is_empty(self) -> bool:
         """Check if the grease pencil data is empty."""
-        return not self.gp_data.layers
+        try:
+            return not self.gp_data.layers
+        except ReferenceError:
+            return True
 
     @property
     def layer_names(self) -> list[str]:

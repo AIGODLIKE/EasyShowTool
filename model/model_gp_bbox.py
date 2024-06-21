@@ -15,6 +15,7 @@ class MouseDetectModel:
     """
 
     bbox_model: 'GreasePencilLayerBBox' = None
+    debug_points: list[Vector] = []
 
     def _bind_bbox_model(self, bbox_model: 'GreasePencilLayerBBox') -> 'MouseDetectModel':
         """Need to bind the bbox model to work."""
@@ -80,10 +81,11 @@ class MouseDetectModel:
         :param radius: the radius of the extrude point
         :return: True if the pos is near the corners, False otherwise
         """
-        vec_pos = Vector((pos[0], pos[1]))
+        vec = Vector(pos)
         points = self.bbox_model.corner_extrude_points_r2d(extrude)
+        self.debug_points = [*points, vec]
         for i, point in enumerate(points):
-            if (vec_pos - point).length < radius:
+            if (vec - point).length < radius:
                 return point, i
         return None, None
 

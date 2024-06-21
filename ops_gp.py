@@ -323,7 +323,8 @@ def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
         draw_model.draw_bbox_edge()
 
     if draw_model.debug:
-        draw_model.draw_debug(self.drag_model.mouse_pos)
+        draw_model.draw_debug((self.drag_model.mouse_pos))
+        draw_model.draw_debug(self.drag_model.debug_points)
 
 
 # noinspection PyPep8Naming

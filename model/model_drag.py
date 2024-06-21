@@ -45,6 +45,10 @@ class DragGreasePencilModel:
         self.build_model = BuildGreasePencilData(self.gp_data)
         self.detect_model = self.bbox_model.detect_model
 
+    @property
+    def debug_points(self):
+        return [*self.detect_model.debug_points, self.mouse_pos]
+
     def handle_drag(self, context, event):
         """Handle the drag event in the modal."""
         # scale mode
@@ -161,11 +165,11 @@ class DragGreasePencilModel:
 
     def on_drag_rotate(self, event):
         """Rotate the active layer of the Grease Pencil Object when near the corner extrude point."""
-        pivot = self.bbox_model.center
-        pivot_r2d = self.bbox_model.center_r2d
+        pivot: Vector = self.bbox_model.center
+        pivot_r2d: Vector = self.bbox_model.center_r2d
 
-        vec_1 = (Vector(self.mouse_pos) - Vector(pivot_r2d))
-        vec_2 = Vector(self.mouse_pos_prev) - Vector(pivot_r2d)
+        vec_1 = Vector(self.mouse_pos) - pivot_r2d
+        vec_2 = Vector(self.mouse_pos_prev) - pivot_r2d
         # clockwise or counterclockwise
         inverse: Literal[1, -1] = VecTool.rotation_direction(vec_1, vec_2)
         angle = inverse * vec_1.angle(vec_2)

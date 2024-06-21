@@ -98,7 +98,8 @@ class DrawModel:
         batch = batch_for_shader(shader, 'POINTS', {"pos": self.edge_points})
         batch.draw(shader)
 
-    def draw_debug(self, points: list[Union[Vector, Sequence]]):
+    def draw_debug(self, points: Sequence[Union[Vector, Sequence]]):
+        if not points: return
         shader.uniform_float("color", self.debug_color)
         batch = batch_for_shader(shader, 'POINTS', {"pos": points})
         batch.draw(shader)
