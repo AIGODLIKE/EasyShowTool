@@ -10,7 +10,7 @@ from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from ..model.model_gp_bbox import GreasePencilLayerBBox, GreasePencilLayers
-from .ops_notes import has_edit_tree
+from .functions import has_edit_tree, tag_redraw
 
 
 def enum_add_type_items() -> list[tuple[str, str, str]]:
@@ -306,6 +306,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
             self.remove_draw_handle()
             self.stop = False
             self.__class__.drag_vmodel = None
+            tag_redraw()
             return {'FINISHED'}
         context.area.tag_redraw()
         return {'PASS_THROUGH'}
