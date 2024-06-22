@@ -1,5 +1,5 @@
 import bpy
-from .ops_notes import ENN_OT_edit_note
+from .operator.ops_notes import ENN_OT_edit_note
 
 addon_keymaps = []
 

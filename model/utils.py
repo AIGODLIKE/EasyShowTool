@@ -3,17 +3,17 @@ from typing import Sequence, Union, Final, ClassVar
 import bpy
 from dataclasses import dataclass
 from enum import Enum
-from math import radians
+from math import radians, degrees
 
 
 class EulerTool:
     @staticmethod
-    def to_rad(degrees: Sequence) -> Euler:
-        return Euler((radians(d) for d in degrees), 'XYZ')
+    def to_rad(degree: Sequence) -> Euler:
+        return Euler((radians(d) for d in degree), 'XYZ')
 
     @staticmethod
-    def to_deg(radians: Sequence) -> Euler:
-        return Euler((d for d in radians), 'XYZ')
+    def to_deg(radian: Sequence) -> Euler:
+        return Euler((degrees(d) for d in radian), 'XYZ')
 
 
 class ShootAngles(Enum):
@@ -27,6 +27,19 @@ class ShootAngles(Enum):
     LEFT: Euler = Euler(EulerTool.to_rad((0, -90, 0)), 'XYZ')
     RIGHT: Euler = Euler(EulerTool.to_rad((0, 90, 0)), 'XYZ')
     BOTTOM: Euler = Euler(EulerTool.to_rad((0, 180, 0)), 'XYZ')
+
+
+class ColorTool:
+    """Grease Pencil Color utility class."""
+
+    @staticmethod
+    def hex_2_rgb(hex_color: str) -> list[float, float, float]:
+        """Convert hex color to rgb color."""
+        if hex_color.startswith('#'):
+            hex = hex_color[1:]
+        else:
+            hex = hex_color
+        return [int(hex[i:i + 2], 16) / 255 for i in (0, 2, 4)]
 
 
 class VecTool:
@@ -90,34 +103,6 @@ class VecTool:
         """
         cross_z = v1[0] * v2[1] - v1[1] * v2[0]
         return 1 if cross_z >= 0 else -1
-
-
-@dataclass(slots=True)
-class ColorTool:
-    """Grease Pencil Color utility class."""
-    white: ClassVar[str] = '#FFFFFF'  # white color
-    orange: ClassVar[str] = '#ED9E5C'  # object color
-    green_geo: ClassVar[str] = '#00D6A3'  # geometry color
-    green_int: ClassVar[str] = '#598C5C'  # interface color
-    blue: ClassVar[str] = '#598AC3'  # string color
-    purple_vec: ClassVar[str] = '#6363C7'  # vector color
-    purple_img: ClassVar[str] = '#633863'  # image color
-    grey: ClassVar[str] = '#A1A1A1'  # float color
-    pink_bool: ClassVar[str] = '#CCA6D6'  # boolean color
-    pink_mat: ClassVar[str] = '#EB7582'  # material color
-
-    @staticmethod
-    def hex_2_rgb(hex_color: str) -> list[float, float, float]:
-        """Convert hex color to rgb color."""
-        if hex_color.startswith('#'):
-            hex = hex_color[1:]
-        else:
-            hex = hex_color
-        return [int(hex[i:i + 2], 16) / 255 for i in (0, 2, 4)]
-
-    @classmethod
-    def get_colors(cls):
-        return {k: v for k, v in cls.__dict__.items() if k[0] != '_' and isinstance(v, str)}
 
 
 class PointBase:

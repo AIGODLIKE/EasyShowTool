@@ -1,27 +1,12 @@
 import bpy
 from typing import Optional
-from .public_path import get_pref
+from ..public_path import get_pref
+from .functions import has_edit_tree, has_active_node
 
 NOTE_DATA_NAME: str = '.NodeNote'  # use . to hide the text data
 
 
-def has_edit_tree(context: bpy.types.Context) -> bool:
-    if context.area.type != 'NODE_EDITOR':
-        return False
-    if context.space_data.edit_tree is None:
-        return False
-    return True
-
-
-def has_active_node(context: bpy.types.Context, bl_idname: Optional[str] = None) -> bool:
-    if context.space_data.edit_tree.nodes.active is None:
-        return False
-    if bl_idname:
-        if context.space_data.edit_tree.nodes.active.bl_idname != bl_idname:
-            return False
-    return True
-
-
+# noinspection PyPep8Naming
 class ENN_OT_add_note(bpy.types.Operator):
     bl_idname = "enn.add_note"
     bl_label = "Add Note"
@@ -48,13 +33,15 @@ class ENN_OT_add_note(bpy.types.Operator):
         self.move_node(frame_node)
         return {'FINISHED'}
 
-    def move_node(self, node: bpy.types.Node):
+    @staticmethod
+    def move_node(node: bpy.types.Node):
         bpy.ops.node.select_all(action='DESELECT')
         bpy.context.space_data.edit_tree.nodes.active = node
         node.select = True
         bpy.ops.transform.translate('INVOKE_DEFAULT')
 
 
+# noinspection PyPep8Naming
 class ENN_OT_edit_note(bpy.types.Operator):
     bl_idname = "enn.edit_note"
     bl_label = "Edit Note"

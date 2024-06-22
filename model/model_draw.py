@@ -2,12 +2,13 @@ import gpu
 import gpu.state
 import gpu.shader
 import bpy
+import blf
 from mathutils import Color, Vector
 from gpu_extras.batch import batch_for_shader
 from gpu_extras.presets import draw_circle_2d
 from typing import Sequence, Union, ClassVar
 
-from .model_gp import GreasePencilLayerBBox
+from .model_gp_bbox import GreasePencilLayerBBox
 from ..public_path import get_pref
 
 shader = gpu.shader.from_builtin('UNIFORM_COLOR')
@@ -17,7 +18,7 @@ from dataclasses import dataclass, field
 
 
 @dataclass
-class DrawModel():
+class DrawModel:
     # data
     points: list[Vector, Vector, Vector, Vector]
     edge_points: list[Vector, Vector, Vector, Vector]
@@ -28,6 +29,7 @@ class DrawModel():
     debug: bool = field(init=False)
     drag: bool = field(init=False)
     drag_area: bool = field(init=False)
+    # color
     color: Color = field(init=False)
     color_hover: Color = field(init=False)
     color_area: Color = field(init=False)
@@ -37,34 +39,44 @@ class DrawModel():
     rotate_px: int = field(init=False)
 
     # default
-    debug_color: tuple = (1, 0, 0, 1)
+    debug_color: Color = field(init=False)
     point_size: ClassVar[int] = 20
 
     def __post_init__(self):
+        theme = bpy.context.preferences.themes['Default'].view_3d
         self.line_width = get_pref().gp_draw_line_width
         self.debug = get_pref().debug_draw
         self.drag = get_pref().gp_draw_drag
         self.drag_area = get_pref().gp_draw_drag_area
-        self.color = get_pref().gp_color
-        self.color_hover = get_pref().gp_color_hover
-        self.color_area = get_pref().gp_color_area
-        self.corner_px = get_pref().gp_detect_corner_px
-        self.edge_px = get_pref().gp_detect_edge_px
-        self.rotate_px = get_pref().gp_detect_rotate_px
+
+        scale_factor = 0.75  # scale factor for the points, make it smaller
+        self.corner_px = get_pref().gp_detect_corner_px * scale_factor
+        self.edge_px = get_pref().gp_detect_edge_px * scale_factor
+        self.rotate_px = get_pref().gp_detect_rotate_px * scale_factor
+
+        self.color = self.color_alpha(theme.lastsel_point, 0.3)
+        self.color_highlight = self.color_alpha(theme.lastsel_point, 0.8)
+        self.color_hover = self.color_alpha(theme.vertex_select, 0.8)
+        self.color_area = self.color_alpha(theme.face, 0.5)
+        self.debug_color = self.color_alpha(theme.face_back, 0.8)
 
         gpu.state.line_width_set(self.line_width)
         gpu.state.point_size_set(self.point_size)
         gpu.state.blend_set('ALPHA')
 
+    @staticmethod
+    def color_alpha(color: Color, alpha: float) -> tuple:
+        return color[0], color[1], color[2], alpha
+
     def draw_bbox_points(self):
-        shader.uniform_float("color", self.color)
+        shader.uniform_float("color", self.color_highlight)
         batch = batch_for_shader(shader, 'POINTS', {"pos": self.points})
         batch.draw(shader)
 
-    def draw_bbox_edge(self):
+    def draw_bbox_edge(self, highlight: bool = False):
         gpu.state.point_size_set(10)
         batch = batch_for_shader(shader, 'LINE_STRIP', {"pos": self.coords})
-        shader.uniform_float("color", self.color)
+        shader.uniform_float("color", self.color if not highlight else self.color_highlight)
         batch.draw(shader)
 
     def draw_bbox_area(self):
@@ -88,7 +100,29 @@ class DrawModel():
         batch = batch_for_shader(shader, 'POINTS', {"pos": self.edge_points})
         batch.draw(shader)
 
-    def draw_debug(self, points: list[Union[Vector, Sequence]]):
+    def _draw_text(self, text_lines: Sequence[str], size=24, space: int = 5):
+        font_id = 0
+        shader.uniform_float("color", self.color)
+        # start from the bottom left corner
+        x, y = 20, 20
+        # draw some text
+        for i, line in enumerate(text_lines):
+            if i % 2 == 0:
+                blf.color(font_id, 0.5, 0.5, 0.5, 1)
+            else:
+                blf.color(font_id, 1, 1, 1, 1)
+            blf.position(font_id, x, y + i * size + space, 0)
+            blf.size(font_id, size)
+            blf.draw(font_id, line)
+
+    def draw_debug(self, dict_info: dict[str, str]):
         shader.uniform_float("color", self.debug_color)
-        batch = batch_for_shader(shader, 'POINTS', {"pos": points})
-        batch.draw(shader)
+        textlines = []
+
+
+        for k, v in dict_info.items():
+            k_str = k.ljust(30, "-")
+            textlines.append(f"{k_str}:{v}")
+
+        if textlines:
+            self._draw_text(textlines)

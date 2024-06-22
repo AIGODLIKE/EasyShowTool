@@ -13,20 +13,16 @@ class Preference(bpy.types.AddonPreferences):
     note_height: IntProperty(default=200, name='Height')
     note_default: StringProperty(default='Note', name='Default Label')
 
-    gp_color: FloatVectorProperty(name='Color', default=(1, 1, 1, 0.5), subtype='COLOR', size=4)
-    gp_color_hover: FloatVectorProperty(name='Color Hover', default=(1, 1, 0, 0.8), subtype='COLOR', size=4)
-    gp_color_area: FloatVectorProperty(name='Color Area', default=(1, 1, 1, 0.2), subtype='COLOR', size=4)
-
-    gp_snap_degree: IntProperty(name='Snap Degree',default=15)
+    gp_snap_degree: IntProperty(name='Snap Degree', default=15)
 
     gp_draw_line_width: IntProperty(default=1, name='Line Width')
 
-    gp_draw_drag: BoolProperty(default=False, name='Drag')
-    gp_draw_drag_area: BoolProperty(default=False, name='Drag Area')
+    gp_draw_drag: BoolProperty(default=True, name='Draw Box When Dragging')
+    gp_draw_drag_area: BoolProperty(default=False, name='Drag Box Area When Dragging')
 
-    gp_detect_edge_px: IntProperty(default=20, name='Edge', subtype='PIXEL')
-    gp_detect_corner_px: IntProperty(default=20, name='Corner', subtype='PIXEL')
-    gp_detect_rotate_px: IntProperty(default=15, name='Rotate', subtype='PIXEL')
+    gp_detect_edge_px: IntProperty(default=20, name='Detect Edge Radius', subtype='PIXEL')
+    gp_detect_corner_px: IntProperty(default=20, name='Detect Corner Radius', subtype='PIXEL')
+    gp_detect_rotate_px: IntProperty(default=20, name='Detect Rotate Radius', subtype='PIXEL')
 
     debug_draw: BoolProperty(default=False, name='Debug')
 
