@@ -1,12 +1,9 @@
 import bpy
 import numpy as np
 from mathutils import Vector, Euler
-from typing import Literal, Optional, Union, Sequence, ClassVar, Final
-from contextlib import contextmanager
+from typing import Literal, Optional, Union, ClassVar
 from dataclasses import dataclass, field
-from math import radians
-
-from .utils import VecTool, ShootAngles
+from .utils import VecTool, ShootAngles, ColorTool
 from .model_gp_edit import EditGreasePencilLayer, EditGreasePencilStroke
 
 
@@ -54,14 +51,6 @@ class GreasePencilProperty:
             self.gp_data.layers.active_index = index
         else:
             self.gp_data.layers.active_index = 0
-
-    def active_next_layer(self):
-        """Set the next layer as active."""
-        self.active_layer_index += 1
-
-    def active_prev_layer(self):
-        """Set the last layer as active."""
-        self.active_layer_index -= 1
 
     def is_empty(self) -> bool:
         """Check if the grease pencil data is empty."""
