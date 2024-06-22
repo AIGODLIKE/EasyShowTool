@@ -5,8 +5,9 @@ from mathutils import Vector
 
 from ..model.utils import VecTool, ShootAngles
 from ..model.model_draw import DrawModel
-from ..model.model_color import Colors, ColorPaletteModel
-from ..model.model_drag import DragGreasePencilModel
+from ..model.model_color import ColorPaletteModel
+from ..view_model.view_model_drag import DragGreasePencilViewModal
+from ..view_model.view_model_drag import ScaleHandler, RotateHandler, MoveHandler
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from ..model.model_gp_bbox import GreasePencilLayerBBox, GreasePencilLayers
 from .ops_notes import has_edit_tree
@@ -214,8 +215,8 @@ class ENN_OT_rotate_gp(bpy.types.Operator):
 def draw_hover_callback_px(self: 'ENN_OT_gp_set_active_layer', context) -> None:
     if self.is_dragging:
         return
-    drag_model: DragGreasePencilModel = self.drag_model
-    gp_data_bbox: GreasePencilLayerBBox = drag_model.bbox_model
+    drag_vmodel: DragGreasePencilViewModal = self.drag_vmodel
+    gp_data_bbox: GreasePencilLayerBBox = drag_vmodel.bbox_model
     if gp_data_bbox.is_empty(): return  # empty data
 
     top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
@@ -225,14 +226,14 @@ def draw_hover_callback_px(self: 'ENN_OT_gp_set_active_layer', context) -> None:
     draw_model: DrawModel = DrawModel(points, gp_data_bbox.edge_center_points_r2d, coords)
     draw_model.draw_bbox_edge()
 
-    if drag_model.in_drag_area:
+    if drag_vmodel.in_drag_area:
         draw_model.draw_bbox_edge(highlight=True)
-    if drag_model.on_edge_center:
+    if drag_vmodel.pos_near_edge_center:
         draw_model.draw_scale_edge_widget()
-    if drag_model.on_corner:
+    if drag_vmodel.pos_near_corner:
         draw_model.draw_scale_corner_widget()
-    elif drag_model.on_corner_extrude:
-        draw_model.draw_rotate_widget(point=drag_model.on_corner_extrude)
+    elif drag_vmodel.pos_near_corner_extrude:
+        draw_model.draw_rotate_widget(point=drag_vmodel.pos_near_corner_extrude)
 
 
 # noinspection PyPep8Naming
@@ -243,7 +244,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
     # bl_options = {'UNDO'}
 
     draw_handle: ClassVar = None
-    drag_model: ClassVar[DragGreasePencilModel] = None
+    drag_vmodel: ClassVar[DragGreasePencilViewModal] = None
     # call stop
     stop: bool = False
     is_dragging: ClassVar[bool] = False  # allow to call from other operator
@@ -257,7 +258,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
         if not gp_data: return {'CANCELLED'}
-        drag_model = DragGreasePencilModel(gp_data=gp_data)
+        drag_vmodel = DragGreasePencilViewModal(gp_data=gp_data)
 
         try:
             layer_index = GreasePencilLayers.in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
@@ -268,9 +269,9 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         if layer_index is None:
             return {'FINISHED'}
 
-        drag_model.bbox_model.active_layer_index = layer_index
-        drag_model.bbox_model.calc_active_layer_bbox()
-        self.__class__.drag_model = drag_model
+        drag_vmodel.bbox_model.active_layer_index = layer_index
+        drag_vmodel.bbox_model.calc_active_layer_bbox()
+        self.__class__.drag_vmodel = drag_vmodel
 
         self.add_draw_handle(context)
         context.window_manager.modal_handler_add(self)
@@ -291,8 +292,8 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
             try:
-                self.drag_model.update_mouse_pos(context, event)
-                self.drag_model.update_near_widgets()
+                self.drag_vmodel.update_mouse_pos(context, event)
+                self.drag_vmodel.update_near_widgets()
             except ReferenceError:  # ctrl z
                 self.stop = True
             except AttributeError:  # switch to other tool
@@ -301,15 +302,15 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         if self.stop or event.type in {'ESC', 'RIGHTMOUSE'} or not context.area:
             self.remove_draw_handle()
             self.stop = False
-            self.__class__.drag_model = None
+            self.__class__.drag_vmodel = None
             return {'FINISHED'}
         context.area.tag_redraw()
         return {'PASS_THROUGH'}
 
 
 def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
-    drag_model: DragGreasePencilModel = self.drag_model
-    gp_data_bbox: GreasePencilLayerBBox = drag_model.bbox_model
+    drag_vmodel: DragGreasePencilViewModal = self.drag_vmodel
+    gp_data_bbox: GreasePencilLayerBBox = drag_vmodel.bbox_model
     if gp_data_bbox.is_empty(): return  # empty data
 
     top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
@@ -325,8 +326,8 @@ def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
         draw_model.draw_bbox_points()
 
     if draw_model.debug:
-        draw_model.draw_debug((self.drag_model.mouse_pos))
-        draw_model.draw_debug(self.drag_model.debug_points)
+        draw_model.draw_debug((self.drag_vmodel.mouse_pos))
+        draw_model.draw_debug(self.drag_vmodel.debug_points)
 
 
 # noinspection PyPep8Naming
@@ -337,7 +338,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     # model
-    drag_model: DragGreasePencilModel = None
+    drag_vmodel: DragGreasePencilViewModal = None
     draw_handle = None  # draw handle
     # is dragging
     drag_init: bool = False
@@ -350,22 +351,25 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
 
-        self.drag_model = DragGreasePencilModel(gp_data=gp_data)
+        self.drag_vmodel = DragGreasePencilViewModal(gp_data=gp_data,
+                                                     drag_move_handler=MoveHandler(),
+                                                     drag_scale_handler=ScaleHandler(),
+                                                     drag_rotate_handler=RotateHandler())
         self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_drag_callback_px, (self, context), 'WINDOW',
                                                                       'POST_PIXEL')
         context.window_manager.modal_handler_add(self)
-        self.drag_model.update_mouse_pos(context, event)
+        self.drag_vmodel.update_mouse_pos(context, event)
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
 
         if event.type == 'MOUSEMOVE':
             ENN_OT_gp_set_active_layer.is_dragging = True
-            self.drag_model.update_mouse_pos(context, event)
+            self.drag_vmodel.update_mouse_pos(context, event)
             if not self.drag_init:
-                self.drag_model.update_near_widgets()
+                self.drag_vmodel.update_near_widgets()
                 self.drag_init = True
-            self.drag_model.handle_drag(context, event)
+            self.drag_vmodel.handle_drag(context, event)
 
         if event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE", "MIDDLEMOUSE"}:
             return {'PASS_THROUGH'}
@@ -378,8 +382,8 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
 
     def _finish(self, context):
         ENN_OT_gp_set_active_layer.is_dragging = False
-        if ENN_OT_gp_set_active_layer.drag_model:
-            ENN_OT_gp_set_active_layer.drag_model.update_bbox(context)
+        if ENN_OT_gp_set_active_layer.drag_vmodel:
+            ENN_OT_gp_set_active_layer.drag_vmodel._update_bbox(context)
         bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
         context.area.tag_redraw()
 
@@ -420,7 +424,7 @@ class MyPaletteGroup(bpy.types.PropertyGroup):
 def register():
     import threading
     import time
-    from bpy.utils import register_class, register_tool
+    from bpy.utils import register_class
 
     register_class(MyPaletteGroup)
     register_class(ENN_OT_add_gp)
@@ -460,7 +464,7 @@ def register():
 
 
 def unregister():
-    from bpy.utils import unregister_class, unregister_tool
+    from bpy.utils import unregister_class
 
     unregister_class(MyPaletteGroup)
     unregister_class(ENN_OT_add_gp)
