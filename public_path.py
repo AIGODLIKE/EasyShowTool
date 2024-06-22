@@ -17,3 +17,11 @@ def get_pref(data_path: Optional[str] = None) -> Union[bpy.types.AddonPreference
             return getattr(obj, path)
 
     return search_attr(pref, data_path)
+
+
+def get_asset_directory() -> Path:
+    return Path(__file__).parent.joinpath('asset')
+
+
+def get_tool_icon(icon_name: str) -> str:
+    return get_asset_directory().joinpath('tool_icon', 'icons', icon_name).as_posix()

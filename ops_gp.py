@@ -413,15 +413,16 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
             layout.template_palette(context.scene.enn_palette_group, "palette", color=True)
 
 
+from .public_path import get_tool_icon
+
 # noinspection PyPep8Naming
-class ENN_TL_grease_pencil_tool(bpy.types.WorkSpaceTool):
-    bl_idname = "enn.grease_pencil_tool"
+class ENN_TL_gp_edit(bpy.types.WorkSpaceTool):
+    bl_idname = "enn.gp_edit_tool"
     bL_idname_fallback = "node.select_box"
     bl_space_type = 'NODE_EDITOR'
     bl_context_mode = None
     bl_label = "Draw"
-    bl_icon = "ops.gpencil.stroke_new"
-    # bl_widget = "PH_GZG_place_tool"
+    bl_icon = get_tool_icon('gp_edit_tool')
     bl_keymap = (
         (ENN_OT_gp_set_active_layer.bl_idname,
          {"type": "LEFTMOUSE", "value": "CLICK"},
@@ -451,14 +452,26 @@ class ENN_TL_grease_pencil_tool(bpy.types.WorkSpaceTool):
         (ENN_OT_gp_drag_modal.bl_idname,
          {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": True, "ctrl": True},
          {"properties": []}),
-
         # delete
         (ENN_OT_remove_gp.bl_idname,
          {"type": 'X', "value": 'PRESS', "ctrl": False, "alt": False, "shift": False},
          {"properties": []}),
-
     )
 
+class ENN_TL_gp_color(bpy.types.WorkSpaceTool):
+    bl_idname = "enn.gp_color_tool"
+    bL_idname_fallback = "node.select_box"
+    bl_space_type = 'NODE_EDITOR'
+    bl_context_mode = None
+    bl_label = "Color"
+    bl_icon = get_tool_icon('gp_color_tool')
+    # bl_widget = "PH_GZG_place_tool"
+    bl_keymap = (
+        (ENN_OT_gp_set_active_layer.bl_idname,
+         {"type": "LEFTMOUSE", "value": "CLICK"},
+         {"properties": []},  # [("deselect_all", True)]
+         ),
+    )
 
 class MyPaletteGroup(bpy.types.PropertyGroup):
     palette: bpy.props.PointerProperty(type=bpy.types.Palette)
@@ -478,7 +491,9 @@ def register():
     register_class(ENN_OT_rotate_gp)
     register_class(ENN_OT_gp_drag_modal)
     register_class(ENN_PT_gn_edit_panel)
-    register_tool(ENN_TL_grease_pencil_tool, separator=True)
+
+    register_tool(ENN_TL_gp_edit, separator=True)
+    register_tool(ENN_TL_gp_color, separator=False)
 
     bpy.types.WindowManager.enn_gp_size = bpy.props.IntProperty(name="Size", default=100, subtype='PIXEL')
     bpy.types.WindowManager.enn_gp_add_type = bpy.props.EnumProperty(items=lambda self, context: enum_add_type_items())
@@ -520,4 +535,5 @@ def unregister():
     unregister_class(ENN_OT_gp_drag_modal)
     unregister_class(ENN_PT_gn_edit_panel)
 
-    unregister_tool(ENN_TL_grease_pencil_tool)
+    unregister_tool(ENN_TL_gp_edit)
+    unregister_tool(ENN_TL_gp_color)
