@@ -48,9 +48,10 @@ class DrawModel:
         self.drag = get_pref().gp_draw_drag
         self.drag_area = get_pref().gp_draw_drag_area
 
-        self.corner_px = get_pref().gp_detect_corner_px
-        self.edge_px = get_pref().gp_detect_edge_px
-        self.rotate_px = get_pref().gp_detect_rotate_px
+        scale_factor = 0.75 # scale factor for the points, make it smaller
+        self.corner_px = get_pref().gp_detect_corner_px * scale_factor
+        self.edge_px = get_pref().gp_detect_edge_px * scale_factor
+        self.rotate_px = get_pref().gp_detect_rotate_px * scale_factor
 
         self.color = self.color_alpha(theme.lastsel_point, 0.3)
         self.color_highlight = self.color_alpha(theme.lastsel_point, 0.8)

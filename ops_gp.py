@@ -291,7 +291,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         if event.type == 'MOUSEMOVE':
             try:
                 self.drag_model.update_mouse_pos(context, event)
-                self.drag_model.detect_near_widgets()
+                self.drag_model.update_near_widgets()
             except ReferenceError:  # ctrl z
                 self.stop = True
             except AttributeError:  # switch to other tool
@@ -362,7 +362,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
             ENN_OT_gp_set_active_layer.is_dragging = True
             self.drag_model.update_mouse_pos(context, event)
             if not self.drag_init:
-                self.drag_model.detect_near_widgets()
+                self.drag_model.update_near_widgets()
                 self.drag_init = True
             self.drag_model.handle_drag(context, event)
 
@@ -378,7 +378,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
     def _finish(self, context):
         ENN_OT_gp_set_active_layer.is_dragging = False
         if ENN_OT_gp_set_active_layer.drag_model:
-            ENN_OT_gp_set_active_layer.drag_model.update_gp_data(context)
+            ENN_OT_gp_set_active_layer.drag_model.update_bbox(context)
         bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
         context.area.tag_redraw()
 
