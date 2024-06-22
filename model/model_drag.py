@@ -60,12 +60,18 @@ class ScaleHandler():
 
         return delta_x, delta_y, size_x_v2d, size_y_v2d
 
-    def calc_scale(self, delta_x, delta_y, size_x_v2d, size_y_v2d):
+    def calc_scale(self, delta_x: float, delta_y: float, size_x_v2d: float, size_y_v2d: float) -> tuple[float, float]:
         scale_x = 1 + delta_x / size_x_v2d
         scale_y = 1 + delta_y / size_y_v2d
         return scale_x, scale_y
 
-    def both_sides_edge_center(self, event):
+    def unify_scale(self, delta_x: float, delta_y: float, vec_scale: Vector) -> None:
+        if abs(delta_x) > abs(delta_y):
+            vec_scale.y = vec_scale.x
+        else:
+            vec_scale.x = vec_scale.y
+
+    def both_sides_edge_center(self, unify_scale: bool):
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
 
@@ -74,9 +80,12 @@ class ScaleHandler():
         else:
             vec_scale = Vector((scale_x, 1, 0))
 
+        if unify_scale:
+            self.unify_scale(delta_x, delta_y, vec_scale)
+
         self.build_model.scale_active(vec_scale, pivot, space='3d')
 
-    def both_sides_corner(self, event):
+    def both_sides_corner(self, unify_scale: bool):
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
         if self.on_corner[0] == self.bbox_model.min_x:
             delta_x = -delta_x
@@ -84,14 +93,13 @@ class ScaleHandler():
             delta_y = -delta_y
 
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
-
-        unit_scale = scale_x if abs(delta_x) > abs(delta_y) else scale_y  # scale by the larger delta
-        vec_scale = Vector((unit_scale, unit_scale, 0)) if event.shift else Vector(
-            (scale_x, scale_y, 0))
+        vec_scale = Vector((scale_x, scale_y, 0))
+        if unify_scale:
+            self.unify_scale(delta_x, delta_y, vec_scale)
 
         self.build_model.scale_active(vec_scale, pivot, space='3d')
 
-    def one_side_edge_center(self, event):
+    def one_side_edge_center(self, unify_scale: bool):
         delta_x, delta_y, size_x_v2d, size_y_v2d = self.calc_one_side()
         points = self.bbox_model.edge_center_points_3d
         pivot_index = EdgeCenter.opposite(self.pt_edge_center)
@@ -109,14 +117,11 @@ class ScaleHandler():
         else:
             vec_scale = Vector((1, scale_y, 0))
 
-        if event.shift:
-            if abs(delta_x) > abs(delta_y):
-                vec_scale.y = vec_scale.x
-            else:
-                vec_scale.x = vec_scale.y
+        if unify_scale:
+            self.unify_scale(delta_x, delta_y, vec_scale)
         self.build_model.scale_active(vec_scale, pivot, space='3d')
 
-    def one_side_corner(self, event):
+    def one_side_corner(self, unify_scale: bool):
         delta_x, delta_y, size_x_v2d, size_y_v2d = self.calc_one_side()
         points = self.bbox_model.bbox_points_3d
         pivot_index = Coord.opposite(self.pt_corner)
@@ -130,11 +135,8 @@ class ScaleHandler():
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
 
         vec_scale = Vector((scale_x, scale_y, 0))
-        if event.shift:
-            if abs(delta_x) > abs(delta_y):
-                vec_scale.y = vec_scale.x
-            else:
-                vec_scale.x = vec_scale.y
+        if unify_scale:
+            self.unify_scale(delta_x, delta_y, vec_scale)
 
         self.build_model.scale_active(vec_scale, pivot, space='3d')
 
@@ -203,16 +205,18 @@ class DragGreasePencilModel:
         self.build_model.move_active(self.delta_vec, space='v2d')
 
     def drag_scale(self, event):
+        unify_scale = event.shift
+        center_scale = event.ctrl
         if self.on_edge_center:
-            if event.ctrl:
-                self.scale_handler.both_sides_edge_center(event)
+            if center_scale:
+                self.scale_handler.both_sides_edge_center(unify_scale)
             else:
-                self.scale_handler.one_side_edge_center(event)
+                self.scale_handler.one_side_edge_center(unify_scale)
         elif self.on_corner:
-            if event.ctrl:
-                self.scale_handler.both_sides_corner(event)
+            if center_scale:
+                self.scale_handler.both_sides_corner(unify_scale)
             else:
-                self.scale_handler.one_side_corner(event)
+                self.scale_handler.one_side_corner(unify_scale)
 
     def drag_rotate(self, event):
         """Rotate the active layer of the Grease Pencil Object when near the corner extrude point."""
