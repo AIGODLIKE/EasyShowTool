@@ -10,11 +10,12 @@ bl_info = {
     "category": "Node"
 }
 
-from . import ops_notes, ops_gp, keymap, preferences
+from . import ops_notes, ops_gp, keymap, preferences, workspace_tool
 
 modules = [
     ops_notes,
     ops_gp,
+    workspace_tool,
     preferences,
     keymap
 ]
