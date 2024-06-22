@@ -3,12 +3,12 @@ from bpy.props import StringProperty, IntProperty, EnumProperty, FloatVectorProp
 from typing import ClassVar
 from mathutils import Vector
 
-from .model.utils import VecTool, ShootAngles
-from .model.model_draw import DrawModel
-from .model.model_color import Colors, ColorPaletteModel
-from .model.model_drag import DragGreasePencilModel
-from .model.model_gp import CreateGreasePencilData, BuildGreasePencilData
-from .model.model_gp_bbox import GreasePencilLayerBBox, GreasePencilLayers
+from ..model.utils import VecTool, ShootAngles
+from ..model.model_draw import DrawModel
+from ..model.model_color import Colors, ColorPaletteModel
+from ..model.model_drag import DragGreasePencilModel
+from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
+from ..model.model_gp_bbox import GreasePencilLayerBBox, GreasePencilLayers
 from .ops_notes import has_edit_tree
 
 

@@ -1,6 +1,6 @@
 import bpy
 from typing import Optional
-from .public_path import get_pref
+from ..public_path import get_pref
 
 NOTE_DATA_NAME: str = '.NodeNote'  # use . to hide the text data
 
