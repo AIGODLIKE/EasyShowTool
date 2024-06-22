@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from math import radians
 
-from .utils import VecTool, ColorTool, ShootAngles
+from .utils import VecTool, ShootAngles
 from .model_gp_edit import EditGreasePencilLayer, EditGreasePencilStroke
 
 

@@ -5,6 +5,7 @@ from mathutils import Vector
 
 from .model.utils import VecTool, ShootAngles
 from .model.model_draw import DrawModel
+from .model.model_color import Colors, ColorPaletteModel
 from .model.model_drag import DragGreasePencilModel
 from .model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from .model.model_gp_bbox import GreasePencilLayerBBox, GreasePencilLayers
@@ -408,15 +409,8 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
         op = box.operator(ENN_OT_add_gp_modal.bl_idname)
         op.add_type = context.window_manager.enn_gp_add_type
 
-        # op = layout.operator(ENN_OT_move_gp.bl_idname)
-        # op.move_vector = (50, 50)
-        # op = layout.operator(ENN_OT_rotate_gp.bl_idname)
-        # op.rotate_angle = 30
-
-        # layout.separator()
-        # box = layout.box()
-        # box.label(text="Move Active Layer Modal")
-        # box.operator(ENN_OT_gp_drag_modal.bl_idname)
+        if context.scene.enn_palette_group:
+            layout.template_palette(context.scene.enn_palette_group, "palette", color=True)
 
 
 # noinspection PyPep8Naming
@@ -466,8 +460,25 @@ class ENN_TL_grease_pencil_tool(bpy.types.WorkSpaceTool):
     )
 
 
+class MyPaletteGroup(bpy.types.PropertyGroup):
+    palette: bpy.props.PointerProperty(type=bpy.types.Palette)
+
+
 def register():
+    import threading
+    import time
     from bpy.utils import register_class, register_tool
+
+    register_class(MyPaletteGroup)
+    register_class(ENN_OT_add_gp)
+    register_class(ENN_OT_add_gp_modal)
+    register_class(ENN_OT_remove_gp)
+    register_class(ENN_OT_gp_set_active_layer)
+    register_class(ENN_OT_move_gp)
+    register_class(ENN_OT_rotate_gp)
+    register_class(ENN_OT_gp_drag_modal)
+    register_class(ENN_PT_gn_edit_panel)
+    register_tool(ENN_TL_grease_pencil_tool, separator=True)
 
     bpy.types.WindowManager.enn_gp_size = bpy.props.IntProperty(name="Size", default=100, subtype='PIXEL')
     bpy.types.WindowManager.enn_gp_add_type = bpy.props.EnumProperty(items=lambda self, context: enum_add_type_items())
@@ -478,22 +489,28 @@ def register():
     bpy.types.WindowManager.enn_gp_obj_shot_angle = bpy.props.EnumProperty(name="Shot Orientation",
                                                                            items=lambda _, __: enum_shot_orient_items())
 
-    bpy.types.WindowManager.enn_gp_move_dis = bpy.props.IntProperty(name='Distance', default=50)
-    register_class(ENN_OT_add_gp)
-    register_class(ENN_OT_add_gp_modal)
-    register_class(ENN_OT_remove_gp)
-    register_class(ENN_OT_gp_set_active_layer)
-    register_class(ENN_OT_move_gp)
-    register_class(ENN_OT_rotate_gp)
-    register_class(ENN_OT_gp_drag_modal)
-    register_class(ENN_PT_gn_edit_panel)
+    bpy.types.Scene.enn_palette_group = bpy.props.PointerProperty(type=MyPaletteGroup)
 
-    register_tool(ENN_TL_grease_pencil_tool, separator=True)
+    bpy.types.WindowManager.enn_gp_move_dis = bpy.props.IntProperty(name='Distance', default=50)
+
+    def register_later(lock, t):
+        while not hasattr(bpy.context, 'scene'):
+            time.sleep(3)
+        # print("Start register palette")
+        color_model = ColorPaletteModel()
+        color_model.setup()
+        bpy.context.scene.enn_palette_group.palette = color_model.palette
+
+    lock = threading.Lock()
+    lock_holder = threading.Thread(target=register_later, args=(lock, 5), name='enn_color')
+    lock_holder.daemon = True
+    lock_holder.start()
 
 
 def unregister():
     from bpy.utils import unregister_class, unregister_tool
 
+    unregister_class(MyPaletteGroup)
     unregister_class(ENN_OT_add_gp)
     unregister_class(ENN_OT_add_gp_modal)
     unregister_class(ENN_OT_remove_gp)

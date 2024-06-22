@@ -29,19 +29,6 @@ class ShootAngles(Enum):
     BOTTOM: Euler = Euler(EulerTool.to_rad((0, 180, 0)), 'XYZ')
 
 
-class Colors(Enum):
-    WHITE: Final[str] = '#FFFFFF'  # white color
-    ORANGE: Final[str] = '#ED9E5C'  # object color
-    GREEN_GEO: Final[str] = '#00D6A3'  # geometry color
-    GREEN_INT: Final[str] = '#598C5C'  # interface color
-    BLUE: Final[str] = '#598AC3'  # string color
-    PURPLE_VEC: Final[str] = '#6363C7'  # vector color
-    PURPLE_IMG: Final[str] = '#633863'  # image color
-    GREY: Final[str] = '#A1A1A1'  # float color
-    PINK_BOOL: Final[str] = '#CCA6D6'  # boolean color
-    PINK_MAT: Final[str] = '#EB7582'  # material color
-
-
 class ColorTool:
     """Grease Pencil Color utility class."""
 
@@ -53,14 +40,6 @@ class ColorTool:
         else:
             hex = hex_color
         return [int(hex[i:i + 2], 16) / 255 for i in (0, 2, 4)]
-
-    @staticmethod
-    def get_colors():
-        return {c.name: ColorTool.hex_2_rgb(c.value) for c in Colors}
-
-    @staticmethod
-    def get_colors_hex():
-        return {c.name: c.value for c in Colors}
 
 
 class VecTool:
