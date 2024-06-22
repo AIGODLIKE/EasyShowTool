@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from mathutils import Vector
 from math import degrees
 from typing import Literal
-from typing import Optional
+from typing import Final
 import bpy
 
 from ..public_path import get_pref
@@ -11,35 +11,49 @@ from .model_gp import VecTool, BuildGreasePencilData
 from .model_gp_bbox import GreasePencilLayerBBox, MouseDetectModel
 
 
-class ScaleHandler():
+class ScaleHandler:
+    vec_scale: Vector = None
+    pivot: Vector = None
+    drag_model_attr: Final[dict] = {
+        'delta_vec',
+        'mouse_pos',
+        'on_edge_center',
+        'on_corner',
+        'pt_edge_center',
+        'pt_corner',
+    }
+
     def __init__(self, model: 'DragGreasePencilModel'):
         self.drag_model = model
         self.build_model = self.drag_model.build_model
         self.bbox_model = self.drag_model.bbox_model
 
-    @property
-    def delta_vec(self) -> Vector:
-        return self.drag_model.delta_vec
+    def __getattr__(self, name):
+        """Get the attribute from the drag model."""
+        if name in self.drag_model_attr:
+            return getattr(self.drag_model, name)
 
-    @property
-    def mouse_pos(self) -> tuple[int, int]:
-        return self.drag_model.mouse_pos
+    def accept(self, event: bpy.types.Event) -> bool:
+        """Handle the scale event in the modal.
+        :return: True if the scale is handled, False otherwise. Event will be accepted if True."""
+        unify_scale = event.shift
+        center_scale = event.ctrl
+        if self.on_edge_center:
+            if center_scale:
+                self.both_sides_edge_center(unify_scale)
+            else:
+                self.one_side_edge_center(unify_scale)
+        elif self.on_corner:
+            if center_scale:
+                self.both_sides_corner(unify_scale)
+            else:
+                self.one_side_corner(unify_scale)
 
-    @property
-    def on_edge_center(self) -> Vector:
-        return self.drag_model.on_edge_center
+        if not self.vec_scale: return False
+        if not self.pivot: return False
 
-    @property
-    def on_corner(self) -> Vector:
-        return self.drag_model.on_corner
-
-    @property
-    def pt_edge_center(self) -> int:
-        return self.drag_model.pt_edge_center
-
-    @property
-    def pt_corner(self) -> int:
-        return self.drag_model.pt_corner
+        self.build_model.scale_active(self.vec_scale, self.pivot, space='3d')
+        return True
 
     def calc_both_side(self):
         pivot = self.bbox_model.center
@@ -83,7 +97,8 @@ class ScaleHandler():
         if unify_scale:
             self.unify_scale(delta_x, delta_y, vec_scale)
 
-        self.build_model.scale_active(vec_scale, pivot, space='3d')
+        self.pivot = pivot
+        self.vec_scale = vec_scale
 
     def both_sides_corner(self, unify_scale: bool):
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
@@ -97,7 +112,8 @@ class ScaleHandler():
         if unify_scale:
             self.unify_scale(delta_x, delta_y, vec_scale)
 
-        self.build_model.scale_active(vec_scale, pivot, space='3d')
+        self.pivot = pivot
+        self.vec_scale = vec_scale
 
     def one_side_edge_center(self, unify_scale: bool):
         delta_x, delta_y, size_x_v2d, size_y_v2d = self.calc_one_side()
@@ -119,7 +135,9 @@ class ScaleHandler():
 
         if unify_scale:
             self.unify_scale(delta_x, delta_y, vec_scale)
-        self.build_model.scale_active(vec_scale, pivot, space='3d')
+
+        self.pivot = pivot
+        self.vec_scale = vec_scale
 
     def one_side_corner(self, unify_scale: bool):
         delta_x, delta_y, size_x_v2d, size_y_v2d = self.calc_one_side()
@@ -138,7 +156,8 @@ class ScaleHandler():
         if unify_scale:
             self.unify_scale(delta_x, delta_y, vec_scale)
 
-        self.build_model.scale_active(vec_scale, pivot, space='3d')
+        self.pivot = pivot
+        self.vec_scale = vec_scale
 
 
 @dataclass
@@ -183,9 +202,9 @@ class DragGreasePencilModel:
     def handle_drag(self, context, event):
         """Handle the drag event in the modal."""
         # scale mode
-        if self.on_edge_center or self.on_corner:  # scale only when near point
-            self.drag_scale(event)
-        # rotate mode
+        if self.scale_handler.accept(event):
+            return
+            # rotate mode
         elif self.on_corner_extrude:
             self.drag_rotate(event)
         # move mode
@@ -203,20 +222,6 @@ class DragGreasePencilModel:
     def drag_move(self):
         # move only when in drag area
         self.build_model.move_active(self.delta_vec, space='v2d')
-
-    def drag_scale(self, event):
-        unify_scale = event.shift
-        center_scale = event.ctrl
-        if self.on_edge_center:
-            if center_scale:
-                self.scale_handler.both_sides_edge_center(unify_scale)
-            else:
-                self.scale_handler.one_side_edge_center(unify_scale)
-        elif self.on_corner:
-            if center_scale:
-                self.scale_handler.both_sides_corner(unify_scale)
-            else:
-                self.scale_handler.one_side_corner(unify_scale)
 
     def drag_rotate(self, event):
         """Rotate the active layer of the Grease Pencil Object when near the corner extrude point."""
