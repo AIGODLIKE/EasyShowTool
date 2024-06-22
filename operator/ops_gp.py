@@ -236,7 +236,7 @@ def draw_hover_callback_px(self: 'ENN_OT_gp_set_active_layer', context) -> None:
         draw_model.draw_rotate_widget(point=drag_vmodel.pos_near_corner_extrude)
 
     if draw_model.debug:
-        draw_model.draw_debug(self.drag_vmodel.debug_info)
+        draw_model.draw_debug_info(self.drag_vmodel.debug_info)
 
 
 # noinspection PyPep8Naming
@@ -317,11 +317,16 @@ def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
     gp_data_bbox: GreasePencilLayerBBox = drag_vmodel.bbox_model
     if gp_data_bbox.is_empty(): return  # empty data
 
+    start_pos = Vector(self.drag_vmodel.start_pos)
+    end_pos = Vector(self.drag_vmodel.end_pos)
+    delta_degree = self.drag_vmodel.delta_degree
+
     top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
     points = [top_left, top_right, bottom_left, bottom_right]
     coords = [top_left, top_right, bottom_right, bottom_left, top_left]  # close the loop
 
-    draw_model: DrawModel = DrawModel(points, gp_data_bbox.edge_center_points_r2d, coords)
+    draw_model: DrawModel = DrawModel(points, gp_data_bbox.edge_center_points_r2d, coords, start_pos, end_pos,
+                                      delta_degree)
 
     if draw_model.drag_area:
         draw_model.draw_bbox_area()
@@ -330,7 +335,7 @@ def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
         draw_model.draw_bbox_points()
 
     if draw_model.debug:
-        draw_model.draw_debug(self.drag_vmodel.debug_info)
+        draw_model.draw_debug_info(self.drag_vmodel.debug_info)
 
 
 # noinspection PyPep8Naming
@@ -354,10 +359,11 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
 
-        self.drag_vmodel = DragGreasePencilViewModal(gp_data=gp_data,
-                                                     drag_move_handler=MoveHandler(),
-                                                     drag_scale_handler=ScaleHandler(),
-                                                     drag_rotate_handler=RotateHandler())
+        self.drag_vmodel = DragGreasePencilViewModal(gp_data=gp_data)
+        self.drag_vmodel.drag_scale_handler = ScaleHandler()
+        self.drag_vmodel.drag_rotate_handler = RotateHandler()
+        self.drag_vmodel.drag_move_handler = MoveHandler()
+
         self.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_drag_callback_px, (self, context), 'WINDOW',
                                                                       'POST_PIXEL')
         context.window_manager.modal_handler_add(self)
@@ -370,6 +376,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
             ENN_OT_gp_set_active_layer.is_dragging = True
             self.drag_vmodel.update_mouse_pos(context, event)
             if not self.drag_init:
+                self.drag_vmodel.mouse_init()
                 self.drag_vmodel.update_near_widgets()
                 self.drag_init = True
             self.drag_vmodel.handle_drag(context, event)

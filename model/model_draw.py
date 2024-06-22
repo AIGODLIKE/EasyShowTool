@@ -3,18 +3,59 @@ import gpu.state
 import gpu.shader
 import bpy
 import blf
-from mathutils import Color, Vector
+import numpy as np
+import bmesh
 from gpu_extras.batch import batch_for_shader
 from gpu_extras.presets import draw_circle_2d
-from typing import Sequence, Union, ClassVar
+from mathutils import Color, Vector
 
+from typing import Sequence, Union, ClassVar, Literal, Optional
+from dataclasses import dataclass, field
+from pathlib import Path
+from collections import OrderedDict
+
+from .utils import VecTool
 from .model_gp_bbox import GreasePencilLayerBBox
 from ..public_path import get_pref
 
 shader = gpu.shader.from_builtin('UNIFORM_COLOR')
 indices = GreasePencilLayerBBox.indices
 
-from dataclasses import dataclass, field
+
+class DrawShape:
+    shapes: ClassVar[dict] = {}
+
+    def load_obj(self, blend_path: Path, obj_name='gz_shape_ROTATE'):
+        if obj_name in bpy.data.objects:
+            bpy.data.objects.remove(bpy.data.objects[obj_name])
+        with bpy.data.libraries.load(str(blend_path)) as (data_from, data_to):
+            data_to.objects = [obj_name]
+        self.shapes[obj_name] = data_to.objects[0]
+        return self.shapes[obj_name]
+
+    @staticmethod
+    def draw_points_from_obj(obj: bpy.types.Object, draw_type: Literal['TRIS', 'LINES'],
+                             size: int = 100) -> np.ndarray:
+        """get the draw points from the object, return the vertices of the object"""
+        tmp_mesh: bpy.types.Mesh = obj.data
+
+        mesh = tmp_mesh
+        vertices = np.zeros((len(mesh.vertices), 3), 'f')
+        mesh.vertices.foreach_get("co", vertices.ravel())
+        mesh.calc_loop_triangles()
+
+        if draw_type == 'LINES':
+            edges = np.zeros((len(mesh.edges), 2), 'i')
+            mesh.edges.foreach_get("vertices", edges.ravel())
+            custom_shape_verts = vertices[edges].reshape(-1, 3)
+        else:
+            tris = np.zeros((len(mesh.loop_triangles), 3), 'i')
+            mesh.loop_triangles.foreach_get("vertices", tris.ravel())
+            custom_shape_verts = vertices[tris].reshape(-1, 3)
+
+        custom_shape_verts *= size
+
+        return custom_shape_verts
 
 
 @dataclass
@@ -23,6 +64,9 @@ class DrawModel:
     points: list[Vector, Vector, Vector, Vector]
     edge_points: list[Vector, Vector, Vector, Vector]
     coords: list[Vector, Vector, Vector, Vector, Vector]  # close the loop, for drawing lines
+    start_pos: Optional[Vector] = None
+    end_pos: Optional[Vector] = None
+    delta_degree: Optional[float] = None
 
     # pref
     line_width: int = field(init=False)
@@ -100,7 +144,17 @@ class DrawModel:
         batch = batch_for_shader(shader, 'POINTS', {"pos": self.edge_points})
         batch.draw(shader)
 
-    def _draw_text(self, text_lines: Sequence[str], size=24, space: int = 5):
+    def draw_shapes(self, point: np.ndarray):
+        shader.uniform_float("color", self.color_hover)
+        batch = batch_for_shader(shader, 'POINTS', {"pos": point})
+        batch.draw(shader)
+
+    def draw_line(self, start_pos, end_pos):
+        shader.uniform_float("color", self.color_hover)
+        batch = batch_for_shader(shader, 'LINES', {"pos": [start_pos, end_pos]})
+        batch.draw(shader)
+
+    def _draw_text_left_bottom(self, text_lines: Sequence[str], size=24, space: int = 5):
         font_id = 0
         shader.uniform_float("color", self.color)
         # start from the bottom left corner
@@ -115,14 +169,36 @@ class DrawModel:
             blf.size(font_id, size)
             blf.draw(font_id, line)
 
-    def draw_debug(self, dict_info: dict[str, str]):
+    def draw_text(self, text: str, pos: Vector, size=24):
+        font_id = 0
+        shader.uniform_float("color", self.color)
+        blf.color(font_id, 1, 1, 1, 1)
+        blf.position(font_id, pos.x, pos.y, 0)
+        blf.size(font_id, size)
+        blf.draw(font_id, text)
+
+    def draw_debug_info(self, dict_info: OrderedDict[str, str]):
         shader.uniform_float("color", self.debug_color)
         textlines = []
-
 
         for k, v in dict_info.items():
             k_str = k.ljust(30, "-")
             textlines.append(f"{k_str}:{v}")
 
         if textlines:
-            self._draw_text(textlines)
+            self._draw_text_left_bottom(textlines)
+
+        if not self.start_pos or not self.end_pos: return
+        if self.end_pos[0] == 0 and self.end_pos[1] == 0: return
+        if self.start_pos[0] == 0 and self.start_pos[1] == 0: return
+        self.draw_line(self.start_pos, self.end_pos)
+        dis = round((self.start_pos - self.end_pos).length, 2)
+        middle = (self.start_pos + self.end_pos) / 2
+        self.draw_text(f"{dis}px", middle)
+
+        if self.delta_degree:
+            center = (self.points[0] + self.points[2]) / 2
+            self.draw_line(center, self.end_pos)
+            self.draw_line(center, self.start_pos)
+            self.draw_text(f"{self.delta_degree}°", self.end_pos + Vector((0, 20)))
+            draw_circle_2d(self.start_pos, self.color_hover, radius=dis, segments=128)

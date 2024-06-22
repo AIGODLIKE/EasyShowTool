@@ -14,6 +14,9 @@ class TransformHandler:
     build_model: BuildGreasePencilData = None
     callback: Optional[Callable[..., Any]] = None
 
+    def __init__(self, callback: Optional[Callable[..., Any]] = None):
+        self.callback = callback
+
     def accept_event(self, event: bpy.types.Event) -> bool:
         ...  # subclass should implement this method
 
@@ -29,8 +32,8 @@ class TransformHandler:
                 setattr(self, key, value)
 
         self.accept_event(event)
-        if self.callback:
-            self.callback()
+        if self.callback is not None:
+            self.callback(self)
 
 
 class MoveHandler(TransformHandler):
