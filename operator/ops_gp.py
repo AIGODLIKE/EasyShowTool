@@ -7,7 +7,7 @@ from ..model.utils import VecTool, ShootAngles
 from ..model.model_draw import DrawModel
 from ..model.model_color import ColorPaletteModel
 from ..view_model.view_model_drag import DragGreasePencilViewModal
-from ..view_model.view_model_drag import ScaleHandler, RotateHandler, MoveHandler
+from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from ..model.model_gp_bbox import GreasePencilLayerBBox, GreasePencilLayers
 from .ops_notes import has_edit_tree
@@ -235,6 +235,9 @@ def draw_hover_callback_px(self: 'ENN_OT_gp_set_active_layer', context) -> None:
     elif drag_vmodel.pos_near_corner_extrude:
         draw_model.draw_rotate_widget(point=drag_vmodel.pos_near_corner_extrude)
 
+    if draw_model.debug:
+        draw_model.draw_debug(self.drag_vmodel.debug_info)
+
 
 # noinspection PyPep8Naming
 class ENN_OT_gp_set_active_layer(bpy.types.Operator):
@@ -326,8 +329,7 @@ def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
         draw_model.draw_bbox_points()
 
     if draw_model.debug:
-        draw_model.draw_debug((self.drag_vmodel.mouse_pos))
-        draw_model.draw_debug(self.drag_vmodel.debug_points)
+        draw_model.draw_debug(self.drag_vmodel.debug_info)
 
 
 # noinspection PyPep8Naming

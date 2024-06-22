@@ -2,6 +2,7 @@ import gpu
 import gpu.state
 import gpu.shader
 import bpy
+import blf
 from mathutils import Color, Vector
 from gpu_extras.batch import batch_for_shader
 from gpu_extras.presets import draw_circle_2d
@@ -48,7 +49,7 @@ class DrawModel:
         self.drag = get_pref().gp_draw_drag
         self.drag_area = get_pref().gp_draw_drag_area
 
-        scale_factor = 0.75 # scale factor for the points, make it smaller
+        scale_factor = 0.75  # scale factor for the points, make it smaller
         self.corner_px = get_pref().gp_detect_corner_px * scale_factor
         self.edge_px = get_pref().gp_detect_edge_px * scale_factor
         self.rotate_px = get_pref().gp_detect_rotate_px * scale_factor
@@ -99,8 +100,29 @@ class DrawModel:
         batch = batch_for_shader(shader, 'POINTS', {"pos": self.edge_points})
         batch.draw(shader)
 
-    def draw_debug(self, points: Sequence[Union[Vector, Sequence]]):
-        if not points: return
+    def _draw_text(self, text_lines: Sequence[str], size=24, space: int = 5):
+        font_id = 0
+        shader.uniform_float("color", self.color)
+        # start from the bottom left corner
+        x, y = 20, 20
+        # draw some text
+        for i, line in enumerate(text_lines):
+            if i % 2 == 0:
+                blf.color(font_id, 0.5, 0.5, 0.5, 1)
+            else:
+                blf.color(font_id, 1, 1, 1, 1)
+            blf.position(font_id, x, y + i * size + space, 0)
+            blf.size(font_id, size)
+            blf.draw(font_id, line)
+
+    def draw_debug(self, dict_info: dict[str, str]):
         shader.uniform_float("color", self.debug_color)
-        batch = batch_for_shader(shader, 'POINTS', {"pos": points})
-        batch.draw(shader)
+        textlines = []
+
+
+        for k, v in dict_info.items():
+            k_str = k.ljust(30, "-")
+            textlines.append(f"{k_str}:{v}")
+
+        if textlines:
+            self._draw_text(textlines)

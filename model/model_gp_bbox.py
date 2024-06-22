@@ -83,7 +83,6 @@ class MouseDetectModel:
         """
         vec = Vector(pos)
         points = self.bbox_model.corner_extrude_points_r2d(extrude)
-        self.debug_points = [*points, vec]
         for i, point in enumerate(points):
             if (vec - point).length < radius:
                 return point, i
