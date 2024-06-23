@@ -15,8 +15,8 @@ class DragGreasePencilViewModal:
     # need to pass in
     gp_data: bpy.types.GreasePencil
     # callback
-    on_drag_start: Optional[Callable[..., Any]] = None
-    on_drag_end: Optional[Callable[..., Any]] = None
+    on_mouse_init: list[Callable] = field(default_factory=list)
+    on_mouse_move: list[Callable] = field(default_factory=list)
     # drag_handle
     drag_scale_handler: Optional[TransformHandler] = None
     drag_move_handler: Optional[TransformHandler] = None
@@ -43,15 +43,15 @@ class DragGreasePencilViewModal:
     # state
     in_drag_area: bool = False
     # pref, detect edge
-    d_edge: int = field(default_factory=lambda: get_pref().gp_detect_edge_px)
-    d_corner: int = field(default_factory=lambda: get_pref().gp_detect_corner_px)
-    d_rotate: int = field(default_factory=lambda: get_pref().gp_detect_rotate_px)
+    d_edge: int = field(default_factory=lambda: get_pref().gp_performance.detect_edge_px)
+    d_corner: int = field(default_factory=lambda: get_pref().gp_performance.detect_corner_px)
+    d_rotate: int = field(default_factory=lambda: get_pref().gp_performance.detect_rotate_px)
     # snap
-    snap_degree: int = field(default_factory=lambda: get_pref().gp_snap_degree)
+    snap_degree: int = field(default_factory=lambda: get_pref().gp_behavior.snap_degree)
     # copy
     already_copied: bool = False
     # debug
-    debug: bool = field(default_factory=lambda: get_pref().debug_draw)
+    debug: bool = field(default_factory=lambda: get_pref().debug)
     debug_info: OrderedDict[str, str] = field(default_factory=OrderedDict)
 
     def __post_init__(self):
@@ -81,8 +81,8 @@ class DragGreasePencilViewModal:
 
     def mouse_init(self):
         self.start_pos = self.mouse_pos
-        if self.on_drag_start:
-            self.on_drag_start(self)
+        for callback in self.on_mouse_init:
+            callback()
 
     def update_mouse_pos(self, context, event):
         """Update the mouse position and the delta vector. Prepare for the handle_drag."""
@@ -93,6 +93,9 @@ class DragGreasePencilViewModal:
         pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
         cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
         self.delta_vec = Vector((cur_v2d[0] - pre_v2d[0], cur_v2d[1] - pre_v2d[1]))
+
+        for callback in self.on_mouse_move:
+            callback()
 
         if self.debug:
             self.debug_info['mouse_pos'] = str(self.mouse_pos)
