@@ -23,6 +23,7 @@ from ..view_model.view_model_draw import DrawViewModel
 shader = gpu.shader.from_builtin('UNIFORM_COLOR')
 indices = GreasePencilLayerBBox.indices
 
+
 class ViewDrawHandle():
     handle = None
     func: Union['ViewBasic', Callable]
@@ -42,7 +43,6 @@ class ViewDrawHandle():
             self.handle = None
 
 
-
 @dataclass
 class ViewBasic:
     drag_vm: DragGreasePencilViewModal
@@ -52,10 +52,16 @@ class ViewBasic:
     # show state
     _visible: bool = True
 
+    def __post_init__(self):
+        if self.draw_preference.lazy_update:
+            self.drag_vm.on_mouse_move.append(self.update)
+            self.drag_vm.on_mouse_init.append(self.update)
+
     def __call__(self, *args, **kwargs):
         if self.drag_vm.bbox_model.is_empty(): return  # empty data
         if not self._visible: return
-        self.update()
+        if not self.draw_preference.lazy_update:
+            self.update()
         self.draw()
 
     def show(self):
@@ -87,7 +93,7 @@ class ViewHover(ViewBasic):
 
     def update(self):
         self.draw_vm.update_draw_data(points=self.drag_vm.bbox_model.bbox_points_r2d,
-                                         edge_points=self.drag_vm.bbox_model.edge_center_points_r2d)
+                                      edge_points=self.drag_vm.bbox_model.edge_center_points_r2d)
 
     def draw(self) -> None:
         self.draw_vm.draw_bbox_edge()
@@ -121,10 +127,10 @@ class ViewDrag(ViewBasic):
 
     def update(self):
         self.draw_vm.update_draw_data(points=self.drag_vm.bbox_model.bbox_points_r2d,
-                                         edge_points=self.drag_vm.bbox_model.edge_center_points_r2d,
-                                         start_pos=Vector(self.drag_vm.start_pos),
-                                         end_pos=Vector(self.drag_vm.end_pos),
-                                         delta_degree=self.drag_vm.delta_degree)
+                                      edge_points=self.drag_vm.bbox_model.edge_center_points_r2d,
+                                      start_pos=Vector(self.drag_vm.start_pos),
+                                      end_pos=Vector(self.drag_vm.end_pos),
+                                      delta_degree=self.drag_vm.delta_degree)
 
     def draw(self) -> None:
         if self.draw_vm.drag_area:
