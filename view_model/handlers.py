@@ -16,12 +16,13 @@ class ViewPan():
     deltax: int = 0
     deltay: int = 0
     step: int = 10
-    step_max = 30
-    pan_count: int = 0
+
+    pan_pos: tuple[int, int] = (0, 0)
+    pan_post_prev: tuple[int, int] = (0, 0)
 
     def is_on_region_edge(self, mouse_pos: tuple[int, int]) -> bool:
         """Check if the mouse is on the edge of the region."""
-        self.deltax = self.deltax = 0
+        self.deltax = self.deltay = 0
         width, height = bpy.context.area.width, bpy.context.area.height
         x, y = mouse_pos
         # speed up the pan
@@ -35,16 +36,17 @@ class ViewPan():
         elif y > height - self.padding:
             self.deltay = self.step
 
-        if self.deltax or self.deltay:
-            self.pan_count += 1
+        if self.deltay or self.deltax:
             return True
 
-    def edge_pan(self) -> Vector:
+    def edge_pan(self, event) -> Vector:
         """only use in node editor window
         :return: the pan vector.
         """
+        self.pan_post_prev: Vector = VecTool.r2d_2_v2d((event.mouse_region_x, event.mouse_region_y))
         bpy.ops.view2d.pan(deltax=self.deltax, deltay=self.deltay)
-        return Vector((self.deltax, self.deltay))
+        self.pan_pos: Vector = VecTool.r2d_2_v2d((event.mouse_region_x, event.mouse_region_y))
+        return self.pan_pos - self.pan_post_prev
 
 
 class TransformHandler:
@@ -88,13 +90,16 @@ class MoveHandler(TransformHandler):
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the move event in the modal."""
-        if self.view_pan.is_on_region_edge((self.end_pos)):
-            pan_vec = self.view_pan.edge_pan()
-            self.build_model.move_active(pan_vec, space='v2d')
-        elif not self.delta_vec:
+        if not self.delta_vec:
             return False
-        else:
-            self.build_model.move_active(self.delta_vec, space='v2d')
+        self.build_model.move_active(self.delta_vec, space='v2d')
+
+        if self.view_pan.is_on_region_edge((self.end_pos)):
+            pan_vec = self.view_pan.edge_pan(event)
+            # print('pan_vec', pan_vec)
+            # print(bpy.context.region.view2d.region_to_view(event.mouse_region_x, event.mouse_region_y))
+            self.build_model.move_active(pan_vec, space='v2d')
+
         return True
 
 
@@ -117,12 +122,12 @@ class RotateHandler(TransformHandler):
         degree = degrees(angle)
         # snap
         if not event.shift:
-            self.build_model.rotate_active(degree, pivot,space='v2d')
+            self.build_model.rotate_active(degree, pivot, space='v2d')
         else:
             self.delta_degree += abs(degree)
             if self.delta_degree > self.snap_degree:
                 self.delta_degree = 0
-                self.build_model.rotate_active(self.snap_degree * inverse, pivot,space='v2d')
+                self.build_model.rotate_active(self.snap_degree * inverse, pivot, space='v2d')
         return True
 
 
