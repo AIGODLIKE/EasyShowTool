@@ -1,6 +1,6 @@
 import bpy
 from ..public_path import get_tool_icon
-from ..operator.ops_gp import ENN_OT_gp_set_active_layer, ENN_OT_add_gp, ENN_OT_gp_drag_modal, ENN_OT_remove_gp
+from ..operator.ops_gp import ENN_OT_gp_set_active_layer, ENN_OT_add_gp, ENN_OT_gp_drag_modal, ENN_OT_remove_gp,ENN_OT_gp_set_active_layer_color
 
 
 # noinspection PyPep8Naming
@@ -56,7 +56,7 @@ class ENN_TL_gp_color(bpy.types.WorkSpaceTool):
     bl_icon = get_tool_icon('gp_color_tool')
     # bl_widget = "PH_GZG_place_tool"
     bl_keymap = (
-        (ENN_OT_gp_set_active_layer.bl_idname,
+        (ENN_OT_gp_set_active_layer_color.bl_idname,
          {"type": "LEFTMOUSE", "value": "CLICK"},
          {"properties": []},  # [("deselect_all", True)]
          ),

@@ -3,7 +3,7 @@ from bpy.props import StringProperty, IntProperty, EnumProperty, FloatVectorProp
 from typing import ClassVar
 from mathutils import Vector
 
-from ..model.utils import VecTool, ShootAngles
+from ..model.utils import VecTool, ShootAngles, ColorTool
 from ..model.model_draw import DrawModel
 from ..model.model_color import ColorPaletteModel
 from ..view_model.view_model_drag import DragGreasePencilViewModal
@@ -312,6 +312,36 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         return {'PASS_THROUGH'}
 
 
+class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
+    bl_idname = 'enn.gp_set_active_layer_color'
+    bl_label = 'Set Active Layer Color'
+    bl_description = 'Set the active layer color of the Grease Pencil Object'
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context)
+
+    def invoke(self, context, event):
+        nt: bpy.types.NodeTree = context.space_data.edit_tree
+        gp_data: bpy.types.GreasePencil = nt.grease_pencil
+        if not gp_data: return {'CANCELLED'}
+        try:
+            layer_index = GreasePencilLayers.in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
+        except ReferenceError:  # ctrl z
+            layer_index = None
+        except AttributeError:  # switch to other tool
+            layer_index = None
+        if layer_index is None:
+            return {'FINISHED'}
+
+        with BuildGreasePencilData(gp_data) as gp_data_builder:
+            gp_data_builder.active_layer_index = layer_index
+            color = context.scene.enn_palette_group.palette.colors.active.color
+            gp_data_builder.color_active(color=color)
+        return {'FINISHED'}
+
+
 def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
     drag_vmodel: DragGreasePencilViewModal = self.drag_vmodel
     gp_data_bbox: GreasePencilLayerBBox = drag_vmodel.bbox_model
@@ -441,6 +471,7 @@ def register():
     register_class(ENN_OT_add_gp_modal)
     register_class(ENN_OT_remove_gp)
     register_class(ENN_OT_gp_set_active_layer)
+    register_class(ENN_OT_gp_set_active_layer_color)
     register_class(ENN_OT_move_gp)
     register_class(ENN_OT_rotate_gp)
     register_class(ENN_OT_gp_drag_modal)
@@ -480,6 +511,7 @@ def unregister():
     unregister_class(ENN_OT_add_gp)
     unregister_class(ENN_OT_add_gp_modal)
     unregister_class(ENN_OT_remove_gp)
+    unregister_class(ENN_OT_gp_set_active_layer_color)
     unregister_class(ENN_OT_gp_set_active_layer)
     unregister_class(ENN_OT_move_gp)
     unregister_class(ENN_OT_rotate_gp)
