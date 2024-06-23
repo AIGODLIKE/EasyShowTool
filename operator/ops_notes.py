@@ -18,12 +18,13 @@ class ENN_OT_add_note(bpy.types.Operator):
         return has_edit_tree(context)
 
     def execute(self, context):
+        title: str = get_pref().note_title
         width: int = get_pref().note_width
         height: int = get_pref().note_height
         node_tree: bpy.types.NodeTree = context.space_data.edit_tree
         frame_node: bpy.types.Node = node_tree.nodes.new('NodeFrame')
 
-        frame_node.label = 'Note'
+        frame_node.label = title
         frame_node.location = context.space_data.cursor_location
         frame_node.width = width
         frame_node.height = height
