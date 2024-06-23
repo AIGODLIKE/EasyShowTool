@@ -48,7 +48,7 @@ class ViewBasic:
     drag_vmodel: DragGreasePencilViewModal
     draw_data: DrawData = field(init=False)
     draw_preference: DrawPreference = field(init=False)
-    draw_model: DrawViewModel = field(init=False)
+    draw_vm: DrawViewModel = field(init=False)
     # show state
     _visible: bool = True
 
@@ -83,26 +83,26 @@ class ViewHover(ViewBasic):
 
         self.draw_data = DrawData(points, gp_data_bbox.edge_center_points_r2d)
         self.draw_preference = DrawPreference()
-        self.draw_model = DrawViewModel(self.draw_data, self.draw_preference)
+        self.draw_vm = DrawViewModel(self.draw_data, self.draw_preference)
 
     def update(self):
-        self.draw_model.update_draw_data(points=self.drag_vmodel.bbox_model.bbox_points_r2d,
+        self.draw_vm.update_draw_data(points=self.drag_vmodel.bbox_model.bbox_points_r2d,
                                          edge_points=self.drag_vmodel.bbox_model.edge_center_points_r2d)
 
     def draw(self) -> None:
-        self.draw_model.draw_bbox_edge()
+        self.draw_vm.draw_bbox_edge()
 
         if self.drag_vmodel.in_drag_area:
-            self.draw_model.draw_bbox_edge(highlight=True)
+            self.draw_vm.draw_bbox_edge(highlight=True)
         if self.drag_vmodel.pos_near_edge_center:
-            self.draw_model.draw_scale_edge_widget()
+            self.draw_vm.draw_scale_edge_widget()
         if self.drag_vmodel.pos_near_corner:
-            self.draw_model.draw_scale_corner_widget()
+            self.draw_vm.draw_scale_corner_widget()
         elif self.drag_vmodel.pos_near_corner_extrude:
-            self.draw_model.draw_rotate_widget(point=self.drag_vmodel.pos_near_corner_extrude)
+            self.draw_vm.draw_rotate_widget(point=self.drag_vmodel.pos_near_corner_extrude)
 
-        if self.draw_model.debug:
-            self.draw_model.draw_debug_info(self.drag_vmodel.debug_info)
+        if self.draw_vm.debug:
+            self.draw_vm.draw_debug_info(self.drag_vmodel.debug_info)
 
 
 @dataclass
@@ -117,21 +117,21 @@ class ViewDrag(ViewBasic):
                                             start_pos,
                                             end_pos, delta_degree)
         self.draw_preference = DrawPreference()
-        self.draw_model = DrawViewModel(self.draw_data, self.draw_preference)
+        self.draw_vm = DrawViewModel(self.draw_data, self.draw_preference)
 
     def update(self):
-        self.draw_model.update_draw_data(points=self.drag_vmodel.bbox_model.bbox_points_r2d,
+        self.draw_vm.update_draw_data(points=self.drag_vmodel.bbox_model.bbox_points_r2d,
                                          edge_points=self.drag_vmodel.bbox_model.edge_center_points_r2d,
                                          start_pos=Vector(self.drag_vmodel.start_pos),
                                          end_pos=Vector(self.drag_vmodel.end_pos),
                                          delta_degree=self.drag_vmodel.delta_degree)
 
     def draw(self) -> None:
-        if self.draw_model.drag_area:
-            self.draw_model.draw_bbox_area()
-        if self.draw_model.drag:
-            self.draw_model.draw_bbox_edge()
-            self.draw_model.draw_bbox_points()
+        if self.draw_vm.drag_area:
+            self.draw_vm.draw_bbox_area()
+        if self.draw_vm.drag:
+            self.draw_vm.draw_bbox_edge()
+            self.draw_vm.draw_bbox_points()
 
-        if self.draw_model.debug:
-            self.draw_model.draw_debug_info(self.drag_vmodel.debug_info)
+        if self.draw_vm.debug:
+            self.draw_vm.draw_debug_info(self.drag_vmodel.debug_info)
