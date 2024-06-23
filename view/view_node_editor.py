@@ -45,7 +45,7 @@ class ViewDrawHandle():
 
 @dataclass
 class ViewBasic:
-    drag_vmodel: DragGreasePencilViewModal
+    drag_vm: DragGreasePencilViewModal
     draw_data: DrawData = field(init=False)
     draw_preference: DrawPreference = field(init=False)
     draw_vm: DrawViewModel = field(init=False)
@@ -53,7 +53,7 @@ class ViewBasic:
     _visible: bool = True
 
     def __call__(self, *args, **kwargs):
-        if self.drag_vmodel.bbox_model.is_empty(): return  # empty data
+        if self.drag_vm.bbox_model.is_empty(): return  # empty data
         if not self._visible: return
         self.update()
         self.draw()
@@ -77,7 +77,7 @@ class ViewBasic:
 class ViewHover(ViewBasic):
 
     def __post_init__(self):
-        gp_data_bbox: GreasePencilLayerBBox = self.drag_vmodel.bbox_model
+        gp_data_bbox: GreasePencilLayerBBox = self.drag_vm.bbox_model
         top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
         points = [top_left, top_right, bottom_left, bottom_right]
 
@@ -86,32 +86,32 @@ class ViewHover(ViewBasic):
         self.draw_vm = DrawViewModel(self.draw_data, self.draw_preference)
 
     def update(self):
-        self.draw_vm.update_draw_data(points=self.drag_vmodel.bbox_model.bbox_points_r2d,
-                                         edge_points=self.drag_vmodel.bbox_model.edge_center_points_r2d)
+        self.draw_vm.update_draw_data(points=self.drag_vm.bbox_model.bbox_points_r2d,
+                                         edge_points=self.drag_vm.bbox_model.edge_center_points_r2d)
 
     def draw(self) -> None:
         self.draw_vm.draw_bbox_edge()
 
-        if self.drag_vmodel.in_drag_area:
+        if self.drag_vm.in_drag_area:
             self.draw_vm.draw_bbox_edge(highlight=True)
-        if self.drag_vmodel.pos_near_edge_center:
+        if self.drag_vm.pos_near_edge_center:
             self.draw_vm.draw_scale_edge_widget()
-        if self.drag_vmodel.pos_near_corner:
+        if self.drag_vm.pos_near_corner:
             self.draw_vm.draw_scale_corner_widget()
-        elif self.drag_vmodel.pos_near_corner_extrude:
-            self.draw_vm.draw_rotate_widget(point=self.drag_vmodel.pos_near_corner_extrude)
+        elif self.drag_vm.pos_near_corner_extrude:
+            self.draw_vm.draw_rotate_widget(point=self.drag_vm.pos_near_corner_extrude)
 
         if self.draw_vm.debug:
-            self.draw_vm.draw_debug_info(self.drag_vmodel.debug_info)
+            self.draw_vm.draw_debug_info(self.drag_vm.debug_info)
 
 
 @dataclass
 class ViewDrag(ViewBasic):
     def __post_init__(self):
-        gp_data_bbox: GreasePencilLayerBBox = self.drag_vmodel.bbox_model
-        start_pos = Vector(self.drag_vmodel.start_pos)
-        end_pos = Vector(self.drag_vmodel.end_pos)
-        delta_degree = self.drag_vmodel.delta_degree
+        gp_data_bbox: GreasePencilLayerBBox = self.drag_vm.bbox_model
+        start_pos = Vector(self.drag_vm.start_pos)
+        end_pos = Vector(self.drag_vm.end_pos)
+        delta_degree = self.drag_vm.delta_degree
 
         self.draw_data: DrawData = DrawData(gp_data_bbox.bbox_points_r2d, gp_data_bbox.edge_center_points_r2d,
                                             start_pos,
@@ -120,11 +120,11 @@ class ViewDrag(ViewBasic):
         self.draw_vm = DrawViewModel(self.draw_data, self.draw_preference)
 
     def update(self):
-        self.draw_vm.update_draw_data(points=self.drag_vmodel.bbox_model.bbox_points_r2d,
-                                         edge_points=self.drag_vmodel.bbox_model.edge_center_points_r2d,
-                                         start_pos=Vector(self.drag_vmodel.start_pos),
-                                         end_pos=Vector(self.drag_vmodel.end_pos),
-                                         delta_degree=self.drag_vmodel.delta_degree)
+        self.draw_vm.update_draw_data(points=self.drag_vm.bbox_model.bbox_points_r2d,
+                                         edge_points=self.drag_vm.bbox_model.edge_center_points_r2d,
+                                         start_pos=Vector(self.drag_vm.start_pos),
+                                         end_pos=Vector(self.drag_vm.end_pos),
+                                         delta_degree=self.drag_vm.delta_degree)
 
     def draw(self) -> None:
         if self.draw_vm.drag_area:
@@ -134,4 +134,4 @@ class ViewDrag(ViewBasic):
             self.draw_vm.draw_bbox_points()
 
         if self.draw_vm.debug:
-            self.draw_vm.draw_debug_info(self.drag_vmodel.debug_info)
+            self.draw_vm.draw_debug_info(self.drag_vm.debug_info)
