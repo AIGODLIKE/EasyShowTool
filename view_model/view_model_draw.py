@@ -21,8 +21,8 @@ class DrawViewModel:
 
     def __getattr__(self, item):
         """Get the attribute from the draw data or draw preference."""
-        if hasattr(self.pref, item):
-            return getattr(self.pref, item)
+        if hasattr(self.draw_preference, item):
+            return getattr(self.draw_preference, item)
         elif hasattr(self.draw_data, item):
             return getattr(self.draw_data, item)
 

@@ -9,7 +9,7 @@ from gpu_extras.batch import batch_for_shader
 from gpu_extras.presets import draw_circle_2d
 from mathutils import Color, Vector
 
-from typing import Sequence, Union, ClassVar, Literal, Optional
+from typing import Sequence, Union, ClassVar, Literal, Optional, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from collections import OrderedDict
@@ -24,32 +24,53 @@ shader = gpu.shader.from_builtin('UNIFORM_COLOR')
 indices = GreasePencilLayerBBox.indices
 
 
-# TODO refactor view classes
+class ViewDrawHandle():
+    handle = None
+
+    def add_to_node_editor(self, func: Callable, args: tuple):
+        if self.handle is None:
+            self.handle = bpy.types.SpaceNodeEditor.draw_handler_add(func, args, 'WINDOW', 'POST_PIXEL')
+
+    def remove_from_node_editor(self):
+        if self.handle is not None:
+            bpy.types.SpaceNodeEditor.draw_handler_remove(self.handle, 'WINDOW')
+            self.handle = None
+
+
 @dataclass
 class ViewHover():
     drag_vmodel: DragGreasePencilViewModal
     draw_data: DrawData = field(init=False)
     draw_preference: DrawPreference = field(init=False)
     draw_model: DrawViewModel = field(init=False)
+    # show state
+    _visible: bool = True
 
     def __post_init__(self):
         gp_data_bbox: GreasePencilLayerBBox = self.drag_vmodel.bbox_model
         top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
         points = [top_left, top_right, bottom_left, bottom_right]
-        coords = [top_left, top_right, bottom_right, bottom_left, top_left]  # close the loop
 
-        self.draw_data = DrawData(points, gp_data_bbox.edge_center_points_r2d, coords)
+        self.draw_data = DrawData(points, gp_data_bbox.edge_center_points_r2d)
         self.draw_preference = DrawPreference()
         self.draw_model = DrawViewModel(self.draw_data, self.draw_preference)
 
     def __call__(self, *args, **kwargs):
         self.draw_hover_callback_px()
 
-    def is_empty(self):
-        return self.drag_vmodel.bbox_model.is_empty()
+    def update(self):
+        self.draw_model.update_draw_data(points=self.drag_vmodel.bbox_model.bbox_points_r2d,
+                                         edge_points=self.drag_vmodel.bbox_model.edge_center_points_r2d)
+
+    def show(self):
+        self._visible = True
+
+    def hide(self):
+        self._visible = False
 
     def draw_hover_callback_px(self) -> None:
-        if self.is_empty(): return  # empty data
+        if self.drag_vmodel.bbox_model.is_empty(): return  # empty data
+        if not self._visible: return
 
         self.draw_model.draw_bbox_edge()
 

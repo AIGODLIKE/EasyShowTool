@@ -11,6 +11,7 @@ from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view_model.view_model_draw import DrawViewModel
 from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool
+from ..view.view_node_editor import ViewHover, ViewDrawHandle
 
 
 def enum_add_type_items() -> list[tuple[str, str, str]]:
@@ -245,8 +246,10 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
     bl_label = "Set Active Layer"
     bl_description = "Set the active layer of the Grease Pencil Object"
     # bl_options = {'UNDO'}
-
-    draw_handle: ClassVar = None
+    # set class variable because need to call from other operator
+    # also this operator is designed to be modal and single instance
+    draw_handle: ClassVar[ViewDrawHandle] = None
+    view_hover: ClassVar[ViewHover] = None
     drag_vmodel: ClassVar[DragGreasePencilViewModal] = None
     # call stop
     stop: bool = False
@@ -275,37 +278,30 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         drag_vmodel.bbox_model.active_layer_index = layer_index
         drag_vmodel.bbox_model.calc_active_layer_bbox()
         self.__class__.drag_vmodel = drag_vmodel
+        self.__class__.view_hover = ViewHover(self.drag_vmodel)
 
-        self.add_draw_handle(context)
+        self.__class__.draw_handle = ViewDrawHandle()
+        self.draw_handle.add_to_node_editor(self.view_hover, (self, context))
         context.window_manager.modal_handler_add(self)
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
-
-    def remove_draw_handle(self):
-        if self.draw_handle:
-            bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')
-            self.__class__.draw_handle = None
-
-    def add_draw_handle(self, context):
-        if not self.__class__.draw_handle:
-            self.__class__.draw_handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw_hover_callback_px,
-                                                                                    (self, context),
-                                                                                    'WINDOW', 'POST_PIXEL')
 
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
             try:
                 self.drag_vmodel.update_mouse_pos(context, event)
                 self.drag_vmodel.update_near_widgets()
+                self.view_hover.update()
             except ReferenceError:  # ctrl z
                 self.stop = True
             except AttributeError:  # switch to other tool
                 self.stop = True
         # active tool is not drag tool
         if self.stop or event.type in {'ESC', 'RIGHTMOUSE'} or not context.area or not is_valid_workspace_tool(context):
-            self.remove_draw_handle()
+            self.draw_handle.remove_from_node_editor()
             self.stop = False
             self.__class__.drag_vmodel = None
+            self.__class__.view_hover = None
             tag_redraw()
             return {'FINISHED'}
         context.area.tag_redraw()
@@ -342,6 +338,9 @@ class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
         return {'FINISHED'}
 
 
+from ..model.model_draw import DrawData, DrawPreference
+
+# TODO refactor this drag
 def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
     drag_vmodel: DragGreasePencilViewModal = self.drag_vmodel
     gp_data_bbox: GreasePencilLayerBBox = drag_vmodel.bbox_model
@@ -351,12 +350,10 @@ def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
     end_pos = Vector(self.drag_vmodel.end_pos)
     delta_degree = self.drag_vmodel.delta_degree
 
-    top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
-    points = [top_left, top_right, bottom_left, bottom_right]
-    coords = [top_left, top_right, bottom_right, bottom_left, top_left]  # close the loop
-
-    draw_model: DrawViewModel = DrawViewModel(points, gp_data_bbox.edge_center_points_r2d, coords, start_pos, end_pos,
-                                              delta_degree)
+    draw_data: DrawData = DrawData(gp_data_bbox.bbox_points_r2d, gp_data_bbox.edge_center_points_r2d, start_pos,
+                                   end_pos, delta_degree)
+    draw_preference = DrawPreference()
+    draw_model: DrawViewModel = DrawViewModel(draw_data, draw_preference)
 
     if draw_model.drag_area:
         draw_model.draw_bbox_area()
@@ -403,7 +400,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
     def modal(self, context, event):
 
         if event.type == 'MOUSEMOVE':
-            ENN_OT_gp_set_active_layer.is_dragging = True
+            ENN_OT_gp_set_active_layer.view_hover.hide()
             self.drag_vmodel.update_mouse_pos(context, event)
             if not self.drag_init:
                 self.drag_vmodel.mouse_init()
@@ -421,7 +418,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def _finish(self, context):
-        ENN_OT_gp_set_active_layer.is_dragging = False
+        ENN_OT_gp_set_active_layer.view_hover.show()
         if ENN_OT_gp_set_active_layer.drag_vmodel:
             ENN_OT_gp_set_active_layer.drag_vmodel._update_bbox(context)
         bpy.types.SpaceNodeEditor.draw_handler_remove(self.draw_handle, 'WINDOW')

@@ -20,6 +20,7 @@ class DrawPreference:
     # color
     color: Color = field(init=False)
     color_hover: Color = field(init=False)
+    color_highlight: Color = field(init=False)
     color_area: Color = field(init=False)
     # detect
     corner_px: int = field(init=False)
@@ -58,10 +59,15 @@ class DrawData():
     """Draw data for grease pencil, collect all the draw data need here"""
     points: list[Vector, Vector, Vector, Vector]
     edge_points: list[Vector, Vector, Vector, Vector]
-    coords: list[Vector, Vector, Vector, Vector, Vector]  # close the loop, for drawing lines
     start_pos: Optional[Vector] = None
     end_pos: Optional[Vector] = None
     delta_degree: Optional[float] = None
+
+    @property
+    def coords(self) -> list[Vector]:
+        # close the loop
+        top_left, top_right, bottom_left, bottom_right = self.points
+        return [top_left, top_right, bottom_right, bottom_left, top_left]
 
 
 class DrawShape:
