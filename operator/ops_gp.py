@@ -3,8 +3,8 @@ from bpy.props import StringProperty, IntProperty, EnumProperty, FloatVectorProp
 from typing import ClassVar
 from mathutils import Vector
 
+from ..view.view_node_editor import DrawModel
 from ..model.utils import VecTool, ShootAngles, ColorTool
-from ..model.model_draw import DrawModel
 from ..model.model_color import ColorPaletteModel
 from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler

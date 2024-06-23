@@ -14,48 +14,119 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from collections import OrderedDict
 
-from .utils import VecTool
-from .model_gp_bbox import GreasePencilLayerBBox
+from ..model.model_gp_bbox import GreasePencilLayerBBox
 from ..public_path import get_pref
+from ..view_model.view_model_drag import DragGreasePencilViewModal
 
 shader = gpu.shader.from_builtin('UNIFORM_COLOR')
 indices = GreasePencilLayerBBox.indices
 
+# TODO refactor view classes
+class ViewHover():
+    def __call__(self, *args, **kwargs):
+        self.draw_hover_callback_px(*args, **kwargs)
 
-class DrawShape:
-    shapes: ClassVar[dict] = {}
+    def draw_hover_callback_px(self, drag_vmodel: DragGreasePencilViewModal, context) -> None:
+        # if self.is_dragging:
+        #     return
+        gp_data_bbox: GreasePencilLayerBBox = drag_vmodel.bbox_model
+        if gp_data_bbox.is_empty(): return  # empty data
 
-    def load_obj(self, blend_path: Path, obj_name='gz_shape_ROTATE'):
-        if obj_name in bpy.data.objects:
-            bpy.data.objects.remove(bpy.data.objects[obj_name])
-        with bpy.data.libraries.load(str(blend_path)) as (data_from, data_to):
-            data_to.objects = [obj_name]
-        self.shapes[obj_name] = data_to.objects[0]
-        return self.shapes[obj_name]
+        top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
+        points = [top_left, top_right, bottom_left, bottom_right]
+        coords = [top_left, top_right, bottom_right, bottom_left, top_left]  # close the loop
+
+        draw_model: DrawModel = DrawModel(points, gp_data_bbox.edge_center_points_r2d, coords)
+        draw_model.draw_bbox_edge()
+
+        if drag_vmodel.in_drag_area:
+            draw_model.draw_bbox_edge(highlight=True)
+        if drag_vmodel.pos_near_edge_center:
+            draw_model.draw_scale_edge_widget()
+        if drag_vmodel.pos_near_corner:
+            draw_model.draw_scale_corner_widget()
+        elif drag_vmodel.pos_near_corner_extrude:
+            draw_model.draw_rotate_widget(point=drag_vmodel.pos_near_corner_extrude)
+
+        if draw_model.debug:
+            draw_model.draw_debug_info(drag_vmodel.debug_info)
+
+
+class ViewDrag():
+
+    def __call__(self, *args, **kwargs):
+        self.draw_drag_callback_px(*args, **kwargs)
+
+    def draw_drag_callback_px(self, drag_vmodel: DragGreasePencilViewModal, context) -> None:
+        gp_data_bbox: GreasePencilLayerBBox = drag_vmodel.bbox_model
+        if gp_data_bbox.is_empty(): return  # empty data
+
+        start_pos = Vector(drag_vmodel.start_pos)
+        end_pos = Vector(drag_vmodel.end_pos)
+        delta_degree = drag_vmodel.delta_degree
+
+        top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
+        points = [top_left, top_right, bottom_left, bottom_right]
+        coords = [top_left, top_right, bottom_right, bottom_left, top_left]  # close the loop
+
+        draw_model: DrawModel = DrawModel(points, gp_data_bbox.edge_center_points_r2d, coords, start_pos, end_pos,
+                                          delta_degree)
+
+        if draw_model.drag_area:
+            draw_model.draw_bbox_area()
+        if draw_model.drag:
+            draw_model.draw_bbox_edge()
+            draw_model.draw_bbox_points()
+
+        if draw_model.debug:
+            draw_model.draw_debug_info(drag_vmodel.debug_info)
+
+
+@dataclass
+class DrawPreference:
+    # pref
+    line_width: int = field(init=False)
+    debug: bool = field(init=False)
+    drag: bool = field(init=False)
+    drag_area: bool = field(init=False)
+    # color
+    color: Color = field(init=False)
+    color_hover: Color = field(init=False)
+    color_area: Color = field(init=False)
+    # detect
+    corner_px: int = field(init=False)
+    edge_px: int = field(init=False)
+    rotate_px: int = field(init=False)
+
+    # default
+    debug_color: Color = field(init=False)
+    point_size: ClassVar[int] = 20
 
     @staticmethod
-    def draw_points_from_obj(obj: bpy.types.Object, draw_type: Literal['TRIS', 'LINES'],
-                             size: int = 100) -> np.ndarray:
-        """get the draw points from the object, return the vertices of the object"""
-        tmp_mesh: bpy.types.Mesh = obj.data
+    def color_alpha(color: Color, alpha: float) -> tuple:
+        return color[0], color[1], color[2], alpha
 
-        mesh = tmp_mesh
-        vertices = np.zeros((len(mesh.vertices), 3), 'f')
-        mesh.vertices.foreach_get("co", vertices.ravel())
-        mesh.calc_loop_triangles()
+    def __post_init__(self):
+        theme = bpy.context.preferences.themes['Default'].view_3d
+        self.line_width = get_pref().gp_draw_line_width
+        self.debug = get_pref().debug_draw
+        self.drag = get_pref().gp_draw_drag
+        self.drag_area = get_pref().gp_draw_drag_area
 
-        if draw_type == 'LINES':
-            edges = np.zeros((len(mesh.edges), 2), 'i')
-            mesh.edges.foreach_get("vertices", edges.ravel())
-            custom_shape_verts = vertices[edges].reshape(-1, 3)
-        else:
-            tris = np.zeros((len(mesh.loop_triangles), 3), 'i')
-            mesh.loop_triangles.foreach_get("vertices", tris.ravel())
-            custom_shape_verts = vertices[tris].reshape(-1, 3)
+        scale_factor = 0.75  # scale factor for the points, make it smaller
+        self.corner_px = get_pref().gp_detect_corner_px * scale_factor
+        self.edge_px = get_pref().gp_detect_edge_px * scale_factor
+        self.rotate_px = get_pref().gp_detect_rotate_px * scale_factor
 
-        custom_shape_verts *= size
+        self.color = self.color_alpha(theme.lastsel_point, 0.3)
+        self.color_highlight = self.color_alpha(theme.lastsel_point, 0.8)
+        self.color_hover = self.color_alpha(theme.vertex_select, 0.8)
+        self.color_area = self.color_alpha(theme.face, 0.5)
+        self.debug_color = self.color_alpha(theme.face_back, 0.8)
 
-        return custom_shape_verts
+        gpu.state.line_width_set(self.line_width)
+        gpu.state.point_size_set(self.point_size)
+        gpu.state.blend_set('ALPHA')
 
 
 @dataclass
