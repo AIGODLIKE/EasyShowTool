@@ -10,7 +10,7 @@ from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from ..model.model_gp_bbox import GreasePencilLayerBBox, GreasePencilLayers
-from .functions import has_edit_tree, tag_redraw
+from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool
 
 
 def enum_add_type_items() -> list[tuple[str, str, str]]:
@@ -302,7 +302,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
             except AttributeError:  # switch to other tool
                 self.stop = True
         # active tool is not drag tool
-        if self.stop or event.type in {'ESC', 'RIGHTMOUSE'} or not context.area:
+        if self.stop or event.type in {'ESC', 'RIGHTMOUSE'} or not context.area or not is_valid_workspace_tool(context):
             self.remove_draw_handle()
             self.stop = False
             self.__class__.drag_vmodel = None
