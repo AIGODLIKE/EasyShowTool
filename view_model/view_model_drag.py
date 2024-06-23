@@ -15,6 +15,9 @@ class DragGreasePencilViewModal:
     # need to pass in
     gp_data: bpy.types.GreasePencil
     # callback
+    on_drag_start: Optional[Callable[..., Any]] = None
+    on_drag_end: Optional[Callable[..., Any]] = None
+    # drag_handle
     drag_scale_handler: Optional[TransformHandler] = None
     drag_move_handler: Optional[TransformHandler] = None
     drag_rotate_handler: Optional[TransformHandler] = None
@@ -78,6 +81,8 @@ class DragGreasePencilViewModal:
 
     def mouse_init(self):
         self.start_pos = self.mouse_pos
+        if self.on_drag_start:
+            self.on_drag_start(self)
 
     def update_mouse_pos(self, context, event):
         """Update the mouse position and the delta vector. Prepare for the handle_drag."""

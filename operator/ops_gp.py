@@ -3,13 +3,13 @@ from bpy.props import StringProperty, IntProperty, EnumProperty, FloatVectorProp
 from typing import ClassVar
 from mathutils import Vector
 
-from ..view.view_node_editor import DrawModel
-from ..model.utils import VecTool, ShootAngles, ColorTool
-from ..model.model_color import ColorPaletteModel
-from ..view_model.view_model_drag import DragGreasePencilViewModal
-from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from ..model.model_gp_bbox import GreasePencilLayerBBox, GreasePencilLayers
+from ..model.utils import VecTool, ShootAngles, ColorTool
+from ..model.model_color import ColorPaletteModel
+from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
+from ..view_model.view_model_drag import DragGreasePencilViewModal
+from ..view_model.view_model_draw import DrawViewModel
 from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool
 
 
@@ -223,7 +223,7 @@ def draw_hover_callback_px(self: 'ENN_OT_gp_set_active_layer', context) -> None:
     points = [top_left, top_right, bottom_left, bottom_right]
     coords = [top_left, top_right, bottom_right, bottom_left, top_left]  # close the loop
 
-    draw_model: DrawModel = DrawModel(points, gp_data_bbox.edge_center_points_r2d, coords)
+    draw_model: DrawViewModel = DrawViewModel(points, gp_data_bbox.edge_center_points_r2d, coords)
     draw_model.draw_bbox_edge()
 
     if drag_vmodel.in_drag_area:
@@ -355,8 +355,8 @@ def draw_drag_callback_px(self: 'ENN_OT_gp_drag_modal', context) -> None:
     points = [top_left, top_right, bottom_left, bottom_right]
     coords = [top_left, top_right, bottom_right, bottom_left, top_left]  # close the loop
 
-    draw_model: DrawModel = DrawModel(points, gp_data_bbox.edge_center_points_r2d, coords, start_pos, end_pos,
-                                      delta_degree)
+    draw_model: DrawViewModel = DrawViewModel(points, gp_data_bbox.edge_center_points_r2d, coords, start_pos, end_pos,
+                                              delta_degree)
 
     if draw_model.drag_area:
         draw_model.draw_bbox_area()
