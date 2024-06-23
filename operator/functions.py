@@ -22,3 +22,7 @@ def has_active_node(context: bpy.types.Context, bl_idname: Optional[str] = None)
         if context.space_data.edit_tree.nodes.active.bl_idname != bl_idname:
             return False
     return True
+
+
+def is_valid_workspace_tool(context) -> bool:
+    return context.workspace.tools.from_space_node().idname in {'enn.gp_edit_tool','enn.gp_color_tool'}

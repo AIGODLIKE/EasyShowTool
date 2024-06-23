@@ -1,6 +1,6 @@
 import bpy
 import numpy as np
-from mathutils import Vector, Euler
+from mathutils import Vector, Euler, Color
 from typing import Literal, Optional, Union, ClassVar
 from dataclasses import dataclass, field
 from .utils import VecTool, ShootAngles, ColorTool
@@ -265,18 +265,24 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
             self.gp_data.layers.remove(layer)
         return self
 
-    def color_active(self, hex_color: str) -> 'BuildGreasePencilData':
+    def color_active(self, color: Optional[Color] = None, hex_color: Optional[str] = None) -> 'BuildGreasePencilData':
         """Set the color of the active grease pencil annotation layer."""
-        return self.color(self.active_layer_index, hex_color)
 
-    def color(self, layer_name_or_index: Union[str, int], hex_color: str) -> 'BuildGreasePencilData':
+        return self.color(self.active_layer_index, color, hex_color)
+
+    def color(self, layer_name_or_index: Union[str, int], color: Optional[Color] = None,
+              hex_color: Optional[str] = None) -> 'BuildGreasePencilData':
         """Set the color of the grease pencil annotation layer.
         :param layer_name_or_index: The name or index of the layer.
         :param hex_color: The color in hex format.
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
         if layer:
-            layer.color = ColorTool.hex_2_rgb(hex_color)
+            if color:
+                layer.color = color
+            elif hex_color:
+                layer.color = ColorTool.hex_2_rgb(hex_color)
+
         return self
 
     def link(self, context: bpy.types.Context) -> 'BuildGreasePencilData':
@@ -360,7 +366,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         :param space: The type of the vector, either 'v2d' or '3d'.
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
-        vec_pivot = VecTool.v2d_2_loc3d(pivot) if space == 'v2d' else pivot
+        vec_pivot = VecTool.v2d_2_loc3d(pivot) if space == '3d' else pivot
         self.edit_layer.scale_layer(layer, scale, vec_pivot)
         return self
 
@@ -374,6 +380,6 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         :param space: The type of the vector, either 'v2d' or '3d'.
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
-        vec_pivot = VecTool.v2d_2_loc3d(pivot) if space == 'v2d' else pivot
+        vec_pivot = VecTool.v2d_2_loc3d(pivot) if space == '3d' else pivot
         self.edit_layer.rotate_layer(layer, degree, vec_pivot)
         return self

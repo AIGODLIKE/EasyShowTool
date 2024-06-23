@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from mathutils import Vector
-from math import degrees
 from typing import Literal, Optional, Callable, Final, Any
 import bpy
+from collections import OrderedDict
 
 from ..public_path import get_pref
 from ..model.model_gp import VecTool, BuildGreasePencilData
@@ -15,6 +15,9 @@ class DragGreasePencilViewModal:
     # need to pass in
     gp_data: bpy.types.GreasePencil
     # callback
+    on_mouse_init: list[Callable] = field(default_factory=list)
+    on_mouse_move: list[Callable] = field(default_factory=list)
+    # drag_handle
     drag_scale_handler: Optional[TransformHandler] = None
     drag_move_handler: Optional[TransformHandler] = None
     drag_rotate_handler: Optional[TransformHandler] = None
@@ -33,21 +36,23 @@ class DragGreasePencilViewModal:
     mouse_pos: tuple[int, int] = (0, 0)
     mouse_pos_prev: tuple[int, int] = (0, 0)
     delta_vec: Vector = Vector((0, 0))
+    delta_degree: float = 0
+    delta_scale: Vector = Vector((0, 0))
+    start_pos: tuple[int, int] = (0, 0)
+    end_pos: tuple[int, int] = (0, 0)
     # state
     in_drag_area: bool = False
     # pref, detect edge
-    d_edge: int = field(default_factory=lambda: get_pref().gp_detect_edge_px)
-    d_corner: int = field(default_factory=lambda: get_pref().gp_detect_corner_px)
-    d_rotate: int = field(default_factory=lambda: get_pref().gp_detect_rotate_px)
+    d_edge: int = field(default_factory=lambda: get_pref().gp_performance.detect_edge_px)
+    d_corner: int = field(default_factory=lambda: get_pref().gp_performance.detect_corner_px)
+    d_rotate: int = field(default_factory=lambda: get_pref().gp_performance.detect_rotate_px)
     # snap
-    snap_degree: int = field(default_factory=lambda: get_pref().gp_snap_degree)
-    delta_degree: float = 0
+    snap_degree: int = field(default_factory=lambda: get_pref().gp_behavior.snap_degree)
     # copy
     already_copied: bool = False
-
     # debug
-    debug: bool = field(default_factory=lambda: get_pref().debug_draw)
-    debug_info: dict[str, str] = field(default_factory=dict)
+    debug: bool = field(default_factory=lambda: get_pref().debug)
+    debug_info: OrderedDict[str, str] = field(default_factory=OrderedDict)
 
     def __post_init__(self):
         self.bbox_model = GreasePencilLayerBBox(self.gp_data)
@@ -74,19 +79,31 @@ class DragGreasePencilViewModal:
             self.debug_info['pos_near_corner_extrude'] = str(self.pos_near_corner_extrude)
             self.debug_info['in_drag_area'] = str(self.in_drag_area)
 
+    def mouse_init(self):
+        self.start_pos = self.mouse_pos
+        for callback in self.on_mouse_init:
+            callback()
+
     def update_mouse_pos(self, context, event):
         """Update the mouse position and the delta vector. Prepare for the handle_drag."""
         self.mouse_pos_prev = self.mouse_pos
         self.mouse_pos = event.mouse_region_x, event.mouse_region_y
+        self.end_pos = self.mouse_pos
         self._update_bbox(context)
         pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
         cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
         self.delta_vec = Vector((cur_v2d[0] - pre_v2d[0], cur_v2d[1] - pre_v2d[1]))
 
+        for callback in self.on_mouse_move:
+            callback()
+
         if self.debug:
             self.debug_info['mouse_pos'] = str(self.mouse_pos)
             self.debug_info['mouse_pos_prev'] = str(self.mouse_pos_prev)
             self.debug_info['delta_vec'] = str(self.delta_vec)
+            self.debug_info['delta_degree'] = str(self.delta_degree)
+            self.debug_info['start_pos'] = str(self.start_pos)
+            self.debug_info['end_pos'] = str(self.end_pos)
 
     def _handle_copy(self, event):
         """Handle the copy event in the modal."""
