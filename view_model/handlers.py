@@ -1,18 +1,58 @@
+from dataclasses import dataclass
 from typing import Any, Callable, Optional, Literal
 import bpy
 from math import degrees
 from mathutils import Vector
+from typing import ClassVar
 
 from ..model.utils import Coord, EdgeCenter, VecTool
 from ..model.model_gp_bbox import GreasePencilLayerBBox
 from ..model.model_gp import BuildGreasePencilData
 
 
+@dataclass
+class ViewPan():
+    padding: int = 30
+    deltax: int = 0
+    deltay: int = 0
+    step: int = 10
+    step_max = 30
+    pan_count: int = 0
+
+    def is_on_region_edge(self, mouse_pos: tuple[int, int]) -> bool:
+        """Check if the mouse is on the edge of the region."""
+        self.deltax = self.deltax = 0
+        width, height = bpy.context.area.width, bpy.context.area.height
+        x, y = mouse_pos
+        # speed up the pan
+        if x < self.padding:
+            self.deltax = -self.step
+        elif x > width - self.padding:
+            self.deltax = self.step
+
+        if y < self.padding:
+            self.deltay = -self.step
+        elif y > height - self.padding:
+            self.deltay = self.step
+
+        if self.deltax or self.deltay:
+            self.pan_count += 1
+            return True
+
+    def edge_pan(self) -> Vector:
+        """only use in node editor window
+        :return: the pan vector.
+        """
+        bpy.ops.view2d.pan(deltax=self.deltax, deltay=self.deltay)
+        return Vector((self.deltax, self.deltay))
+
+
 class TransformHandler:
     """Handle the transform operation in the modal."""
     bbox_model: GreasePencilLayerBBox = None
     build_model: BuildGreasePencilData = None
-    callback: Optional[Callable[..., Any]] = None
+    on_start: Callable = None
+    on_end: Callable = None
 
     def __init__(self, callback: Optional[Callable[..., Any]] = None):
         self.callback = callback
@@ -30,20 +70,31 @@ class TransformHandler:
         for key, value in kwargs.items():
             if key in self.__annotations__:
                 setattr(self, key, value)
-
+        if self.on_start:
+            self.on_start(self)
         self.accept_event(event)
-        if self.callback is not None:
-            self.callback(self)
+        if self.on_end is not None:
+            self.on_end(self)
 
 
 class MoveHandler(TransformHandler):
     delta_vec: Vector = None
+    end_pos: tuple[int, int] = (0, 0)
+    view_pan: ViewPan = None
+
+    def __init__(self):
+        super().__init__()
+        self.view_pan = ViewPan()
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the move event in the modal."""
-        if not self.delta_vec:
+        if self.view_pan.is_on_region_edge((self.end_pos)):
+            pan_vec = self.view_pan.edge_pan()
+            self.build_model.move_active(pan_vec, space='v2d')
+        elif not self.delta_vec:
             return False
-        self.build_model.move_active(self.delta_vec, space='v2d')
+        else:
+            self.build_model.move_active(self.delta_vec, space='v2d')
         return True
 
 
@@ -66,12 +117,12 @@ class RotateHandler(TransformHandler):
         degree = degrees(angle)
         # snap
         if not event.shift:
-            self.build_model.rotate_active(degree, pivot)
+            self.build_model.rotate_active(degree, pivot,space='v2d')
         else:
             self.delta_degree += abs(degree)
             if self.delta_degree > self.snap_degree:
                 self.delta_degree = 0
-                self.build_model.rotate_active(self.snap_degree * inverse, pivot)
+                self.build_model.rotate_active(self.snap_degree * inverse, pivot,space='v2d')
         return True
 
 
@@ -106,7 +157,7 @@ class ScaleHandler(TransformHandler):
         if not self.vec_scale: return False
         if not self.pivot: return False
 
-        self.build_model.scale_active(self.vec_scale, self.pivot, space='3d')
+        self.build_model.scale_active(self.vec_scale, self.pivot, space='v2d')
         return True
 
     def calc_both_side(self):

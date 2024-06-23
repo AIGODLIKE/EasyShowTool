@@ -12,6 +12,8 @@ from ..public_path import get_pref
 @dataclass(slots=True)
 class DrawPreference:
     """blender draw preference for grease pencil, collect all the draw preference here"""
+    # lazy update
+    lazy_update: bool = field(init=False)
     # pref
     line_width: int = field(init=False)
     debug: bool = field(init=False)
@@ -26,7 +28,6 @@ class DrawPreference:
     corner_px: int = field(init=False)
     edge_px: int = field(init=False)
     rotate_px: int = field(init=False)
-
     # default
     debug_color: Color = field(init=False)
     point_size: ClassVar[int] = 20
@@ -36,16 +37,18 @@ class DrawPreference:
         return color[0], color[1], color[2], alpha
 
     def __post_init__(self):
+        self.lazy_update = get_pref().gp_performance.lazy_update
+
         theme = bpy.context.preferences.themes['Default'].view_3d
-        self.line_width = get_pref().gp_draw_line_width
-        self.debug = get_pref().debug_draw
-        self.drag = get_pref().gp_draw_drag
-        self.drag_area = get_pref().gp_draw_drag_area
+        self.line_width = get_pref().gp_draw.line_width
+        self.drag = get_pref().gp_draw.drag
+        self.drag_area = get_pref().gp_draw.drag_area
+        self.debug = get_pref().debug
 
         scale_factor = 0.75  # scale factor for the points, make it smaller
-        self.corner_px = get_pref().gp_detect_corner_px * scale_factor
-        self.edge_px = get_pref().gp_detect_edge_px * scale_factor
-        self.rotate_px = get_pref().gp_detect_rotate_px * scale_factor
+        self.corner_px = get_pref().gp_performance.detect_corner_px * scale_factor
+        self.edge_px = get_pref().gp_performance.detect_edge_px * scale_factor
+        self.rotate_px = get_pref().gp_performance.detect_rotate_px * scale_factor
 
         self.color = self.color_alpha(theme.lastsel_point, 0.3)
         self.color_highlight = self.color_alpha(theme.lastsel_point, 0.8)

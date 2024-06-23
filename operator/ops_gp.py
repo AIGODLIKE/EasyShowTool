@@ -208,7 +208,7 @@ class ENN_OT_rotate_gp(bpy.types.Operator):
         bbox.calc_active_layer_bbox()
         pivot = bbox.center
         with BuildGreasePencilData(gp_data) as gp_data_builder:
-            gp_data_builder.rotate_active(self.rotate_angle, pivot)
+            gp_data_builder.rotate_active(self.rotate_angle, pivot,space='v2d')
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -263,7 +263,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
-        if event.type == 'MOUSEMOVE':
+        if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'MIDDLEMOUSE'}:
             try:
                 self.drag_vm.update_mouse_pos(context, event)
                 self.drag_vm.update_near_widgets()
