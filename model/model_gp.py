@@ -16,19 +16,19 @@ class GreasePencilProperty:
     def name(self) -> str:
         return self.gp_data.name
 
-    def has_active_layer(self) -> bool:
-        """Check if the grease pencil data has an active layer."""
-        return bool(self.gp_data.layers.active)
+    def has_active_layer(self):
+        return self.active_layer_index != -1
 
     @property
     def active_layer_name(self) -> str:
         """Return the active layer name."""
-        return self.active_layer.info
+        return self.active_layer.info if self.has_active_layer() else ''
 
     @active_layer_name.setter
     def active_layer_name(self, name: str):
         """Set the active layer name."""
-        self.active_layer.info = name
+        if self.has_active_layer():
+            self.active_layer.info = name
 
     @property
     def active_layer(self) -> bpy.types.GPencilLayer:
@@ -38,7 +38,11 @@ class GreasePencilProperty:
     @property
     def active_layer_index(self) -> int:
         """Return the active layer index."""
-        return self.gp_data.layers.active_index
+        try:
+            index = self.gp_data.layers.active_index
+            return index
+        except ReferenceError:
+            return -1
 
     @active_layer_index.setter
     def active_layer_index(self, index: int):
@@ -123,7 +127,18 @@ class CreateGreasePencilData(GreasePencilCache):
                                keep_original=keep_original)
 
     @staticmethod
+    def ensure_context_obj():
+        """Ensure there is a context object to make bpy.ops.object work."""
+        if bpy.context.object: return
+        c_obj = bpy.data.objects.new('tmp_context', None)
+        bpy.context.collection.objects.link(c_obj)
+        bpy.context.view_layer.objects.active = c_obj
+        CreateGreasePencilData.del_later(c_obj)
+
+    @staticmethod
     def empty() -> bpy.types.GreasePencil:
+        """Create an empty grease pencil data."""
+        CreateGreasePencilData.ensure_context_obj()
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.gpencil_add(type='EMPTY')
         obj = bpy.context.object
@@ -237,6 +252,9 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """allow to use with statement"""
         self.cleanup()  # remove cache
 
+    def is_2d(self):
+        return self.edit_layer.is_in_2d(self.active_layer)
+
     def to_2d(self) -> 'BuildGreasePencilData':
         """show the grease pencil data in 2D space."""
         for layer in self.gp_data.layers:
@@ -265,23 +283,19 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
             self.gp_data.layers.remove(layer)
         return self
 
-    def color_active(self, color: Optional[Color] = None, hex_color: Optional[str] = None) -> 'BuildGreasePencilData':
+    def color_active(self, color: Color) -> 'BuildGreasePencilData':
         """Set the color of the active grease pencil annotation layer."""
 
-        return self.color(self.active_layer_index, color, hex_color)
+        return self.color(self.active_layer_index, color)
 
-    def color(self, layer_name_or_index: Union[str, int], color: Optional[Color] = None,
-              hex_color: Optional[str] = None) -> 'BuildGreasePencilData':
+    def color(self, layer_name_or_index: Union[str, int], color: Color = None) -> 'BuildGreasePencilData':
         """Set the color of the grease pencil annotation layer.
         :param layer_name_or_index: The name or index of the layer.
         :param hex_color: The color in hex format.
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
         if layer:
-            if color:
-                layer.color = color
-            elif hex_color:
-                layer.color = ColorTool.hex_2_rgb(hex_color)
+            layer.color = color
 
         return self
 

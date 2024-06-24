@@ -3,7 +3,7 @@ from math import radians
 from typing import Union
 import bpy
 import numpy as np
-from mathutils import Vector
+from mathutils import Vector, Matrix
 from typing import Literal
 
 
@@ -72,9 +72,18 @@ class EditGreasePencilLayer(EditGreasePencilStroke):
     def display_in_3d(self, layer: bpy.types.GPencilLayer):
         self._set_display_mode(layer, '3DSPACE')
 
+    def is_in_2d(self, layer: bpy.types.GPencilLayer) -> bool:
+        return self._get_display_mode(layer) == '2DSPACE'
+
     @staticmethod
     def _set_display_mode(layer: bpy.types.GPencilLayer, mode: Literal['2DSPACE', '3DSPACE']):
         for frame in layer.frames:
             for stroke in frame.strokes:
                 if stroke.display_mode != mode:
                     stroke.display_mode = mode
+
+    @staticmethod
+    def _get_display_mode(layer: bpy.types.GPencilLayer) -> Literal['2DSPACE', '3DSPACE']:
+        if not layer.frames or not layer.frames[0].strokes:
+            return '3DSPACE'
+        return layer.frames[0].strokes[0].display_mode
