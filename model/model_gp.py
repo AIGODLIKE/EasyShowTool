@@ -237,6 +237,9 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """allow to use with statement"""
         self.cleanup()  # remove cache
 
+    def is_2d(self):
+        return self.edit_layer.is_in_2d(self.active_layer)
+
     def to_2d(self) -> 'BuildGreasePencilData':
         """show the grease pencil data in 2D space."""
         for layer in self.gp_data.layers:
