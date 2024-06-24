@@ -38,7 +38,11 @@ class GreasePencilProperty:
     @property
     def active_layer_index(self) -> int:
         """Return the active layer index."""
-        return self.gp_data.layers.active_index
+        try:
+            index = self.gp_data.layers.active_index
+            return index
+        except ReferenceError:
+            return -1
 
     @active_layer_index.setter
     def active_layer_index(self, index: int):
