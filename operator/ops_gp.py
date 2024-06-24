@@ -186,6 +186,32 @@ class ENN_OT_move_gp(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class ENN_OT_scale_gp(bpy.types.Operator):
+    bl_idname = "enn.scale_gp"
+    bl_label = "Scale"
+    bl_description = "Scale the selected Grease Pencil Object"
+    bl_options = {'UNDO'}
+
+    scale_vector: bpy.props.FloatVectorProperty(name='Scale Vector', size=2, default=(1.1, 1.1))
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context)
+
+    def execute(self, context):
+        nt: bpy.types.NodeTree = context.space_data.edit_tree
+        gp_data: bpy.types.GreasePencil = nt.grease_pencil
+        if not gp_data:
+            return {'CANCELLED'}
+        bbox = GreasePencilLayerBBox(gp_data)
+        bbox.calc_active_layer_bbox()
+        pivot = bbox.center
+        with BuildGreasePencilData(gp_data) as gp_data_builder:
+            gp_data_builder.scale_active(self.scale_vector, pivot, space='v2d')
+        context.area.tag_redraw()
+        return {'FINISHED'}
+
+
 # noinspection PyPep8Naming
 class ENN_OT_rotate_gp(bpy.types.Operator):
     bl_idname = "enn.rotate_gp"
@@ -407,6 +433,10 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
         op = box.operator(ENN_OT_add_gp_modal.bl_idname)
         op.add_type = context.window_manager.enn_gp_add_type
 
+        box.prop(context.window_manager, "enn_gp_scale")
+        op = box.operator(ENN_OT_scale_gp.bl_idname)
+        op.scale_vector = context.window_manager.enn_gp_scale
+
         if context.scene.enn_palette_group:
             layout.template_palette(context.scene.enn_palette_group, "palette", color=True)
 
@@ -428,6 +458,7 @@ def register():
     register_class(ENN_OT_gp_set_active_layer_color)
     register_class(ENN_OT_move_gp)
     register_class(ENN_OT_rotate_gp)
+    register_class(ENN_OT_scale_gp)
     register_class(ENN_OT_gp_drag_modal)
     register_class(ENN_PT_gn_edit_panel)
 
@@ -441,8 +472,9 @@ def register():
                                                                            items=lambda _, __: enum_shot_orient_items())
 
     bpy.types.Scene.enn_palette_group = bpy.props.PointerProperty(type=MyPaletteGroup)
-
     bpy.types.WindowManager.enn_gp_move_dis = bpy.props.IntProperty(name='Distance', default=50)
+    bpy.types.WindowManager.enn_gp_scale = bpy.props.FloatVectorProperty(name='Scale Vector', size=2,
+                                                                         default=(1.1, 1.1))
 
     def register_later(lock, t):
         while not hasattr(bpy.context, 'scene'):
@@ -469,5 +501,6 @@ def unregister():
     unregister_class(ENN_OT_gp_set_active_layer)
     unregister_class(ENN_OT_move_gp)
     unregister_class(ENN_OT_rotate_gp)
+    unregister_class(ENN_OT_scale_gp)
     unregister_class(ENN_OT_gp_drag_modal)
     unregister_class(ENN_PT_gn_edit_panel)
