@@ -8,6 +8,27 @@ from ..model.utils import VecTool, ShootAngles
 from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items
 
 
+class ENN_OT_toggle_gp_space(bpy.types.Operator):
+    bl_idname = "enn.toggle_gp_space"
+    bl_label = "Toggle Space"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context)
+
+    def execute(self, context):
+        nt: bpy.types.NodeTree = context.space_data.edit_tree
+        gp_data: bpy.types.GreasePencil = nt.grease_pencil
+        if not gp_data: return {'CANCELLED'}
+        with BuildGreasePencilData(gp_data) as gp_data_builder:
+            if gp_data_builder.is_2d():
+                gp_data_builder.to_3d()
+            else:
+                gp_data_builder.to_2d()
+        return {'FINISHED'}
+
+
 class ENN_OT_remove_gp(bpy.types.Operator):
     bl_idname = "enn.remove_gp"
     bl_label = "Remove"
@@ -173,6 +194,7 @@ class ENN_OT_add_gp(bpy.types.Operator):
 def register():
     from bpy.utils import register_class
 
+    register_class(ENN_OT_toggle_gp_space)
     register_class(ENN_OT_add_gp)
     register_class(ENN_OT_remove_gp)
     register_class(ENN_OT_move_gp)
@@ -188,3 +210,4 @@ def unregister():
     unregister_class(ENN_OT_scale_gp)
     unregister_class(ENN_OT_remove_gp)
     unregister_class(ENN_OT_add_gp)
+    unregister_class(ENN_OT_toggle_gp_space)
