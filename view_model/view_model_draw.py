@@ -129,4 +129,3 @@ class DrawViewModel:
             self.draw_line(center, self.end_pos)
             self.draw_line(center, self.start_pos)
             self.draw_text(f"{round(self.delta_degree, 1)}°", self.end_pos + Vector((0, 20)))
-            draw_circle_2d(center, self.color_hover, radius=dis / 2, segments=128)

@@ -26,9 +26,9 @@ class DragGreasePencilViewModal:
     build_model: BuildGreasePencilData = field(init=False)
     detect_model: MouseDetectModel = field(init=False)
     # state / on points
-    pos_near_edge_center: Vector = None
-    pos_near_corner: Vector = None
-    pos_near_corner_extrude: Vector = None
+    pos_edge_center: Vector = None
+    pos_corner: Vector = None
+    pos_corner_extrude: Vector = None
     pt_corner: int = 0
     pt_edge_center: int = 0
     pt_corner_extrude: int = 0
@@ -36,14 +36,11 @@ class DragGreasePencilViewModal:
     mouse_pos: tuple[int, int] = (0, 0)
     mouse_pos_prev: tuple[int, int] = (0, 0)
     start_pos: tuple[int, int] = (0, 0)
+    start_center_pos: tuple[int, int] = (0, 0)
     end_pos: tuple[int, int] = (0, 0)
     delta_vec_v2d: Vector = Vector((0, 0))
     # state
     in_drag_area: bool = False
-    # pref, detect edge
-    d_edge: int = field(default_factory=lambda: get_pref().gp_performance.detect_edge_px)
-    d_corner: int = field(default_factory=lambda: get_pref().gp_performance.detect_corner_px)
-    d_rotate: int = field(default_factory=lambda: get_pref().gp_performance.detect_rotate_px)
     # snap
     snap_degree: int = field(default_factory=lambda: get_pref().gp_behavior.snap_degree)
     # copy
@@ -66,18 +63,18 @@ class DragGreasePencilViewModal:
 
     def update_near_widgets(self):
         """Detect and update the near points and areas of the Grease Pencil Object."""
-        self.pos_near_edge_center, self.pt_edge_center = self.detect_model.near_edge_center(self.mouse_pos,
-                                                                                            radius=self.d_edge)
-        self.pos_near_corner, self.pt_corner = self.detect_model.near_corners(self.mouse_pos, radius=self.d_corner)
-        self.pos_near_corner_extrude, self.pt_corner_extrude = self.detect_model.near_corners_extrude(self.mouse_pos,
-                                                                                                      extrude=self.d_rotate,
-                                                                                                      radius=self.d_rotate)
-        self.in_drag_area = self.detect_model.in_area(self.mouse_pos, feather=0)
+        # TODO this event will not show at a same time , so make it to if  branch
+
+        res = self.detect_model.detect_near(self.mouse_pos)
+        self.pos_edge_center, self.pt_edge_center = res.get('edge_center')
+        self.pos_corner, self.pt_corner = res.get('corner')
+        self.pos_corner_extrude, self.pt_corner_extrude = res.get('corner_extrude')
+        self.in_drag_area = res.get('in_area')
 
         if self.debug:
-            self.debug_info['pos_near_edge_center'] = str(self.pos_near_edge_center)
-            self.debug_info['pos_near_corner'] = str(self.pos_near_corner)
-            self.debug_info['pos_near_corner_extrude'] = str(self.pos_near_corner_extrude)
+            self.debug_info['pos_edge_center'] = str(self.pos_edge_center)
+            self.debug_info['pos_corner'] = str(self.pos_corner)
+            self.debug_info['pos_corner_extrude'] = str(self.pos_corner_extrude)
             self.debug_info['in_drag_area'] = str(self.in_drag_area)
 
     def mouse_init(self):
@@ -126,9 +123,9 @@ class DragGreasePencilViewModal:
         pass_in_args = self._collect_kwargs()
         models = {'bbox_model': self.bbox_model, 'build_model': self.build_model}
 
-        if (self.pos_near_edge_center or self.pos_near_corner) and self.drag_scale_handler:
+        if (self.pos_edge_center or self.pos_corner) and self.drag_scale_handler:
             self.drag_scale_handler.handle(event=event, models=models, **pass_in_args)
-        elif self.pos_near_corner_extrude and self.drag_rotate_handler:
+        elif self.pos_corner_extrude and self.drag_rotate_handler:
             self.drag_rotate_handler.handle(event=event, models=models, **pass_in_args)
         elif self.in_drag_area and self.drag_move_handler:
             self.drag_move_handler.handle(event=event, models=models, **pass_in_args)

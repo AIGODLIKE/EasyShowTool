@@ -17,8 +17,8 @@ class ViewPan():
     deltax: int = 0
     deltay: int = 0
     step: int = 10
-    step_max: int = 50 # max step
-    pan_count: int = 0 # count the pan event, higher the count, faster the pan
+    step_max: int = 50  # max step
+    pan_count: int = 0  # count the pan event, higher the count, faster the pan
 
     pan_pos: tuple[int, int] = (0, 0)
     pan_post_prev: tuple[int, int] = (0, 0)
@@ -48,9 +48,9 @@ class ViewPan():
             self.deltay = self.step
 
         if self.deltay or self.deltax:
-            self.pan_count+=1
+            self.pan_count += 1
             if self.pan_count < self.step_max:
-                self.step+= 1
+                self.step += 1
             return True
 
     def edge_pan(self, event) -> Vector:
@@ -128,7 +128,7 @@ class RotateHandler(TransformHandler):
     snap_degree: int = 0
     snap_degree_count: int = 0
 
-    #
+    # TODO pin rotate pivot since the bbox center update all the time
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the rotate event in the modal."""
@@ -162,8 +162,8 @@ class ScaleHandler(TransformHandler):
     # pass in
     delta_vec_v2d: Vector = None
     mouse_pos: tuple[int, int] = (0, 0)
-    pos_near_edge_center: Vector = None
-    pos_near_corner: Vector = None
+    pos_edge_center: Vector = None
+    pos_corner: Vector = None
     pt_edge_center: int = 0
     pt_corner: int = 0
 
@@ -172,12 +172,12 @@ class ScaleHandler(TransformHandler):
         :return: True if the scale is handled, False otherwise. Event will be accepted if True."""
         unify_scale = event.shift
         center_scale = event.ctrl
-        if self.pos_near_edge_center:
+        if self.pos_edge_center:
             if center_scale:
                 self.both_sides_edge_center(unify_scale)
             else:
                 self.one_side_edge_center(unify_scale)
-        elif self.pos_near_corner:
+        elif self.pos_corner:
             if center_scale:
                 self.both_sides_corner(unify_scale)
             else:
@@ -223,7 +223,7 @@ class ScaleHandler(TransformHandler):
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
 
-        if self.pos_near_edge_center[0] == pivot_r2d[0]:
+        if self.pos_edge_center[0] == pivot_r2d[0]:
             vec_scale = Vector((1, scale_y, 0))
         else:
             vec_scale = Vector((scale_x, 1, 0))
@@ -236,9 +236,9 @@ class ScaleHandler(TransformHandler):
 
     def both_sides_corner(self, unify_scale: bool):
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
-        if self.pos_near_corner[0] == self.bbox_model.min_x:
+        if self.pos_corner[0] == self.bbox_model.min_x:
             delta_x = -delta_x
-        if self.pos_near_corner[1] == self.bbox_model.min_y:
+        if self.pos_corner[1] == self.bbox_model.min_y:
             delta_y = -delta_y
 
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
