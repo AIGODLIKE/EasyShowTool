@@ -208,7 +208,7 @@ class ENN_OT_rotate_gp(bpy.types.Operator):
         bbox.calc_active_layer_bbox()
         pivot = bbox.center
         with BuildGreasePencilData(gp_data) as gp_data_builder:
-            gp_data_builder.rotate_active(self.rotate_angle, pivot,space='v2d')
+            gp_data_builder.rotate_active(self.rotate_angle, pivot, space='v2d')
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -320,11 +320,13 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
     bl_description = "Move the active Grease Pencil Layer"
     bl_options = {'UNDO'}
 
-    # model
+    # drag view model is used to handle the drag event
     drag_vm: DragGreasePencilViewModal = None
-    draw_handle: ClassVar[ViewDrawHandle] = None
+    #  view is accept view model data and draw the view
     view_drag: ViewDrag = None
-
+    # draw handle is used to set up or stop the draw
+    draw_handle: ClassVar[ViewDrawHandle] = None
+    # init drag because click drag will cover the mouse move event in the first time
     drag_init: bool = False
 
     @classmethod
@@ -338,9 +340,12 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         self.drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
         self.view_drag = ViewDrag(self.drag_vm)
 
-        self.drag_vm.drag_scale_handler = ScaleHandler()
-        self.drag_vm.drag_rotate_handler = RotateHandler()
-        self.drag_vm.drag_move_handler = MoveHandler()
+        self.drag_vm.drag_scale_handler = ScaleHandler(
+            call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_scale', h.delta_scale))
+        self.drag_vm.drag_rotate_handler = RotateHandler(
+            call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_degree', h.delta_degree))
+        self.drag_vm.drag_move_handler = MoveHandler(
+            call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_move', h.delta_move))
 
         self.__class__.draw_handle = ViewDrawHandle()
         self.__class__.draw_handle.add_to_node_editor(self.view_drag, (self, context))
@@ -350,7 +355,8 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
 
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
-            ENN_OT_gp_set_active_layer.view_hover.hide()
+            if ENN_OT_gp_set_active_layer.view_hover:
+                ENN_OT_gp_set_active_layer.view_hover.hide()
             self.drag_vm.update_mouse_pos(context, event)
             if not self.drag_init:
                 self.drag_vm.mouse_init()
@@ -358,13 +364,11 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
                 self.drag_init = True
             self.drag_vm.handle_drag(context, event)
 
-        if event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE", "MIDDLEMOUSE"}:
-            self.view_drag.update()
-            return {'PASS_THROUGH'}
-        if event.type in {'ESC', 'RIGHTMOUSE'} or (event.type == 'LEFTMOUSE' and event.value == 'RELEASE'):
-            self._finish(context)
-            return {'FINISHED'}
-        if not is_valid_workspace_tool(context):
+        if True in (
+                event.type in {'ESC', 'RIGHTMOUSE'},
+                event.type == 'LEFTMOUSE' and event.value == 'RELEASE',
+                not is_valid_workspace_tool(context)
+        ):
             self._finish(context)
             return {'FINISHED'}
         context.area.tag_redraw()

@@ -35,11 +35,9 @@ class DragGreasePencilViewModal:
     # mouse
     mouse_pos: tuple[int, int] = (0, 0)
     mouse_pos_prev: tuple[int, int] = (0, 0)
-    delta_vec: Vector = Vector((0, 0))
-    delta_degree: float = 0
-    delta_scale: Vector = Vector((0, 0))
     start_pos: tuple[int, int] = (0, 0)
     end_pos: tuple[int, int] = (0, 0)
+    delta_vec_v2d: Vector = Vector((0, 0))
     # state
     in_drag_area: bool = False
     # pref, detect edge
@@ -92,7 +90,7 @@ class DragGreasePencilViewModal:
         self._update_bbox(context)
         pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
         cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
-        self.delta_vec = Vector((cur_v2d[0] - pre_v2d[0], cur_v2d[1] - pre_v2d[1]))
+        self.delta_vec_v2d = Vector((cur_v2d[0] - pre_v2d[0], cur_v2d[1] - pre_v2d[1]))
 
         for callback in self.on_mouse_move:
             callback()
@@ -100,8 +98,6 @@ class DragGreasePencilViewModal:
         if self.debug:
             self.debug_info['mouse_pos'] = str(self.mouse_pos)
             self.debug_info['mouse_pos_prev'] = str(self.mouse_pos_prev)
-            self.debug_info['delta_vec'] = str(self.delta_vec)
-            self.debug_info['delta_degree'] = str(self.delta_degree)
             self.debug_info['start_pos'] = str(self.start_pos)
             self.debug_info['end_pos'] = str(self.end_pos)
 
