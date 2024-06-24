@@ -1,7 +1,7 @@
 from typing import Optional
 
 import bpy
-
+from ..model.utils import ShootAngles
 
 def tag_redraw():
     for area in bpy.context.screen.areas:
@@ -26,3 +26,17 @@ def has_active_node(context: bpy.types.Context, bl_idname: Optional[str] = None)
 
 def is_valid_workspace_tool(context) -> bool:
     return context.workspace.tools.from_space_node().idname in {'enn.gp_edit_tool','enn.gp_color_tool'}
+
+
+def enum_add_type_items() -> list[tuple[str, str, str]]:
+    """Return the items for the add_type enum property."""
+    data: dict = {
+        'TEXT': "Text",
+        'OBJECT': "Object",
+    }
+    return [(key, value, "") for key, value in data.items()]
+
+
+def enum_shot_orient_items() -> list[tuple[str, str, str]]:
+    """Return the items for the shot_orient enum property."""
+    return [(euler.name, euler.name.replace('_', ' ').title(), '') for euler in ShootAngles]
