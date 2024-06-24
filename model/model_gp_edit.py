@@ -66,6 +66,8 @@ class EditGreasePencilLayer(EditGreasePencilStroke):
             for stroke in frame.strokes:
                 self._rotate_stroke(stroke, degree, pivot)
 
+        # store rotation in layer.rotation, but inverse the rotation
+        layer.rotation[2] += radians(degree)
     def display_in_2d(self, layer: bpy.types.GPencilLayer):
         self._set_display_mode(layer, '2DSPACE')
 
