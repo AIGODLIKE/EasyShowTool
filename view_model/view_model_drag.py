@@ -57,6 +57,9 @@ class DragGreasePencilViewModal:
         self.build_model = BuildGreasePencilData(self.gp_data)
         self.detect_model = self.bbox_model.detect_model
 
+    def has_active_layer(self) -> bool:
+        return self.build_model.has_active_layer()
+
     def handle_drag(self, context, event):
         """Handle the drag event in the modal."""
         self._update_drag_handles(event)

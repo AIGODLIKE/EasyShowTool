@@ -16,19 +16,19 @@ class GreasePencilProperty:
     def name(self) -> str:
         return self.gp_data.name
 
-    def has_active_layer(self) -> bool:
-        """Check if the grease pencil data has an active layer."""
-        return bool(self.gp_data.layers.active)
+    def has_active_layer(self):
+        return self.active_layer_index != -1
 
     @property
     def active_layer_name(self) -> str:
         """Return the active layer name."""
-        return self.active_layer.info
+        return self.active_layer.info if self.has_active_layer() else ''
 
     @active_layer_name.setter
     def active_layer_name(self, name: str):
         """Set the active layer name."""
-        self.active_layer.info = name
+        if self.has_active_layer():
+            self.active_layer.info = name
 
     @property
     def active_layer(self) -> bpy.types.GPencilLayer:

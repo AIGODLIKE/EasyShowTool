@@ -126,7 +126,8 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
             except AttributeError:  # switch to other tool
                 self.stop = True
         # active tool is not drag tool
-        if self.stop or event.type in {'ESC', 'RIGHTMOUSE'} or not context.area or not is_valid_workspace_tool(context):
+        if self.stop or event.type in {'ESC', 'RIGHTMOUSE'} or not context.area or not is_valid_workspace_tool(
+                context) or not self.drag_vm.has_active_layer():
             self.draw_handle.remove_from_node_editor()
             self.stop = False
             self.__class__.drag_vm = None

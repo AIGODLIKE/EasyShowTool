@@ -17,6 +17,8 @@ class ViewPan():
     deltax: int = 0
     deltay: int = 0
     step: int = 10
+    step_max: int = 50 # max step
+    pan_count: int = 0 # count the pan event, higher the count, faster the pan
 
     pan_pos: tuple[int, int] = (0, 0)
     pan_post_prev: tuple[int, int] = (0, 0)
@@ -46,6 +48,9 @@ class ViewPan():
             self.deltay = self.step
 
         if self.deltay or self.deltax:
+            self.pan_count+=1
+            if self.pan_count < self.step_max:
+                self.step+= 1
             return True
 
     def edge_pan(self, event) -> Vector:
