@@ -231,7 +231,8 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
 
     def _finish(self, context):
         self.draw_handle.remove_from_node_editor()
-        ENN_OT_gp_set_active_layer.view_hover.show()
+        if ENN_OT_gp_set_active_layer.view_hover:
+            ENN_OT_gp_set_active_layer.view_hover.show()
         if ENN_OT_gp_set_active_layer.drag_vm:
             ENN_OT_gp_set_active_layer.drag_vm._update_bbox(context)
         context.area.tag_redraw()

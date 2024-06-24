@@ -162,11 +162,13 @@ class ENN_OT_add_gp(bpy.types.Operator):
 
         if not font_gp_data: return {'CANCELLED'}
 
+        color = context.scene.enn_palette_group.palette.colors.active.color
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             gp_data_builder.link(context).join(font_gp_data) \
-                .set_active_layer(-1).move_active(vec, space='v2d').color_active('#E7E7E7').to_2d()
+                .set_active_layer(-1).move_active(vec, space='v2d').color_active(color=color).to_2d()
 
         return {'FINISHED'}
+
 
 def register():
     from bpy.utils import register_class
@@ -176,6 +178,7 @@ def register():
     register_class(ENN_OT_move_gp)
     register_class(ENN_OT_rotate_gp)
     register_class(ENN_OT_scale_gp)
+
 
 def unregister():
     from bpy.utils import unregister_class

@@ -265,23 +265,19 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
             self.gp_data.layers.remove(layer)
         return self
 
-    def color_active(self, color: Optional[Color] = None, hex_color: Optional[str] = None) -> 'BuildGreasePencilData':
+    def color_active(self, color: Color) -> 'BuildGreasePencilData':
         """Set the color of the active grease pencil annotation layer."""
 
-        return self.color(self.active_layer_index, color, hex_color)
+        return self.color(self.active_layer_index, color)
 
-    def color(self, layer_name_or_index: Union[str, int], color: Optional[Color] = None,
-              hex_color: Optional[str] = None) -> 'BuildGreasePencilData':
+    def color(self, layer_name_or_index: Union[str, int], color: Color = None) -> 'BuildGreasePencilData':
         """Set the color of the grease pencil annotation layer.
         :param layer_name_or_index: The name or index of the layer.
         :param hex_color: The color in hex format.
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
         if layer:
-            if color:
-                layer.color = color
-            elif hex_color:
-                layer.color = ColorTool.hex_2_rgb(hex_color)
+            layer.color = color
 
         return self
 
