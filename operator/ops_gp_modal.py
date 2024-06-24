@@ -70,12 +70,12 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
     bl_idname = "enn.gp_set_active_layer"
     bl_label = "Set Active Layer"
     bl_description = "Set the active layer of the Grease Pencil Object"
-    # bl_options = {'UNDO'}
+
     # set class variable because need to call from other operator
     # also this operator is designed to be modal and single instance
     draw_handle: ClassVar[ViewDrawHandle] = None
-    view_hover: ClassVar[ViewHover] = None
     drag_vm: ClassVar[DragGreasePencilViewModal] = None
+    view_hover: ClassVar[ViewHover] = None
     # call stop
     stop: bool = False
     is_dragging: ClassVar[bool] = False  # allow to call from other operator
@@ -83,6 +83,18 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context)
+
+    @classmethod
+    def hide(cls):
+        if cls.view_hover:
+            cls.view_hover.hide()
+
+    @classmethod
+    def show(cls):
+        if cls.view_hover:
+            cls.view_hover.show()
+        if cls.drag_vm:
+            cls.drag_vm._update_bbox(bpy.context)
 
     def invoke(self, context, event):
         self.stop = False
@@ -116,24 +128,32 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
 
     def modal(self, context, event):
         if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'MIDDLEMOUSE'}:
-            try:
-                self.drag_vm.update_mouse_pos(context, event)
-                self.drag_vm.update_near_widgets()
-            except ReferenceError:  # ctrl z
-                self.stop = True
-            except AttributeError:  # switch to other tool
-                self.stop = True
-        # active tool is not drag tool
-        if self.stop or event.type in {'ESC', 'RIGHTMOUSE'} or not context.area or not is_valid_workspace_tool(
+            self.update_drag_vm(context, event)
+
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            return self._finish()
+        if self.stop or not context.area or not is_valid_workspace_tool(
                 context) or not self.drag_vm.has_active_layer():
-            self.draw_handle.remove_from_node_editor()
-            self.stop = False
-            self.__class__.drag_vm = None
-            self.__class__.view_hover = None
-            tag_redraw()
-            return {'FINISHED'}
+            return self._finish()
         context.area.tag_redraw()
         return {'PASS_THROUGH'}
+
+    def update_drag_vm(self, context, event):
+        try:
+            self.drag_vm.update_mouse_pos(context, event)
+            self.drag_vm.update_near_widgets()
+        except ReferenceError:  # ctrl z
+            self.stop = True
+        except AttributeError:  # switch to other tool
+            self.stop = True
+
+    def _finish(self) -> set:
+        self.draw_handle.remove_from_node_editor()
+        self.stop = False
+        self.__class__.drag_vm = None
+        self.__class__.view_hover = None
+        tag_redraw()
+        return {'FINISHED'}
 
 
 class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
@@ -178,7 +198,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
     #  view is accept view model data and draw the view
     view_drag: ViewDrag = None
     # draw handle is used to set up or stop the draw
-    draw_handle: ClassVar[ViewDrawHandle] = None
+    draw_handle: ViewDrawHandle = None
     # init drag because click drag will cover the mouse move event in the first time
     drag_init: bool = False
 
@@ -200,16 +220,15 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         self.drag_vm.drag_move_handler = MoveHandler(
             call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_move', h.delta_move))
 
-        self.__class__.draw_handle = ViewDrawHandle()
-        self.__class__.draw_handle.add_to_node_editor(self.view_drag, (self, context))
+        self.draw_handle = ViewDrawHandle()
+        self.draw_handle.add_to_node_editor(self.view_drag, (self, context))
         context.window_manager.modal_handler_add(self)
         self.drag_vm.update_mouse_pos(context, event)
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
-            if ENN_OT_gp_set_active_layer.view_hover:
-                ENN_OT_gp_set_active_layer.view_hover.hide()
+            ENN_OT_gp_set_active_layer.hide()
             self.drag_vm.update_mouse_pos(context, event)
             if not self.drag_init:
                 self.drag_vm.mouse_init()
@@ -222,18 +241,15 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
                 event.type == 'LEFTMOUSE' and event.value == 'RELEASE',
                 not is_valid_workspace_tool(context)
         ):
-            self._finish(context)
-            return {'FINISHED'}
+            return self._finish(context)
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
 
-    def _finish(self, context):
+    def _finish(self, context) -> set:
         self.draw_handle.remove_from_node_editor()
-        if ENN_OT_gp_set_active_layer.view_hover:
-            ENN_OT_gp_set_active_layer.view_hover.show()
-        if ENN_OT_gp_set_active_layer.drag_vm:
-            ENN_OT_gp_set_active_layer.drag_vm._update_bbox(context)
+        ENN_OT_gp_set_active_layer.show()
         context.area.tag_redraw()
+        return {'FINISHED'}
 
 
 # noinspection PyPep8Naming
