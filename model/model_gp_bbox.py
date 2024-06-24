@@ -169,6 +169,10 @@ class GreasePencilLayerBBox(GreasePencilProperty):
             x_list.extend([max_x, min_x])
             y_list.extend([max_y, min_y])
 
+        if not x_list or not y_list:
+            self.max_x = self.min_x = self.max_y = self.min_y = 0
+            return
+
         self.max_x = max(x_list)
         self.min_x = min(x_list)
         self.max_y = max(y_list)
