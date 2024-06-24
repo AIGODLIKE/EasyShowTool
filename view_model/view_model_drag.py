@@ -6,7 +6,8 @@ from collections import OrderedDict
 
 from ..public_path import get_pref
 from ..model.model_gp import VecTool, BuildGreasePencilData
-from ..model.model_gp_bbox import GreasePencilLayerBBox, MouseDetectModel
+from ..model.model_gp_bbox import GreasePencilLayerBBox
+from ..view_model.view_model_detect import MouseDetectModel
 from .handlers import TransformHandler
 
 
@@ -52,7 +53,7 @@ class DragGreasePencilViewModal:
     def __post_init__(self):
         self.bbox_model = GreasePencilLayerBBox(self.gp_data)
         self.build_model = BuildGreasePencilData(self.gp_data)
-        self.detect_model = self.bbox_model.detect_model
+        self.detect_model = MouseDetectModel().bind_bbox(self.bbox_model)
 
     def has_active_layer(self) -> bool:
         return self.build_model.has_active_layer()

@@ -1,11 +1,15 @@
-from typing import Optional
-
+from typing import Optional, Union, Sequence
+from mathutils import Vector
 import bpy
 from ..model.utils import ShootAngles
+from ..model.model_gp_bbox import GreasePencilLayerBBox
+from ..view_model.view_model_detect import MouseDetectModel
+
 
 def tag_redraw():
     for area in bpy.context.screen.areas:
         area.tag_redraw()
+
 
 def has_edit_tree(context: bpy.types.Context) -> bool:
     if context.area.type != 'NODE_EDITOR':
@@ -25,7 +29,7 @@ def has_active_node(context: bpy.types.Context, bl_idname: Optional[str] = None)
 
 
 def is_valid_workspace_tool(context) -> bool:
-    return context.workspace.tools.from_space_node().idname in {'enn.gp_edit_tool','enn.gp_color_tool'}
+    return context.workspace.tools.from_space_node().idname in {'enn.gp_edit_tool', 'enn.gp_color_tool'}
 
 
 def enum_add_type_items() -> list[tuple[str, str, str]]:
@@ -40,3 +44,23 @@ def enum_add_type_items() -> list[tuple[str, str, str]]:
 def enum_shot_orient_items() -> list[tuple[str, str, str]]:
     """Return the items for the shot_orient enum property."""
     return [(euler.name, euler.name.replace('_', ' ').title(), '') for euler in ShootAngles]
+
+
+def in_layer_area(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather: int = 0, ) -> Union[
+    int, None]:
+    """check if the pos is in the area defined by the points
+    :param gp_data: the grease pencil data
+    :param pos: the position to check
+    :param feather: the feather to expand the area, unit: pixel
+    :return: index of the layer if the pos is in the area, None otherwise
+    """
+    bboxs: list[GreasePencilLayerBBox] = [GreasePencilLayerBBox(gp_data, layer) for layer in
+                                          gp_data.layers]
+    mouse_detect = MouseDetectModel()
+    for i, bbox in enumerate(bboxs):
+        bbox.calc_bbox(i)
+        mouse_detect.bind_bbox(bbox)
+        if mouse_detect.in_area(pos, feather):
+            return bbox.last_layer_index
+
+    return None

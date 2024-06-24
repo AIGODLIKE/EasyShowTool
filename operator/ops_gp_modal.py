@@ -1,18 +1,16 @@
 import bpy
-from bpy.props import StringProperty, IntProperty, EnumProperty, FloatVectorProperty, BoolProperty
+from bpy.props import StringProperty
 from typing import ClassVar
-from mathutils import Vector
 
-from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
-from ..model.model_gp_bbox import GreasePencilLayerBBox, GreasePencilLayers
+from ..model.model_gp import BuildGreasePencilData
 from ..model.utils import VecTool, ShootAngles, ColorTool
 from ..model.model_color import ColorPaletteModel
 from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..view_model.view_model_drag import DragGreasePencilViewModal
-from ..view_model.view_model_draw import DrawViewModel
 from ..view.view_node_editor import ViewHover, ViewDrawHandle, ViewDrag
 
-from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, enum_add_type_items, enum_shot_orient_items
+from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, enum_add_type_items, enum_shot_orient_items, \
+    in_layer_area
 
 
 # noinspection PyPep8Naming
@@ -97,7 +95,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
 
         try:
-            layer_index = GreasePencilLayers.in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
+            layer_index = in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
         except ReferenceError:  # ctrl z
             layer_index = None
         except AttributeError:  # switch to other tool
@@ -153,7 +151,7 @@ class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
         if not gp_data: return {'CANCELLED'}
         try:
-            layer_index = GreasePencilLayers.in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
+            layer_index = in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
         except ReferenceError:  # ctrl z
             layer_index = None
         except AttributeError:  # switch to other tool
