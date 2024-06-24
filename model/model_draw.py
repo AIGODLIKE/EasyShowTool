@@ -64,7 +64,10 @@ class DrawData():
     edge_points: list[Vector, Vector, Vector, Vector]
     start_pos: Optional[Vector] = None
     end_pos: Optional[Vector] = None
+    # from transform handles
     delta_degree: Optional[float] = None
+    delta_scale: Optional[Vector] = None
+    delta_move: Optional[Vector] = None
 
     @property
     def coords(self) -> list[Vector]:

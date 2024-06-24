@@ -125,8 +125,7 @@ class DrawViewModel:
         self.draw_text(f"{dis}px", middle)
 
         if self.delta_degree:
-            center = (self.points[0] + self.points[2]) / 2
+            center = (self.points[0] + self.points[3]) / 2
             self.draw_line(center, self.end_pos)
             self.draw_line(center, self.start_pos)
-            self.draw_text(f"{self.delta_degree}°", self.end_pos + Vector((0, 20)))
-            draw_circle_2d(self.start_pos, self.color_hover, radius=dis, segments=128)
+            self.draw_text(f"{round(self.delta_degree, 1)}°", self.end_pos + Vector((0, 20)))
