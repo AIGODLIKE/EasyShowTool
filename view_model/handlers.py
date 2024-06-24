@@ -23,9 +23,17 @@ class ViewPan():
 
     def is_on_region_edge(self, mouse_pos: tuple[int, int]) -> bool:
         """Check if the mouse is on the edge of the region."""
-        self.deltax = self.deltay = 0
         width, height = bpy.context.area.width, bpy.context.area.height
+        for region in bpy.context.area.regions:
+            if region.type == 'WINDOW':
+                continue
+            elif region.type == 'UI':
+                width -= region.width
+            elif region.type == 'HEADER':
+                height -= region.height
+
         x, y = mouse_pos
+        self.deltax = self.deltay = 0
         # speed up the pan
         if x < self.padding:
             self.deltax = -self.step
@@ -139,6 +147,7 @@ class RotateHandler(TransformHandler):
                 self.delta_degree += self.snap_degree * inverse
                 self.build_model.rotate_active(self.snap_degree * inverse, pivot, space='v2d')
         return True
+
 
 @dataclass
 class ScaleHandler(TransformHandler):
