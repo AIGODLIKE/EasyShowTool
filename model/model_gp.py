@@ -123,7 +123,18 @@ class CreateGreasePencilData(GreasePencilCache):
                                keep_original=keep_original)
 
     @staticmethod
+    def ensure_context_obj():
+        """Ensure there is a context object to make bpy.ops.object work."""
+        if bpy.context.object: return
+        c_obj = bpy.data.objects.new('tmp_context', None)
+        bpy.context.collection.objects.link(c_obj)
+        bpy.context.view_layer.objects.active = c_obj
+        CreateGreasePencilData.del_later(c_obj)
+
+    @staticmethod
     def empty() -> bpy.types.GreasePencil:
+        """Create an empty grease pencil data."""
+        CreateGreasePencilData.ensure_context_obj()
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.gpencil_add(type='EMPTY')
         obj = bpy.context.object

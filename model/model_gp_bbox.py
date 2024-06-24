@@ -9,8 +9,6 @@ from .model_gp_edit import EditGreasePencilStroke
 from .model_gp import GreasePencilProperty
 
 
-
-
 @dataclass
 class GreasePencilLayerBBox(GreasePencilProperty):
     """
@@ -136,7 +134,7 @@ class GreasePencilLayerBBox(GreasePencilProperty):
 
         return max_x, min_x, max_y, min_y
 
-    def calc_active_layer_bbox(self, frame: int = 0) -> None:
+    def calc_active_layer_bbox(self) -> None:
         """
         Calculate the bounding box of the active grease pencil annotation layer.
         :param frame: calc this frame
@@ -145,22 +143,24 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         if not layer:
             raise ValueError('Active layer not found.')
 
-        return self.calc_bbox(layer.info, frame)
+        return self.calc_bbox(layer.info)
 
-    def calc_bbox(self, layer_name_or_inedx: Union[str, int], frame: int = 0) -> None:
+    def calc_bbox(self, layer_name_or_index: Union[str, int]) -> None:
         """
         Calculate the bounding box of the grease pencil annotation.
-        :param layer_name_or_inedx: The name or index of the layer.
+        :param layer_name_or_index: The name or index of the layer.
         :param frame: calc this frame
         """
 
-        layer = self._get_layer(layer_name_or_inedx)
+        layer = self._get_layer(layer_name_or_index)
         if not layer:
-            raise ValueError(f'Layer {layer_name_or_inedx} not found.')
+            raise ValueError(f'Layer {layer_name_or_index} not found.')
 
-        frame = layer.frames[frame]
-        if not frame:
-            raise ValueError(f'Frame {frame} not found.')
+        try:
+            frame = layer.frames[0]
+        except IndexError:  # no frame
+            self.max_x = self.min_x = self.max_y = self.min_y = 0
+            return
 
         x_list = []
         y_list = []
@@ -174,6 +174,3 @@ class GreasePencilLayerBBox(GreasePencilProperty):
         self.max_y = max(y_list)
         self.min_y = min(y_list)
         self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
-
-
-
