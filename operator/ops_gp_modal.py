@@ -224,83 +224,20 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
 
 
 # noinspection PyPep8Naming
-class ENN_PT_gn_edit_panel(bpy.types.Panel):
-    bl_label = "Edit Grease Pencil Text"
-    bl_idname = "ENN_PT_gn_edit_panel"
-    bl_space_type = 'NODE_EDITOR'
-    bl_region_type = 'UI'
-    bl_category = 'View'
 
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(context.window_manager, "enn_gp_size")
-
-        box = layout.box()
-        box.label(text="Add")
-        row = box.row()
-        row.prop(context.window_manager, "enn_gp_add_type", expand=True)
-
-        if context.window_manager.enn_gp_add_type == 'TEXT':
-            box.prop(context.window_manager, "enn_gp_text")
-        elif context.window_manager.enn_gp_add_type == 'OBJECT':
-            box.prop(context.window_manager, "enn_gp_obj")
-            box.prop(context.window_manager, "enn_gp_obj_shot_angle")
-        op = box.operator(ENN_OT_add_gp_modal.bl_idname)
-        op.add_type = context.window_manager.enn_gp_add_type
-
-        if context.scene.enn_palette_group:
-            layout.template_palette(context.scene.enn_palette_group, "palette", color=True)
-
-
-class MyPaletteGroup(bpy.types.PropertyGroup):
-    palette: bpy.props.PointerProperty(type=bpy.types.Palette)
 
 
 def register():
-    import threading
-    import time
     from bpy.utils import register_class
 
-    register_class(MyPaletteGroup)
     register_class(ENN_OT_add_gp_modal)
     register_class(ENN_OT_gp_set_active_layer)
     register_class(ENN_OT_gp_drag_modal)
-    register_class(ENN_PT_gn_edit_panel)
-
-    bpy.types.WindowManager.enn_gp_size = bpy.props.IntProperty(name="Size", default=100, subtype='PIXEL')
-    bpy.types.WindowManager.enn_gp_add_type = bpy.props.EnumProperty(items=lambda self, context: enum_add_type_items())
-    bpy.types.WindowManager.enn_gp_text = bpy.props.StringProperty(name="Text", default="Hello World")
-    bpy.types.WindowManager.enn_gp_obj = bpy.props.PointerProperty(name='Object', type=bpy.types.Object,
-                                                                   poll=lambda self, obj: obj.type in {'MESH',
-                                                                                                       'GPENCIL'})
-    bpy.types.WindowManager.enn_gp_obj_shot_angle = bpy.props.EnumProperty(name="Shot Orientation",
-                                                                           items=lambda _, __: enum_shot_orient_items())
-
-    bpy.types.Scene.enn_palette_group = bpy.props.PointerProperty(type=MyPaletteGroup)
-    bpy.types.WindowManager.enn_gp_move_dis = bpy.props.IntProperty(name='Distance', default=50)
-    bpy.types.WindowManager.enn_gp_scale = bpy.props.FloatVectorProperty(name='Scale Vector', size=2,
-                                                                         default=(1.1, 1.1))
-
-    def register_later(lock, t):
-        while not hasattr(bpy.context, 'scene'):
-            time.sleep(3)
-        # print("Start register palette")
-        color_model = ColorPaletteModel()
-        color_model.setup()
-        bpy.context.scene.enn_palette_group.palette = color_model.palette
-
-    lock = threading.Lock()
-    lock_holder = threading.Thread(target=register_later, args=(lock, 5), name='enn_color')
-    lock_holder.daemon = True
-    lock_holder.start()
 
 
 def unregister():
     from bpy.utils import unregister_class
 
-    unregister_class(MyPaletteGroup)
     unregister_class(ENN_OT_add_gp_modal)
     unregister_class(ENN_OT_gp_set_active_layer)
-
     unregister_class(ENN_OT_gp_drag_modal)
-    unregister_class(ENN_PT_gn_edit_panel)

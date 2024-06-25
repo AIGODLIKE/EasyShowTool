@@ -6,6 +6,7 @@ from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool, ShootAngles
 from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, in_layer_area
+from .ops_gp_modal import ENN_OT_add_gp_modal
 
 
 class ENN_OT_toggle_gp_space(bpy.types.Operator):
@@ -190,6 +191,7 @@ class ENN_OT_add_gp(bpy.types.Operator):
 
         return {'FINISHED'}
 
+
 class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
     bl_idname = 'enn.gp_set_active_layer_color'
     bl_label = 'Set Active Layer Color'
@@ -219,6 +221,35 @@ class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
             gp_data_builder.color_active(color=color)
         return {'FINISHED'}
 
+
+class ENN_PT_gn_edit_panel(bpy.types.Panel):
+    bl_label = "Edit Grease Pencil Text"
+    bl_idname = "ENN_PT_gn_edit_panel"
+    bl_space_type = 'NODE_EDITOR'
+    bl_region_type = 'UI'
+    bl_category = 'View'
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(context.window_manager, "enn_gp_size")
+
+        box = layout.box()
+        box.label(text="Add")
+        row = box.row()
+        row.prop(context.window_manager, "enn_gp_add_type", expand=True)
+
+        if context.window_manager.enn_gp_add_type == 'TEXT':
+            box.prop(context.window_manager, "enn_gp_text")
+        elif context.window_manager.enn_gp_add_type == 'OBJECT':
+            box.prop(context.window_manager, "enn_gp_obj")
+            box.prop(context.window_manager, "enn_gp_obj_shot_angle")
+        op = box.operator(ENN_OT_add_gp_modal.bl_idname)
+        op.add_type = context.window_manager.enn_gp_add_type
+
+        if context.scene.enn_palette_group:
+            layout.template_palette(context.scene.enn_palette_group, "palette", color=True)
+
+
 def register():
     from bpy.utils import register_class
 
@@ -229,6 +260,7 @@ def register():
     register_class(ENN_OT_rotate_gp)
     register_class(ENN_OT_scale_gp)
     register_class(ENN_OT_gp_set_active_layer_color)
+    register_class(ENN_PT_gn_edit_panel)
 
 
 def unregister():
@@ -241,3 +273,4 @@ def unregister():
     unregister_class(ENN_OT_add_gp)
     unregister_class(ENN_OT_toggle_gp_space)
     unregister_class(ENN_OT_gp_set_active_layer_color)
+    unregister_class(ENN_PT_gn_edit_panel)
