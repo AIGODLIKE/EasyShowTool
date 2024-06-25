@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 from ..public_path import get_pref
 from ..model.model_gp import VecTool, BuildGreasePencilData
-from ..model.model_gp_bbox import GreasePencilLayerBBox
+from ..model.model_gp_bbox import GPencilLayerBBox
 from ..view_model.view_model_detect import MouseDetectModel
 from .handlers import TransformHandler
 
@@ -23,7 +23,7 @@ class DragGreasePencilViewModal:
     drag_move_handler: Optional[TransformHandler] = None
     drag_rotate_handler: Optional[TransformHandler] = None
     # model from gp_data will be created
-    bbox_model: GreasePencilLayerBBox = field(init=False)
+    bbox_model: GPencilLayerBBox = field(init=False)
     build_model: BuildGreasePencilData = field(init=False)
     detect_model: MouseDetectModel = field(init=False)
     # state / on points
@@ -51,12 +51,23 @@ class DragGreasePencilViewModal:
     debug_info: OrderedDict[str, str] = field(default_factory=OrderedDict)
 
     def __post_init__(self):
-        self.bbox_model = GreasePencilLayerBBox(self.gp_data)
+        self.bbox_model = GPencilLayerBBox(self.gp_data)
         self.build_model = BuildGreasePencilData(self.gp_data)
         self.detect_model = MouseDetectModel().bind_bbox(self.bbox_model)
 
     def has_active_layer(self) -> bool:
         return self.build_model.has_active_layer()
+
+    def set_bbox_mode(self, str: Literal['GLOBAL', 'LOCAL,', 'TOGGLE']):
+        if str == 'GLOBAL':
+            self.bbox_model.to_global()
+        elif str == 'LOCAL':
+            self.bbox_model.to_local()
+        else:
+            if self.bbox_model.is_local:
+                self.bbox_model.to_global()
+            else:
+                self.bbox_model.to_local()
 
     def handle_drag(self, context, event):
         """Handle the drag event in the modal."""

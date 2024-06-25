@@ -8,10 +8,10 @@ from gpu_extras.presets import draw_circle_2d
 import blf
 
 from ..model.model_draw import DrawData, DrawPreference
-from ..model.model_gp_bbox import GreasePencilLayerBBox
+from ..model.model_gp_bbox import GPencilLayerBBox
 
 shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-indices = GreasePencilLayerBBox.indices
+indices = GPencilLayerBBox.indices
 
 
 @dataclass

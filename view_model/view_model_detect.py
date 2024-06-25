@@ -3,7 +3,7 @@ from typing import Sequence, Union, ClassVar, Optional, Literal
 
 from mathutils import Vector
 
-from ..model.model_gp_bbox import GreasePencilLayerBBox
+from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool
 from ..public_path import get_pref
 
@@ -14,13 +14,13 @@ class MouseDetectModel:
     work in region 2d space.
     """
 
-    bbox_model: 'GreasePencilLayerBBox' = Optional[None]
+    bbox_model: 'GPencilLayerBBox' = Optional[None]
 
     d_edge: int = field(default_factory=lambda: get_pref().gp_performance.detect_edge_px)
     d_corner: int = field(default_factory=lambda: get_pref().gp_performance.detect_corner_px)
     d_rotate: int = field(default_factory=lambda: get_pref().gp_performance.detect_rotate_px)
 
-    def bind_bbox(self, bbox_model: 'GreasePencilLayerBBox') -> 'MouseDetectModel':
+    def bind_bbox(self, bbox_model: 'GPencilLayerBBox') -> 'MouseDetectModel':
         """Need to bind the bbox model to work."""
         self.bbox_model = bbox_model
         return self

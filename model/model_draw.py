@@ -58,7 +58,7 @@ class DrawPreference:
 
 
 @dataclass(slots=True)
-class DrawData():
+class DrawData:
     """Draw data for grease pencil, collect all the draw data need here"""
     points: list[Vector, Vector, Vector, Vector]
     edge_points: list[Vector, Vector, Vector, Vector]

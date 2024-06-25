@@ -1,7 +1,7 @@
 import bpy
 from ..public_path import get_tool_icon
-from ..operator.ops_gp_modal import ENN_OT_gp_set_active_layer, ENN_OT_gp_drag_modal, ENN_OT_gp_set_active_layer_color
-from ..operator.ops_gp_basic import ENN_OT_add_gp, ENN_OT_remove_gp, ENN_OT_scale_gp
+from ..operator.ops_gp_modal import ENN_OT_gp_set_active_layer, ENN_OT_gp_drag_modal
+from ..operator.ops_gp_basic import ENN_OT_add_gp, ENN_OT_remove_gp, ENN_OT_scale_gp,ENN_OT_gp_set_active_layer_color
 
 
 # noinspection PyPep8Naming
