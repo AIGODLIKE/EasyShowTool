@@ -2,7 +2,7 @@ from typing import Optional, Union, Sequence
 from mathutils import Vector
 import bpy
 from ..model.utils import ShootAngles
-from ..model.model_gp_bbox import GreasePencilLayerBBox
+from ..model.model_gp_bbox import GPencilLayerBBox
 from ..view_model.view_model_detect import MouseDetectModel
 
 
@@ -54,7 +54,7 @@ def in_layer_area(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector],
     :param feather: the feather to expand the area, unit: pixel
     :return: index of the layer if the pos is in the area, None otherwise
     """
-    bboxs: list[GreasePencilLayerBBox] = [GreasePencilLayerBBox(gp_data, layer) for layer in
+    bboxs: list[GPencilLayerBBox] = [GPencilLayerBBox(gp_data, layer) for layer in
                                           gp_data.layers]
     mouse_detect = MouseDetectModel()
     for i, bbox in enumerate(bboxs):

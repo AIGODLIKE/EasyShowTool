@@ -15,16 +15,16 @@ from pathlib import Path
 from collections import OrderedDict
 
 from ..public_path import get_pref
-from ..model.model_gp_bbox import GreasePencilLayerBBox
+from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.model_draw import DrawData, DrawPreference
 from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view_model.view_model_draw import DrawViewModel
 
 shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-indices = GreasePencilLayerBBox.indices
+indices = GPencilLayerBBox.indices
 
 
-class ViewDrawHandle():
+class ViewDrawHandle:
     handle = None
     func: Union['ViewBasic', Callable]
     log: ClassVar[list[str]] = []
@@ -83,7 +83,7 @@ class ViewBasic:
 class ViewHover(ViewBasic):
 
     def __post_init__(self):
-        gp_data_bbox: GreasePencilLayerBBox = self.drag_vm.bbox_model
+        gp_data_bbox: GPencilLayerBBox = self.drag_vm.bbox_model
         top_left, top_right, bottom_left, bottom_right = gp_data_bbox.bbox_points_r2d
         points = [top_left, top_right, bottom_left, bottom_right]
 
@@ -114,7 +114,7 @@ class ViewHover(ViewBasic):
 @dataclass
 class ViewDrag(ViewBasic):
     def __post_init__(self):
-        gp_data_bbox: GreasePencilLayerBBox = self.drag_vm.bbox_model
+        gp_data_bbox: GPencilLayerBBox = self.drag_vm.bbox_model
         start_pos = Vector(self.drag_vm.start_pos)
         end_pos = Vector(self.drag_vm.end_pos)
 

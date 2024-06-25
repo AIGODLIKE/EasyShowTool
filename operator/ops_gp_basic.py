@@ -3,7 +3,7 @@ from bpy.props import IntVectorProperty, FloatVectorProperty, StringProperty, Bo
 from mathutils import Vector
 
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
-from ..model.model_gp_bbox import GreasePencilLayerBBox
+from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool, ShootAngles
 from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items
 
@@ -89,7 +89,7 @@ class ENN_OT_scale_gp(bpy.types.Operator):
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
         if not gp_data:
             return {'CANCELLED'}
-        bbox = GreasePencilLayerBBox(gp_data)
+        bbox = GPencilLayerBBox(gp_data)
         bbox.calc_active_layer_bbox()
         pivot = bbox.center
         with BuildGreasePencilData(gp_data) as gp_data_builder:
@@ -116,7 +116,7 @@ class ENN_OT_rotate_gp(bpy.types.Operator):
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
         if not gp_data: return {'CANCELLED'}
 
-        bbox = GreasePencilLayerBBox(gp_data)
+        bbox = GPencilLayerBBox(gp_data)
         bbox.calc_active_layer_bbox()
         pivot = bbox.center
         with BuildGreasePencilData(gp_data) as gp_data_builder:

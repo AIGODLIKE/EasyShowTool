@@ -6,12 +6,12 @@ from mathutils import Vector
 from typing import ClassVar
 
 from ..model.utils import Coord, EdgeCenter, VecTool
-from ..model.model_gp_bbox import GreasePencilLayerBBox
+from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.model_gp import BuildGreasePencilData
 
 
 @dataclass
-class ViewPan():
+class ViewPan:
     """Handle the pan operation in the modal. only use in node editor window"""
     padding: int = 30
     deltax: int = 0
@@ -65,7 +65,7 @@ class ViewPan():
 class TransformHandler:
     """Handle the complex transform operation in the modal.
     state attr can be pass in the callback function to update the view."""
-    bbox_model: GreasePencilLayerBBox = None  # init by drag modal
+    bbox_model: GPencilLayerBBox = None  # init by drag modal
     build_model: BuildGreasePencilData = None  # init by drag modal
     # callback
     call_before: Optional[Callable] = None
@@ -110,7 +110,7 @@ class MoveHandler(TransformHandler):
             return False
         self.build_model.move_active(self.delta_vec_v2d, space='v2d')
         self.delta_move = self.delta_vec_v2d
-        if self.view_pan.is_on_region_edge((self.end_pos)):
+        if self.view_pan.is_on_region_edge(self.end_pos):
             pan_vec = self.view_pan.edge_pan(event)
             self.build_model.move_active(pan_vec, space='v2d')
 
