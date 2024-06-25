@@ -132,7 +132,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         if event.type in {'ESC', 'RIGHTMOUSE'}:
             return self._finish()
         if self.stop or not context.area or not is_valid_workspace_tool(
-                context) or not self.drag_vm.has_active_layer():
+                context) or not self.drag_vm or not self.drag_vm.has_active_layer():
             return self._finish()
         context.area.tag_redraw()
         return {'PASS_THROUGH'}
