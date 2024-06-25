@@ -222,7 +222,11 @@ class GreasePencilLayerBBox(GreasePencilProperty):
             return
 
         points = self._get_layer_points(frame)
+        angle = self.rotation_2d_inverse()
         pivot = np.mean(points, axis=0)
+        points = ((points - pivot) @ np.array([[np.cos(angle), -np.sin(angle), 0],
+                                               [np.sin(angle), np.cos(angle), 0],
+                                               [0, 0, 1]]) + pivot)
 
         max_xyz_id = np.argmax(points, axis=0)
         min_xyz_id = np.argmin(points, axis=0)
