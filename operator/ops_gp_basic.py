@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import IntVectorProperty, FloatVectorProperty, StringProperty, BoolProperty, EnumProperty, IntProperty
+from bpy.props import IntVectorProperty, FloatVectorProperty, StringProperty, BoolProperty, EnumProperty, IntProperty,PointerProperty
 from mathutils import Vector
 
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
@@ -7,6 +7,7 @@ from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool, ShootAngles
 from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, in_layer_area
 from .ops_gp_modal import ENN_OT_add_gp_modal
+from ..public_path import get_pref
 
 
 class ENN_OT_toggle_gp_space(bpy.types.Operator):
@@ -132,15 +133,13 @@ class ENN_OT_add_gp(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     add_type: bpy.props.EnumProperty(name='Type',
-                                     items=lambda _, __: enum_add_type_items(),
-                                     options={'SKIP_SAVE', 'HIDDEN'})
+                                     items=lambda _, __: enum_add_type_items(), )
 
     text: StringProperty(name="Text", default="Hello World")
     size: IntProperty(name="Size", default=100)
-    obj: StringProperty(name="Object", default="", options={'SKIP_SAVE', 'HIDDEN'})
+    obj: StringProperty(name="Object", default="")
     obj_shot_angle: EnumProperty(name="Shot Orientation",
-                                 items=lambda _, __: enum_shot_orient_items(),
-                                 options={'SKIP_SAVE', 'HIDDEN'})
+                                 items=lambda _, __: enum_shot_orient_items(), )
 
     location: FloatVectorProperty(size=2, default=(0, 0), options={'SKIP_SAVE', 'HIDDEN'})
     use_mouse_pos: BoolProperty(default=False, options={'SKIP_SAVE', 'HIDDEN'})
@@ -150,6 +149,17 @@ class ENN_OT_add_gp(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context)
+
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
+        row.prop(self, 'add_type', expand=True)
+        layout.prop(self, 'size')
+        if self.add_type == 'TEXT':
+            layout.prop(self, 'text')
+        elif self.add_type == 'OBJECT':
+            layout.prop(context.window_manager, 'enn_gp_obj')
+            layout.prop(self, 'obj_shot_angle')
 
     def invoke(self, context, event):
         self.mouse_pos = (event.mouse_region_x, event.mouse_region_y)
@@ -166,7 +176,7 @@ class ENN_OT_add_gp(bpy.types.Operator):
         if not self.handle_invalid_input(): return {'CANCELLED'}
 
         font_gp_data: bpy.types.GreasePencil = None
-        obj: bpy.types.Object = bpy.data.objects.get(self.obj, None)
+        obj: bpy.types.Object = bpy.data.objects.get(self.obj, context.window_manager.enn_gp_obj)
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         vec: Vector = VecTool.r2d_2_v2d(self.mouse_pos) if self.use_mouse_pos else self.location
         gp_data: bpy.types.GreasePencil = CreateGreasePencilData.empty() if not nt.grease_pencil else nt.grease_pencil
@@ -245,6 +255,17 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
             box.prop(context.window_manager, "enn_gp_obj_shot_angle")
         op = box.operator(ENN_OT_add_gp_modal.bl_idname)
         op.add_type = context.window_manager.enn_gp_add_type
+
+        if get_pref().debug:
+            layout.prop(context.window_manager, "enn_gp_move_vector")
+            op = layout.operator(ENN_OT_move_gp.bl_idname)
+            op.move_vector = context.window_manager.enn_gp_move_vector
+            layout.prop(context.window_manager, "enn_gp_scale")
+            op = layout.operator(ENN_OT_scale_gp.bl_idname)
+            op.scale_vector = context.window_manager.enn_gp_scale
+            layout.prop(context.window_manager, "enn_gp_rotate_angle")
+            op = layout.operator(ENN_OT_rotate_gp.bl_idname)
+            op.rotate_angle = context.window_manager.enn_gp_rotate_angle
 
         if context.scene.enn_palette_group:
             layout.template_palette(context.scene.enn_palette_group, "palette", color=True)
