@@ -128,8 +128,6 @@ class RotateHandler(TransformHandler):
     snap_degree: int = 0
     snap_degree_count: int = 0
 
-    # TODO pin rotate pivot since the bbox center update all the time
-
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the rotate event in the modal."""
         pivot: Vector = self.bbox_model.center
@@ -152,7 +150,7 @@ class RotateHandler(TransformHandler):
                 self.delta_degree += self.snap_degree * inverse
                 self.build_model.rotate_active(self.snap_degree * inverse, pivot, space='v2d')
         return True
-
+#TODO need to refactor the scale handler
 
 @dataclass
 class ScaleHandler(TransformHandler):
