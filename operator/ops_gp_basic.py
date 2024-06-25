@@ -5,7 +5,7 @@ from mathutils import Vector
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool, ShootAngles
-from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items
+from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, in_layer_area
 
 
 class ENN_OT_toggle_gp_space(bpy.types.Operator):
@@ -190,6 +190,34 @@ class ENN_OT_add_gp(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
+    bl_idname = 'enn.gp_set_active_layer_color'
+    bl_label = 'Set Active Layer Color'
+    bl_description = 'Set the active layer color of the Grease Pencil Object'
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context)
+
+    def invoke(self, context, event):
+        nt: bpy.types.NodeTree = context.space_data.edit_tree
+        gp_data: bpy.types.GreasePencil = nt.grease_pencil
+        if not gp_data: return {'CANCELLED'}
+        try:
+            layer_index = in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
+        except ReferenceError:  # ctrl z
+            layer_index = None
+        except AttributeError:  # switch to other tool
+            layer_index = None
+        if layer_index is None:
+            return {'FINISHED'}
+
+        with BuildGreasePencilData(gp_data) as gp_data_builder:
+            gp_data_builder.active_layer_index = layer_index
+            color = context.scene.enn_palette_group.palette.colors.active.color
+            gp_data_builder.color_active(color=color)
+        return {'FINISHED'}
 
 def register():
     from bpy.utils import register_class
@@ -200,6 +228,7 @@ def register():
     register_class(ENN_OT_move_gp)
     register_class(ENN_OT_rotate_gp)
     register_class(ENN_OT_scale_gp)
+    register_class(ENN_OT_gp_set_active_layer_color)
 
 
 def unregister():
@@ -211,3 +240,4 @@ def unregister():
     unregister_class(ENN_OT_remove_gp)
     unregister_class(ENN_OT_add_gp)
     unregister_class(ENN_OT_toggle_gp_space)
+    unregister_class(ENN_OT_gp_set_active_layer_color)

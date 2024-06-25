@@ -129,7 +129,6 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
     def modal(self, context, event):
         if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'MIDDLEMOUSE'}:
             self.update_drag_vm(context, event)
-
         if event.type in {'ESC', 'RIGHTMOUSE'}:
             return self._finish()
         if self.stop or not context.area or not is_valid_workspace_tool(
@@ -153,36 +152,6 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         self.__class__.drag_vm = None
         self.__class__.view_hover = None
         tag_redraw()
-        return {'FINISHED'}
-
-
-class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
-    bl_idname = 'enn.gp_set_active_layer_color'
-    bl_label = 'Set Active Layer Color'
-    bl_description = 'Set the active layer color of the Grease Pencil Object'
-    bl_options = {'UNDO'}
-
-    @classmethod
-    def poll(cls, context):
-        return has_edit_tree(context)
-
-    def invoke(self, context, event):
-        nt: bpy.types.NodeTree = context.space_data.edit_tree
-        gp_data: bpy.types.GreasePencil = nt.grease_pencil
-        if not gp_data: return {'CANCELLED'}
-        try:
-            layer_index = in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
-        except ReferenceError:  # ctrl z
-            layer_index = None
-        except AttributeError:  # switch to other tool
-            layer_index = None
-        if layer_index is None:
-            return {'FINISHED'}
-
-        with BuildGreasePencilData(gp_data) as gp_data_builder:
-            gp_data_builder.active_layer_index = layer_index
-            color = context.scene.enn_palette_group.palette.colors.active.color
-            gp_data_builder.color_active(color=color)
         return {'FINISHED'}
 
 
@@ -216,6 +185,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         self.drag_vm.drag_scale_handler = ScaleHandler(
             call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_scale', h.delta_scale))
         self.drag_vm.drag_rotate_handler = RotateHandler(
+            call_before=lambda h: self.drag_vm.set_bbox_mode('LOCAL'),
             call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_degree', h.delta_degree))
         self.drag_vm.drag_move_handler = MoveHandler(
             call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_move', h.delta_move))
@@ -235,7 +205,8 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
                 self.drag_vm.update_near_widgets()
                 self.drag_init = True
             self.drag_vm.handle_drag(context, event)
-
+        # if event.type == 'B' and event.value == 'PRESS':
+        #     self.drag_vm.toggle_bbox_mode()
         if True in (
                 event.type in {'ESC', 'RIGHTMOUSE'},
                 event.type == 'LEFTMOUSE' and event.value == 'RELEASE',
@@ -293,7 +264,6 @@ def register():
     register_class(MyPaletteGroup)
     register_class(ENN_OT_add_gp_modal)
     register_class(ENN_OT_gp_set_active_layer)
-    register_class(ENN_OT_gp_set_active_layer_color)
     register_class(ENN_OT_gp_drag_modal)
     register_class(ENN_PT_gn_edit_panel)
 
@@ -330,7 +300,6 @@ def unregister():
 
     unregister_class(MyPaletteGroup)
     unregister_class(ENN_OT_add_gp_modal)
-    unregister_class(ENN_OT_gp_set_active_layer_color)
     unregister_class(ENN_OT_gp_set_active_layer)
 
     unregister_class(ENN_OT_gp_drag_modal)

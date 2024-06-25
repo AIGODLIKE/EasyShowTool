@@ -58,6 +58,17 @@ class DragGreasePencilViewModal:
     def has_active_layer(self) -> bool:
         return self.build_model.has_active_layer()
 
+    def set_bbox_mode(self, str: Literal['GLOBAL', 'LOCAL,', 'TOGGLE']):
+        if str == 'GLOBAL':
+            self.bbox_model.to_global()
+        elif str == 'LOCAL':
+            self.bbox_model.to_local()
+        else:
+            if self.bbox_model.is_local:
+                self.bbox_model.to_global()
+            else:
+                self.bbox_model.to_local()
+
     def handle_drag(self, context, event):
         """Handle the drag event in the modal."""
         self._update_drag_handles(event)
