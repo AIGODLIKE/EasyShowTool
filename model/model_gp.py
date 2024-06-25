@@ -340,6 +340,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         bpy.ops.gpencil.layer_duplicate_object(only_active=True)  # new layer will be send to the bottom
         self_temp_layer = self_tmp_data.layers[0]
         self_temp_layer.color = self.active_layer.color
+        self_temp_layer.rotation = self.active_layer.rotation
         self.gp_data = self_obj.data
         self.del_later(obj_list=[self_obj, tmp_obj])
         return self.join(self_tmp_data)
