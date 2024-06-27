@@ -216,11 +216,15 @@ class CreateGreasePencilData(GreasePencilCache):
         :return:
         """
         gp_data = obj.data.copy()
-        new_obj = bpy.data.objects.new('tmp', gp_data)
+        # new_obj = bpy.data.objects.new('tmp', gp_data)
+        new_obj = obj.copy()
+        new_obj.data = gp_data
         bpy.context.collection.objects.link(new_obj)
         bpy.context.view_layer.objects.active = new_obj
         CreateGreasePencilData.apply_transform(new_obj)
         new_obj.rotation_euler = euler.value
+        for mod in new_obj.grease_pencil_modifiers:
+            bpy.ops.object.gpencil_modifier_apply(apply_as='DATA', modifier=mod.name)
         CreateGreasePencilData.apply_transform(new_obj)
         CreateGreasePencilData.del_later(new_obj)
 
