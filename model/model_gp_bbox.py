@@ -199,5 +199,7 @@ class GPencilLayerBBox(GreasePencilProperty, GPencilBBoxProperty):
         for stroke in frame.strokes:
             with EditGreasePencilStroke.stroke_points(stroke) as points:
                 all_points.append(points)
-
+        # if empty
+        if not all_points:
+            return np.array([[0, 0]])
         return np.concatenate(all_points, axis=0)
