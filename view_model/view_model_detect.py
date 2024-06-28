@@ -29,7 +29,7 @@ class MouseDetectModel:
         return {
             'corner': self._near_corners(pos, self.d_corner),
             'edge_center': self._near_edge_center(pos, self.d_edge),
-            'corner_extrude': self._near_corners_extrude(pos, self.d_corner, self.d_rotate),
+            'corner_extrude': self._near_corners_extrude(pos, self.d_corner, self.d_rotate * 2),
             'in_area': self.in_area(pos, self.d_edge)
         }
 
