@@ -10,14 +10,15 @@ bl_info = {
     "category": "Node"
 }
 
-from . import operator, keymap, preferences, workspace_tool, property
+from . import operator, keymap, preferences, workspace_tool, property, translation
 
 modules = [
     property,
     operator,
     workspace_tool,
     preferences,
-    keymap
+    keymap,
+    translation
 ]
 
 
