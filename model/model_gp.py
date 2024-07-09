@@ -353,9 +353,10 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """Move the active grease pencil layer."""
         return self.move(self.active_layer_name, v, space)
 
-    def scale_active(self, scale: Vector, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+    def scale_active(self, scale: Vector, pivot: Vector, space: Literal['v2d', '3d'] = '3d',
+                     local: bool = False) -> 'BuildGreasePencilData':
         """Scale the active grease pencil layer."""
-        return self.scale(self.active_layer_name, scale, pivot, space)
+        return self.scale(self.active_layer_name, scale, pivot, space, local)
 
     def rotate_active(self, degree: int, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Rotate the active grease pencil layer."""
@@ -376,17 +377,18 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         return self
 
     def scale(self, layer_name_or_index: Union[str, int], scale: Vector, pivot: Vector,
-              space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+              space: Literal['v2d', '3d'] = '3d', local: bool = False) -> 'BuildGreasePencilData':
         """Scale the grease pencil data.
         The pivot point should be in 3D space.
         :param layer_name_or_index: The name or index of the layer.
         :param scale: The scale vector.
         :param pivot: The pivot vector.
         :param space: The type of the vector, either 'v2d' or '3d'.
+        :param local: The local scale flag.
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
         vec_pivot = VecTool.v2d_2_loc3d(pivot) if space == '3d' else pivot
-        self.edit_layer.scale_layer(layer, scale, vec_pivot)
+        self.edit_layer.scale_layer(layer, scale, vec_pivot, local)
         return self
 
     def rotate(self, layer_name_or_index: Union[str, int], degree: int, pivot: Vector,
@@ -399,6 +401,6 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         :param space: The type of the vector, either 'v2d' or '3d'.
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
-        vec_pivot = VecTool.v2d_2_loc3d(pivot) if space == '3d' else pivot
+        vec_pivot = pivot if space == '3d' else VecTool.v2d_2_loc3d(pivot)
         self.edit_layer.rotate_layer(layer, degree, vec_pivot)
         return self

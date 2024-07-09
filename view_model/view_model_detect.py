@@ -42,15 +42,23 @@ class MouseDetectModel:
         x, y = pos
         points = self.bbox_model.bbox_points_r2d
         top_left, top_right, bottom_left, bottom_right = points
+        if not self.bbox_model.is_local:
+            if feather != 0:
+                top_left = (top_left[0] - feather, top_left[1] + feather)
+                top_right = (top_right[0] + feather, top_right[1] + feather)
+                bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
 
-        if feather != 0:
-            top_left = (top_left[0] - feather, top_left[1] + feather)
-            top_right = (top_right[0] + feather, top_right[1] + feather)
-            bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
+            if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
+                return True
+        else:
+            polygon = [top_left, top_right, bottom_right, bottom_left]
+            inside = False
 
-        if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
-            return True
-        return False
+            for i in range(4):
+                p1, p2 = polygon[i], polygon[(i + 1) % 4]
+                if (p1[1] > y) != (p2[1] > y) and (x < (p2[0] - p1[0]) * (y - p1[1]) / (p2[1] - p1[1]) + p1[0]):
+                    inside = not inside
+            return inside
 
     def _near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 20) -> \
             Union[tuple[Vector, int], None]:

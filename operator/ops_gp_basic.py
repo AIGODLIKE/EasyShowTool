@@ -1,5 +1,6 @@
 import bpy
-from bpy.props import IntVectorProperty, FloatVectorProperty, StringProperty, BoolProperty, EnumProperty, IntProperty,PointerProperty
+from bpy.props import IntVectorProperty, FloatVectorProperty, StringProperty, BoolProperty, EnumProperty, IntProperty, \
+    PointerProperty
 from mathutils import Vector
 
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
@@ -264,8 +265,11 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
             op = layout.operator(ENN_OT_scale_gp.bl_idname)
             op.scale_vector = context.window_manager.enn_gp_scale
             layout.prop(context.window_manager, "enn_gp_rotate_angle")
-            op = layout.operator(ENN_OT_rotate_gp.bl_idname)
+            row = layout.row()
+            op = row.operator(ENN_OT_rotate_gp.bl_idname)
             op.rotate_angle = context.window_manager.enn_gp_rotate_angle
+            op = row.operator(ENN_OT_rotate_gp.bl_idname, text="Back")
+            op.rotate_angle = -context.window_manager.enn_gp_rotate_angle
 
         if context.scene.enn_palette_group:
             layout.template_palette(context.scene.enn_palette_group, "palette", color=True)
