@@ -1,7 +1,7 @@
 import bpy
 from ..public_path import get_tool_icon
 from ..operator.ops_gp_modal import ENN_OT_gp_set_active_layer, ENN_OT_gp_drag_modal
-from ..operator.ops_gp_basic import ENN_OT_add_gp, ENN_OT_remove_gp, ENN_OT_scale_gp, ENN_OT_gp_set_active_layer_color
+from ..operator.ops_gp_basic import ENN_OT_add_gp_modal, ENN_OT_remove_gp, ENN_OT_scale_gp, ENN_OT_gp_set_active_layer_color
 
 
 class ENN_TL_gp_add(bpy.types.WorkSpaceTool):
@@ -12,15 +12,11 @@ class ENN_TL_gp_add(bpy.types.WorkSpaceTool):
     bl_label = "Add"
     bl_icon = get_tool_icon('gp_add_tool')
     bl_keymap = (
-        (ENN_OT_add_gp.bl_idname,
+        (ENN_OT_add_gp_modal.bl_idname,
          {"type": 'LEFTMOUSE', "value": 'PRESS', "shift": False, "ctrl": False},
-         {"properties": [('use_mouse_pos', True)]}
+         # {"properties": [('use_mouse_pos', True)]}
+         {"properties": []}
          ),
-        (ENN_OT_add_gp.bl_idname,
-         {"type": 'LEFTMOUSE', "value": 'PRESS', "shift": True, "ctrl": False},
-         {"properties": [('use_mouse_pos', True), ('add_type', 'OBJECT')]}
-         ),
-
     )
 
 
@@ -36,6 +32,11 @@ class ENN_TL_gp_edit(bpy.types.WorkSpaceTool):
         (ENN_OT_gp_set_active_layer.bl_idname,
          {"type": "LEFTMOUSE", "value": "CLICK"},
          {"properties": []},  # [("deselect_all", True)]
+         ),
+        (ENN_OT_add_gp_modal.bl_idname,
+         {"type": 'LEFTMOUSE', "value": 'DOUBLE_CLICK', "shift": False, "ctrl": False},
+         # {"properties": [('use_mouse_pos', True)]}
+         {"properties": []}
          ),
         # normal mode drag
         (ENN_OT_gp_drag_modal.bl_idname,
@@ -94,7 +95,7 @@ def reigster():
 
 
 def unregister():
-    from bpy.utils import unregister_class, unregister_tool
+    from bpy.utils import unregister_tool
 
     # unregister_tool(ENN_TL_gp_add)
     unregister_tool(ENN_TL_gp_edit)

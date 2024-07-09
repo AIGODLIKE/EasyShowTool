@@ -23,10 +23,6 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
     bl_description = "Add Grease from %s"
     bl_options = {'UNDO', "GRAB_CURSOR", "BLOCKING"}
 
-    add_type: bpy.props.EnumProperty(
-        items=lambda self, context: enum_add_type_items(),
-    )
-
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context)
@@ -36,6 +32,7 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
         return cls.bl_description % property.add_type.title()
 
     def invoke(self, context, event):
+        self.add_type = context.window_manager.enn_gp_add_type
         context.window_manager.modal_handler_add(self)
         context.window.cursor_set('PICK_AREA')
         return {'RUNNING_MODAL'}
@@ -51,12 +48,18 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
 
     def _add(self, context, location):
         if self.add_type == 'TEXT':
+            if context.window_manager.enn_gp_text == '':
+                self.report({'ERROR'}, "Empty")
+                return
             bpy.ops.enn.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
                                text=context.window_manager.enn_gp_text,
                                size=context.window_manager.enn_gp_size,
                                location=location)
         elif self.add_type == 'OBJECT':
+            if not context.window_manager.enn_gp_obj:
+                self.report({'ERROR'}, "No object selected")
+                return
             bpy.ops.enn.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
                                size=context.window_manager.enn_gp_size,
@@ -225,7 +228,6 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
 
 
 # noinspection PyPep8Naming
-
 
 
 def register():

@@ -151,37 +151,27 @@ class ENN_OT_add_gp(bpy.types.Operator):
     def poll(cls, context):
         return has_edit_tree(context)
 
-    def draw(self, context):
-        layout = self.layout
-        row = layout.row()
-        row.prop(self, 'add_type', expand=True)
-        layout.prop(self, 'size')
-        if self.add_type == 'TEXT':
-            layout.prop(self, 'text')
-        elif self.add_type == 'OBJECT':
-            layout.prop(context.window_manager, 'enn_gp_obj')
-            layout.prop(self, 'obj_shot_angle')
+    # def draw(self, context):
+    #     layout = self.layout
+    #     row = layout.row()
+    #     row.prop(self, 'add_type', expand=True)
+    #     layout.prop(self, 'size')
+    #     if self.add_type == 'TEXT':
+    #         layout.prop(self, 'text')
+    #     elif self.add_type == 'OBJECT':
+    #         layout.prop(context.window_manager, 'enn_gp_obj')
+    #         layout.prop(self, 'obj_shot_angle')
 
     def invoke(self, context, event):
         self.mouse_pos = (event.mouse_region_x, event.mouse_region_y)
-        return context.window_manager.invoke_props_dialog(self)
-
-    def handle_invalid_input(self) -> bool:
-        if self.add_type == 'OBJECT' and not bpy.data.objects.get(self.obj, None):
-            return True
-        elif self.add_type == 'TEXT' and self.text != '':
-            return True
-        return False
+        return self.execute(context)
 
     def execute(self, context: bpy.types.Context):
-        if not self.handle_invalid_input(): return {'CANCELLED'}
-
         font_gp_data: bpy.types.GreasePencil = None
-        obj: bpy.types.Object = bpy.data.objects.get(self.obj, context.window_manager.enn_gp_obj)
+        obj: bpy.types.Object = bpy.data.objects.get(self.obj)
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         vec: Vector = VecTool.r2d_2_v2d(self.mouse_pos) if self.use_mouse_pos else self.location
         gp_data: bpy.types.GreasePencil = CreateGreasePencilData.empty() if not nt.grease_pencil else nt.grease_pencil
-
         if self.add_type == 'TEXT':
             font_gp_data = CreateGreasePencilData.from_text(self.text, self.size)
         elif self.add_type == 'OBJECT':
@@ -254,8 +244,7 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
         elif context.window_manager.enn_gp_add_type == 'OBJECT':
             box.prop(context.window_manager, "enn_gp_obj")
             box.prop(context.window_manager, "enn_gp_obj_shot_angle")
-        op = box.operator(ENN_OT_add_gp_modal.bl_idname)
-        op.add_type = context.window_manager.enn_gp_add_type
+        box.operator(ENN_OT_add_gp_modal.bl_idname)
 
         if get_pref().debug:
             layout.prop(context.window_manager, "enn_gp_move_vector")
