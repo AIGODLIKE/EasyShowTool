@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from math import radians
+from math import radians, degrees
 from typing import Union
 import bpy
 import numpy as np
@@ -35,10 +35,10 @@ class EditGreasePencilStroke:
             points = (points - pivot_3d) * scale_3d + pivot_3d
             stroke.points.foreach_set('co', points.ravel())
 
-    def _rotate_stroke(self, stroke: bpy.types.GPencilStroke, degree: int, pivot: Vector):
+    def _rotate_stroke(self, stroke: bpy.types.GPencilStroke, angle: int, pivot: Vector):
         """Rotate the grease pencil data around the pivot point."""
         pivot_3d = Vector((pivot[0], pivot[1], 0))
-        angle = radians(degree)
+
         with self.stroke_points(stroke) as points:
             # use numpy to calculate the rotation
             points = ((points - pivot_3d) @ np.array([[np.cos(angle), -np.sin(angle), 0],
@@ -46,6 +46,20 @@ class EditGreasePencilStroke:
                                                       [0, 0, 1]]) + pivot_3d)
 
             stroke.points.foreach_set('co', points.ravel())
+
+    def _scale_stroke_local(self, strokes: bpy.types.GPencilStroke, scale: Vector, angle: float, pivot: Vector):
+        """rotate around the pivot point. before scale, then rotate back"""
+        pivot_3d = Vector((pivot[0], pivot[1], 0))
+        scale_3d = Vector((scale[0], scale[1], 1))
+        with self.stroke_points(strokes) as points:
+            points = ((points - pivot_3d) @ np.array([[np.cos(angle), -np.sin(angle), 0],
+                                                      [np.sin(angle), np.cos(angle), 0],
+                                                      [0, 0, 1]]) + pivot_3d)
+            points = (points - pivot_3d) * scale_3d + pivot_3d
+            points = ((points - pivot_3d) @ np.array([[np.cos(-angle), -np.sin(-angle), 0],
+                                                      [np.sin(-angle), np.cos(-angle), 0],
+                                                      [0, 0, 1]]) + pivot_3d)
+            strokes.points.foreach_set('co', points.ravel())
 
 
 class EditGreasePencilLayer(EditGreasePencilStroke):
@@ -56,26 +70,28 @@ class EditGreasePencilLayer(EditGreasePencilStroke):
             for stroke in frame.strokes:
                 self._move_stroke(stroke, v)
 
-    def scale_layer(self, layer: bpy.types.GPencilLayer, scale: Vector, pivot: Vector):
-        for frame in layer.frames:
-            for stroke in frame.strokes:
-                self._scale_stroke(stroke, scale, pivot)
-
-    def scale_local_layer(self, layer: bpy.types.GPencilLayer, scale: Vector, degree: int, pivot: Vector):
-        """rotate the layer first, then scale the layer, then rotate back"""
-        self.rotate_layer(layer, -degree, pivot)
-        self.scale_layer(layer, scale, pivot)
-        self.rotate_layer(layer, degree, pivot)
-
     def rotate_layer(self, layer: bpy.types.GPencilLayer, degree: int, pivot: Vector):
+        angle = radians(degree)
         for frame in layer.frames:
             for stroke in frame.strokes:
-                self._rotate_stroke(stroke, degree, pivot)
+                self._rotate_stroke(stroke, angle, pivot)
 
         # store rotation in layer.rotation, but inverse the rotation
         # because rotate from z up view in 3d clockwise, value is negative
         # so store the inverse value, to make it always looks straight in 3d view, easy to debug
-        layer.rotation[2] += radians(degree)
+        layer.rotation[2] += angle
+
+    def scale_layer(self, layer: bpy.types.GPencilLayer, scale: Vector, pivot: Vector, local=False):
+        """Scale the grease pencil data. Local scale will rotate the data first, then scale, then rotate back."""
+        if local:
+            angle = -layer.rotation[2]  # since the rotation is stored in the layer, we need to inverse it
+            for frame in layer.frames:
+                for stroke in frame.strokes:
+                    self._scale_stroke_local(stroke, scale, angle, pivot)
+        else:
+            for frame in layer.frames:
+                for stroke in frame.strokes:
+                    self._scale_stroke(stroke, scale, pivot)
 
     def display_in_2d(self, layer: bpy.types.GPencilLayer):
         self._set_display_mode(layer, '2DSPACE')
