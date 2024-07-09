@@ -86,16 +86,16 @@ class ENN_TL_gp_color(bpy.types.WorkSpaceTool):
 
 
 def reigster():
-    from bpy.utils import register_class, register_tool
+    from bpy.utils import register_tool
 
-    register_tool(ENN_TL_gp_add, separator=True)
-    register_tool(ENN_TL_gp_edit, separator=False)
+    # register_tool(ENN_TL_gp_add, separator=True)
+    register_tool(ENN_TL_gp_edit, separator=True)
     register_tool(ENN_TL_gp_color, separator=False)
 
 
 def unregister():
     from bpy.utils import unregister_class, unregister_tool
 
-    unregister_tool(ENN_TL_gp_add)
+    # unregister_tool(ENN_TL_gp_add)
     unregister_tool(ENN_TL_gp_edit)
     unregister_tool(ENN_TL_gp_color)
