@@ -92,8 +92,10 @@ class GPencilBBoxProperty:
         :param extrude: the extrude distance
         this is not a property because it needs an extrude distance"""
         points = self.bbox_points_r2d
-        extrude_vecs = [Vector((-extrude, extrude)), Vector((extrude, extrude)), Vector((-extrude, -extrude)),
-                        Vector((extrude, -extrude))]  # top_left, top_right, bottom_left, bottom_right
+        # point to center vector
+        vecs = [point - self.center_r2d for point in points]
+        # normalize and scale
+        extrude_vecs = [vec.normalized() * extrude for vec in vecs]
         new_points = [Vector(point) + vec for point, vec in zip(points, extrude_vecs)]
 
         return new_points
