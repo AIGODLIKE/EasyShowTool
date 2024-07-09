@@ -61,6 +61,12 @@ class EditGreasePencilLayer(EditGreasePencilStroke):
             for stroke in frame.strokes:
                 self._scale_stroke(stroke, scale, pivot)
 
+    def scale_local_layer(self, layer: bpy.types.GPencilLayer, scale: Vector, degree: int, pivot: Vector):
+        """rotate the layer first, then scale the layer, then rotate back"""
+        self.rotate_layer(layer, -degree, pivot)
+        self.scale_layer(layer, scale, pivot)
+        self.rotate_layer(layer, degree, pivot)
+
     def rotate_layer(self, layer: bpy.types.GPencilLayer, degree: int, pivot: Vector):
         for frame in layer.frames:
             for stroke in frame.strokes:

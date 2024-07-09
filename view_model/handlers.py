@@ -94,7 +94,7 @@ class TransformHandler:
 @dataclass
 class MoveHandler(TransformHandler):
     # state
-    total_move: Vector = Vector((0,0))  # value between the last mouse move and the first mouse move
+    total_move: Vector = Vector((0, 0))  # value between the last mouse move and the first mouse move
     delta_move: Vector = None  # compare to the last mouse move
     # in
     delta_vec_v2d: Vector = None
@@ -133,7 +133,7 @@ class RotateHandler(TransformHandler):
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the rotate event in the modal."""
-        pivot: Vector = self.bbox_model.center
+        pivot: Vector = self.bbox_model.center_v2d
         pivot_r2d: Vector = self.bbox_model.center_r2d
         vec_1 = Vector(self.mouse_pos) - pivot_r2d
         vec_2 = Vector(self.mouse_pos_prev) - pivot_r2d
@@ -202,6 +202,8 @@ class ScaleHandler(TransformHandler):
     total_scale: Vector = Vector((1, 1, 1))
     delta_scale: Vector = None
     pivot: Vector = None
+    pivot_local: Vector = None
+    degree_local: float = 0
     # pass in
     delta_vec_v2d: Vector = None
     mouse_pos: tuple[int, int] = (0, 0)
@@ -215,6 +217,7 @@ class ScaleHandler(TransformHandler):
         :return: True if the scale is handled, False otherwise. Event will be accepted if True."""
         unify_scale = event.shift
         center_scale = event.ctrl
+
         if self.pos_edge_center:
             if center_scale:
                 self.both_sides_edge_center(unify_scale)
@@ -229,8 +232,18 @@ class ScaleHandler(TransformHandler):
         if not self.delta_scale: return False
         if not self.pivot: return False
 
+        if self.bbox_model.is_local:
+            if not self.pivot_local:
+                self.pivot_local = self.bbox_model.center_v2d
+                self.degree_local = degrees(self.bbox_model.rotation_2d_inverse())
+            self.build_model.rotate_active(self.degree_local, self.pivot_local,
+                                           space='v2d')
+
         self.build_model.scale_active(self.delta_scale, self.pivot, space='v2d')
         self.total_scale *= self.delta_scale
+
+        if self.bbox_model.is_local:
+            self.build_model.rotate_active(-self.degree_local, self.pivot_local, space='v2d')
         return True
 
     def calc_both_side(self):
