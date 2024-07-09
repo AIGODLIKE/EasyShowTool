@@ -23,10 +23,6 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
     bl_description = "Add Grease from %s"
     bl_options = {'UNDO', "GRAB_CURSOR", "BLOCKING"}
 
-    add_type: bpy.props.EnumProperty(
-        items=lambda self, context: enum_add_type_items(),
-    )
-
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context)
@@ -36,6 +32,7 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
         return cls.bl_description % property.add_type.title()
 
     def invoke(self, context, event):
+        self.add_type = context.scene.enn_gp_add_type
         context.window_manager.modal_handler_add(self)
         context.window.cursor_set('PICK_AREA')
         return {'RUNNING_MODAL'}
@@ -51,17 +48,23 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
 
     def _add(self, context, location):
         if self.add_type == 'TEXT':
+            if context.scene.enn_gp_text == '':
+                self.report({'ERROR'}, "Empty")
+                return
             bpy.ops.enn.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
-                               text=context.window_manager.enn_gp_text,
-                               size=context.window_manager.enn_gp_size,
+                               text=context.scene.enn_gp_text,
+                               size=context.scene.enn_gp_size,
                                location=location)
         elif self.add_type == 'OBJECT':
+            if not context.scene.enn_gp_obj:
+                self.report({'ERROR'}, "No object selected")
+                return
             bpy.ops.enn.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
-                               size=context.window_manager.enn_gp_size,
-                               obj=context.window_manager.enn_gp_obj.name,
-                               obj_shot_angle=context.window_manager.enn_gp_obj_shot_angle,
+                               size=context.scene.enn_gp_size,
+                               obj=context.scene.enn_gp_obj.name,
+                               obj_shot_angle=context.scene.enn_gp_obj_shot_angle,
                                location=location)
 
 
@@ -124,16 +127,16 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         self.draw_handle.add_to_node_editor(self.view_hover, (self, context))
         context.window_manager.modal_handler_add(self)
         context.area.tag_redraw()
+        self.drag_vm.set_bbox_mode('LOCAL')
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
         if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'MIDDLEMOUSE'}:
             self.update_drag_vm(context, event)
-
         if event.type in {'ESC', 'RIGHTMOUSE'}:
             return self._finish()
         if self.stop or not context.area or not is_valid_workspace_tool(
-                context) or not self.drag_vm.has_active_layer():
+                context) or not self.drag_vm or not self.drag_vm.has_active_layer():
             return self._finish()
         context.area.tag_redraw()
         return {'PASS_THROUGH'}
@@ -153,36 +156,6 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         self.__class__.drag_vm = None
         self.__class__.view_hover = None
         tag_redraw()
-        return {'FINISHED'}
-
-
-class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
-    bl_idname = 'enn.gp_set_active_layer_color'
-    bl_label = 'Set Active Layer Color'
-    bl_description = 'Set the active layer color of the Grease Pencil Object'
-    bl_options = {'UNDO'}
-
-    @classmethod
-    def poll(cls, context):
-        return has_edit_tree(context)
-
-    def invoke(self, context, event):
-        nt: bpy.types.NodeTree = context.space_data.edit_tree
-        gp_data: bpy.types.GreasePencil = nt.grease_pencil
-        if not gp_data: return {'CANCELLED'}
-        try:
-            layer_index = in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
-        except ReferenceError:  # ctrl z
-            layer_index = None
-        except AttributeError:  # switch to other tool
-            layer_index = None
-        if layer_index is None:
-            return {'FINISHED'}
-
-        with BuildGreasePencilData(gp_data) as gp_data_builder:
-            gp_data_builder.active_layer_index = layer_index
-            color = context.scene.enn_palette_group.palette.colors.active.color
-            gp_data_builder.color_active(color=color)
         return {'FINISHED'}
 
 
@@ -223,6 +196,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         self.draw_handle = ViewDrawHandle()
         self.draw_handle.add_to_node_editor(self.view_drag, (self, context))
         context.window_manager.modal_handler_add(self)
+        self.drag_vm.set_bbox_mode('LOCAL')
         self.drag_vm.update_mouse_pos(context, event)
         return {'RUNNING_MODAL'}
 
@@ -235,7 +209,8 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
                 self.drag_vm.update_near_widgets()
                 self.drag_init = True
             self.drag_vm.handle_drag(context, event)
-
+        # if event.type == 'B' and event.value == 'PRESS':
+        #     self.drag_vm.toggle_bbox_mode()
         if True in (
                 event.type in {'ESC', 'RIGHTMOUSE'},
                 event.type == 'LEFTMOUSE' and event.value == 'RELEASE',
@@ -253,85 +228,19 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
 
 
 # noinspection PyPep8Naming
-class ENN_PT_gn_edit_panel(bpy.types.Panel):
-    bl_label = "Edit Grease Pencil Text"
-    bl_idname = "ENN_PT_gn_edit_panel"
-    bl_space_type = 'NODE_EDITOR'
-    bl_region_type = 'UI'
-    bl_category = 'View'
-
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(context.window_manager, "enn_gp_size")
-
-        box = layout.box()
-        box.label(text="Add")
-        row = box.row()
-        row.prop(context.window_manager, "enn_gp_add_type", expand=True)
-
-        if context.window_manager.enn_gp_add_type == 'TEXT':
-            box.prop(context.window_manager, "enn_gp_text")
-        elif context.window_manager.enn_gp_add_type == 'OBJECT':
-            box.prop(context.window_manager, "enn_gp_obj")
-            box.prop(context.window_manager, "enn_gp_obj_shot_angle")
-        op = box.operator(ENN_OT_add_gp_modal.bl_idname)
-        op.add_type = context.window_manager.enn_gp_add_type
-
-        if context.scene.enn_palette_group:
-            layout.template_palette(context.scene.enn_palette_group, "palette", color=True)
-
-
-class MyPaletteGroup(bpy.types.PropertyGroup):
-    palette: bpy.props.PointerProperty(type=bpy.types.Palette)
 
 
 def register():
-    import threading
-    import time
     from bpy.utils import register_class
 
-    register_class(MyPaletteGroup)
     register_class(ENN_OT_add_gp_modal)
     register_class(ENN_OT_gp_set_active_layer)
-    register_class(ENN_OT_gp_set_active_layer_color)
     register_class(ENN_OT_gp_drag_modal)
-    register_class(ENN_PT_gn_edit_panel)
-
-    bpy.types.WindowManager.enn_gp_size = bpy.props.IntProperty(name="Size", default=100, subtype='PIXEL')
-    bpy.types.WindowManager.enn_gp_add_type = bpy.props.EnumProperty(items=lambda self, context: enum_add_type_items())
-    bpy.types.WindowManager.enn_gp_text = bpy.props.StringProperty(name="Text", default="Hello World")
-    bpy.types.WindowManager.enn_gp_obj = bpy.props.PointerProperty(name='Object', type=bpy.types.Object,
-                                                                   poll=lambda self, obj: obj.type in {'MESH',
-                                                                                                       'GPENCIL'})
-    bpy.types.WindowManager.enn_gp_obj_shot_angle = bpy.props.EnumProperty(name="Shot Orientation",
-                                                                           items=lambda _, __: enum_shot_orient_items())
-
-    bpy.types.Scene.enn_palette_group = bpy.props.PointerProperty(type=MyPaletteGroup)
-    bpy.types.WindowManager.enn_gp_move_dis = bpy.props.IntProperty(name='Distance', default=50)
-    bpy.types.WindowManager.enn_gp_scale = bpy.props.FloatVectorProperty(name='Scale Vector', size=2,
-                                                                         default=(1.1, 1.1))
-
-    def register_later(lock, t):
-        while not hasattr(bpy.context, 'scene'):
-            time.sleep(3)
-        # print("Start register palette")
-        color_model = ColorPaletteModel()
-        color_model.setup()
-        bpy.context.scene.enn_palette_group.palette = color_model.palette
-
-    lock = threading.Lock()
-    lock_holder = threading.Thread(target=register_later, args=(lock, 5), name='enn_color')
-    lock_holder.daemon = True
-    lock_holder.start()
 
 
 def unregister():
     from bpy.utils import unregister_class
 
-    unregister_class(MyPaletteGroup)
     unregister_class(ENN_OT_add_gp_modal)
-    unregister_class(ENN_OT_gp_set_active_layer_color)
     unregister_class(ENN_OT_gp_set_active_layer)
-
     unregister_class(ENN_OT_gp_drag_modal)
-    unregister_class(ENN_PT_gn_edit_panel)

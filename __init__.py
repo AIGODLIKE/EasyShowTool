@@ -10,13 +10,15 @@ bl_info = {
     "category": "Node"
 }
 
-from . import operator, keymap, preferences, workspace_tool
+from . import operator, keymap, preferences, workspace_tool, property, translation
 
 modules = [
+    property,
     operator,
     workspace_tool,
     preferences,
-    keymap
+    keymap,
+    translation
 ]
 
 
@@ -26,5 +28,5 @@ def register():
 
 
 def unregister():
-    for m in modules.reverse():
+    for m in modules:
         m.unregister()

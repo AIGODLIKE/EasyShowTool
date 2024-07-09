@@ -24,8 +24,8 @@ class ShootAngles(Enum):
 
     TOP: Euler = Euler(EulerTool.to_rad((0, 0, 0)), 'XYZ')
     FRONT: Euler = Euler(EulerTool.to_rad((-90, 0, 0)), 'XYZ')
-    LEFT: Euler = Euler(EulerTool.to_rad((0, -90, 0)), 'XYZ')
-    RIGHT: Euler = Euler(EulerTool.to_rad((0, 90, 0)), 'XYZ')
+    LEFT: Euler = Euler(EulerTool.to_rad((0, -90, -90)), 'XYZ')
+    RIGHT: Euler = Euler(EulerTool.to_rad((0, 90, 90)), 'XYZ')
     BOTTOM: Euler = Euler(EulerTool.to_rad((0, 180, 0)), 'XYZ')
 
 

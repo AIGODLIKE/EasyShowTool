@@ -3,7 +3,7 @@ from typing import Sequence, Union, ClassVar, Optional, Literal
 
 from mathutils import Vector
 
-from ..model.model_gp_bbox import GreasePencilLayerBBox
+from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool
 from ..public_path import get_pref
 
@@ -14,13 +14,13 @@ class MouseDetectModel:
     work in region 2d space.
     """
 
-    bbox_model: 'GreasePencilLayerBBox' = Optional[None]
+    bbox_model: 'GPencilLayerBBox' = Optional[None]
 
     d_edge: int = field(default_factory=lambda: get_pref().gp_performance.detect_edge_px)
     d_corner: int = field(default_factory=lambda: get_pref().gp_performance.detect_corner_px)
     d_rotate: int = field(default_factory=lambda: get_pref().gp_performance.detect_rotate_px)
 
-    def bind_bbox(self, bbox_model: 'GreasePencilLayerBBox') -> 'MouseDetectModel':
+    def bind_bbox(self, bbox_model: 'GPencilLayerBBox') -> 'MouseDetectModel':
         """Need to bind the bbox model to work."""
         self.bbox_model = bbox_model
         return self
@@ -29,7 +29,7 @@ class MouseDetectModel:
         return {
             'corner': self._near_corners(pos, self.d_corner),
             'edge_center': self._near_edge_center(pos, self.d_edge),
-            'corner_extrude': self._near_corners_extrude(pos, self.d_corner, self.d_rotate),
+            'corner_extrude': self._near_corners_extrude(pos, self.d_corner, self.d_rotate * 2),
             'in_area': self.in_area(pos, self.d_edge)
         }
 
@@ -42,15 +42,23 @@ class MouseDetectModel:
         x, y = pos
         points = self.bbox_model.bbox_points_r2d
         top_left, top_right, bottom_left, bottom_right = points
+        if not self.bbox_model.is_local:
+            if feather != 0:
+                top_left = (top_left[0] - feather, top_left[1] + feather)
+                top_right = (top_right[0] + feather, top_right[1] + feather)
+                bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
 
-        if feather != 0:
-            top_left = (top_left[0] - feather, top_left[1] + feather)
-            top_right = (top_right[0] + feather, top_right[1] + feather)
-            bottom_left = (bottom_left[0] - feather, bottom_left[1] - feather)
+            if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
+                return True
+        else:
+            polygon = [top_left, top_right, bottom_right, bottom_left]
+            inside = False
 
-        if top_left[0] < x < top_right[0] and bottom_left[1] < y < top_left[1]:
-            return True
-        return False
+            for i in range(4):
+                p1, p2 = polygon[i], polygon[(i + 1) % 4]
+                if (p1[1] > y) != (p2[1] > y) and (x < (p2[0] - p1[0]) * (y - p1[1]) / (p2[1] - p1[1]) + p1[0]):
+                    inside = not inside
+            return inside
 
     def _near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 20) -> \
             Union[tuple[Vector, int], None]:

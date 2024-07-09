@@ -1,9 +1,12 @@
 import bpy
-from bpy.props import IntProperty, PointerProperty, StringProperty, BoolProperty, FloatVectorProperty
+from bpy.props import IntProperty, PointerProperty, StringProperty, BoolProperty, FloatVectorProperty, EnumProperty, \
+    FloatProperty
+from bpy.app.translations import pgettext_iface as _p
+from .operator.functions import enum_shot_orient_items
 
 
 def draw_property_group(layout: bpy.types.UILayout, pointer: bpy.types.PointerProperty):
-    layout.label(text=pointer.text, icon=pointer.icon)
+    layout.label(text=_p(pointer.text), icon=pointer.icon)
     for prop in pointer.__annotations__:
         layout.prop(pointer, prop)
 
@@ -35,7 +38,7 @@ class GreasePencilDrawProperty(bpy.types.PropertyGroup):
 
 
 class GreasePencilPerformanceProperty(bpy.types.PropertyGroup):
-    lazy_update: BoolProperty(default=False, name='Lazy Update')
+    # lazy_update: BoolProperty(default=False, name='Lazy Update')
     detect_edge_px: IntProperty(default=20, name='Detect Edge Radius', subtype='PIXEL')
     detect_corner_px: IntProperty(default=20, name='Detect Corner Radius', subtype='PIXEL')
     detect_rotate_px: IntProperty(default=20, name='Detect Rotate Radius', subtype='PIXEL')
@@ -52,13 +55,6 @@ class Preference(bpy.types.AddonPreferences):
     gp_draw: PointerProperty(type=GreasePencilDrawProperty)
     gp_behavior: PointerProperty(type=GreasePencilBehaviorProperty)
     gp_performance: PointerProperty(type=GreasePencilPerformanceProperty)
-
-    gp_snap_degree: IntProperty(name='Rotate Snap Degree', default=15)
-
-    # draw preference
-    gp_draw_line_width: IntProperty(default=1, name='Line Width')
-    gp_draw_drag: BoolProperty(default=True, name='Draw Box When Dragging')
-    gp_draw_drag_area: BoolProperty(default=False, name='Drag Box Area When Dragging')
     # debug
     debug: BoolProperty(default=False, name='Debug')
 
