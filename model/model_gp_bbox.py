@@ -143,6 +143,17 @@ class GPencilLayerBBox(GreasePencilProperty, GPencilBBoxProperty):
         points_3d = [p.to_3d() for p in points]
         return [((p - pivot_3d) @ Euler((0, 0, angle), 'XYZ').to_matrix() + pivot_3d).to_2d() for p in points_3d]
 
+    @property
+    def edge_center_points_3d(self) -> list[Vector, Vector, Vector, Vector]:
+        """Return the edge center points of the bounding box in 3d space."""
+        if not self.is_local:
+            return super().edge_center_points_3d
+        points = super().edge_center_points_3d
+        angle = self.rotation_2d()
+        pivot_3d = self.center.to_3d()
+        points_3d = [p.to_3d() for p in points]
+        return [((p - pivot_3d) @ Euler((0, 0, angle), 'XYZ').to_matrix() + pivot_3d).to_2d() for p in points_3d]
+
     def calc_active_layer_bbox(self) -> None:
         layer = self.active_layer
         if not layer:
@@ -186,7 +197,8 @@ class GPencilLayerBBox(GreasePencilProperty, GPencilBBoxProperty):
         self.min_x = min_x
         self.max_y = max_y
         self.min_y = min_y
-        self.center = Vector(((min_x + max_x) / 2, (min_y + max_y) / 2, 0))
+        # self.center = Vector(((min_x + max_x) / 2, (min_y + max_y) / 2, 0))
+        self.center = Vector(pivot)
         # rotate the bounding box back
         self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
 

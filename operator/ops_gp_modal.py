@@ -124,6 +124,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         self.draw_handle.add_to_node_editor(self.view_hover, (self, context))
         context.window_manager.modal_handler_add(self)
         context.area.tag_redraw()
+        self.drag_vm.set_bbox_mode('LOCAL')
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
@@ -185,7 +186,6 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         self.drag_vm.drag_scale_handler = ScaleHandler(
             call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_scale', h.delta_scale))
         self.drag_vm.drag_rotate_handler = RotateHandler(
-            # call_before=lambda h: self.drag_vm.set_bbox_mode('LOCAL'),
             call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_degree', h.delta_degree))
         self.drag_vm.drag_move_handler = MoveHandler(
             call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_move', h.delta_move))
@@ -193,6 +193,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         self.draw_handle = ViewDrawHandle()
         self.draw_handle.add_to_node_editor(self.view_drag, (self, context))
         context.window_manager.modal_handler_add(self)
+        self.drag_vm.set_bbox_mode('LOCAL')
         self.drag_vm.update_mouse_pos(context, event)
         return {'RUNNING_MODAL'}
 
