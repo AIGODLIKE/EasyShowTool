@@ -197,9 +197,7 @@ class GPencilLayerBBox(GreasePencilProperty, GPencilBBoxProperty):
         self.min_x = min_x
         self.max_y = max_y
         self.min_y = min_y
-        # self.center = Vector(((min_x + max_x) / 2, (min_y + max_y) / 2, 0))
         self.center = Vector(pivot)
-        # rotate the bounding box back
         self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
 
     def _getLayer_frame_points(self, frame: bpy.types.GPencilFrame) -> np.ndarray:

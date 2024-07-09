@@ -133,10 +133,12 @@ class RotateHandler(TransformHandler):
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the rotate event in the modal."""
-        pivot: Vector = self.bbox_model.center_v2d
-        pivot_r2d: Vector = self.bbox_model.center_r2d
-        vec_1 = Vector(self.mouse_pos) - pivot_r2d
-        vec_2 = Vector(self.mouse_pos_prev) - pivot_r2d
+        if not self.pivot:
+            self.pivot = self.bbox_model.center_v2d
+            self.pivot_r2d = self.bbox_model.center_r2d
+
+        vec_1 = Vector(self.mouse_pos) - self.pivot_r2d
+        vec_2 = Vector(self.mouse_pos_prev) - self.pivot_r2d
         # clockwise or counterclockwise
         inverse: Literal[1, -1] = VecTool.rotation_direction(vec_1, vec_2)
         angle = inverse * vec_1.angle(vec_2)
@@ -145,14 +147,14 @@ class RotateHandler(TransformHandler):
         # snap
         if not event.shift:
             self.delta_degree += degree
-            self.build_model.rotate_active(degree, pivot, space='v2d')
+            self.build_model.rotate_active(degree, self.pivot , space='v2d')
             self.total_degree += degree
         else:
             self.snap_degree_count += abs(degree)
             if self.snap_degree_count > self.snap_degree:
                 self.snap_degree_count = 0
                 self.delta_degree += self.snap_degree * inverse
-                self.build_model.rotate_active(self.snap_degree * inverse, pivot, space='v2d')
+                self.build_model.rotate_active(self.snap_degree * inverse, self.pivot , space='v2d')
                 self.total_degree += self.snap_degree * inverse
         return True
 

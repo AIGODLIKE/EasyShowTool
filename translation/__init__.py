@@ -38,7 +38,7 @@ def register():
     for filename in os.listdir(languages_dir):
         if not filename.endswith('.py'): continue
         if filename == '__init__.py': continue
-        
+
         module_name = filename[:-3]
         module = importlib.import_module('.' + module_name, package=addon_package)
 
