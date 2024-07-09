@@ -28,5 +28,5 @@ def register():
 
 
 def unregister():
-    for m in modules.reverse():
+    for m in modules:
         m.unregister()
