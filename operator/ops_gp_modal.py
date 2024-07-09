@@ -32,7 +32,7 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
         return cls.bl_description % property.add_type.title()
 
     def invoke(self, context, event):
-        self.add_type = context.window_manager.enn_gp_add_type
+        self.add_type = context.scene.enn_gp_add_type
         context.window_manager.modal_handler_add(self)
         context.window.cursor_set('PICK_AREA')
         return {'RUNNING_MODAL'}
@@ -48,23 +48,23 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
 
     def _add(self, context, location):
         if self.add_type == 'TEXT':
-            if context.window_manager.enn_gp_text == '':
+            if context.scene.enn_gp_text == '':
                 self.report({'ERROR'}, "Empty")
                 return
             bpy.ops.enn.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
-                               text=context.window_manager.enn_gp_text,
-                               size=context.window_manager.enn_gp_size,
+                               text=context.scene.enn_gp_text,
+                               size=context.scene.enn_gp_size,
                                location=location)
         elif self.add_type == 'OBJECT':
-            if not context.window_manager.enn_gp_obj:
+            if not context.scene.enn_gp_obj:
                 self.report({'ERROR'}, "No object selected")
                 return
             bpy.ops.enn.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
-                               size=context.window_manager.enn_gp_size,
-                               obj=context.window_manager.enn_gp_obj.name,
-                               obj_shot_angle=context.window_manager.enn_gp_obj_shot_angle,
+                               size=context.scene.enn_gp_size,
+                               obj=context.scene.enn_gp_obj.name,
+                               obj_shot_angle=context.scene.enn_gp_obj_shot_angle,
                                location=location)
 
 

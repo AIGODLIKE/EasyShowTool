@@ -38,6 +38,10 @@ class ENN_TL_gp_edit(bpy.types.WorkSpaceTool):
          # {"properties": [('use_mouse_pos', True)]}
          {"properties": []}
          ),
+        (ENN_OT_gp_set_active_layer_color.bl_idname,
+         {"type": "C", "value": "PRESS"},
+         {"properties": []},  # [("deselect_all", True)]
+         ),
         # normal mode drag
         (ENN_OT_gp_drag_modal.bl_idname,
          {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False, "ctrl": False},
@@ -91,7 +95,7 @@ def reigster():
 
     # register_tool(ENN_TL_gp_add, separator=True)
     register_tool(ENN_TL_gp_edit, separator=True)
-    register_tool(ENN_TL_gp_color, separator=False)
+    # register_tool(ENN_TL_gp_color, separator=False)
 
 
 def unregister():
@@ -99,4 +103,4 @@ def unregister():
 
     # unregister_tool(ENN_TL_gp_add)
     unregister_tool(ENN_TL_gp_edit)
-    unregister_tool(ENN_TL_gp_color)
+    # unregister_tool(ENN_TL_gp_color)

@@ -232,19 +232,24 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        layout.prop(context.window_manager, "enn_gp_size")
+        layout.prop(context.scene, "enn_gp_size")
 
         box = layout.box()
-        box.label(text="Add")
+        box.label(text="New")
         row = box.row()
-        row.prop(context.window_manager, "enn_gp_add_type", expand=True)
+        row.prop(context.scene, "enn_gp_add_type", expand=True)
 
-        if context.window_manager.enn_gp_add_type == 'TEXT':
-            box.prop(context.window_manager, "enn_gp_text")
-        elif context.window_manager.enn_gp_add_type == 'OBJECT':
-            box.prop(context.window_manager, "enn_gp_obj")
-            box.prop(context.window_manager, "enn_gp_obj_shot_angle")
-        box.operator(ENN_OT_add_gp_modal.bl_idname)
+        if context.scene.enn_gp_add_type == 'TEXT':
+            box.prop(context.scene, "enn_gp_text")
+        elif context.scene.enn_gp_add_type == 'OBJECT':
+            box.prop(context.scene, "enn_gp_obj")
+            box.prop(context.scene, "enn_gp_obj_shot_angle")
+        # box.operator(ENN_OT_add_gp_modal.bl_idname)
+
+        if context.scene.enn_palette_group:
+            box = layout.box()
+            box.label(text="Palette")
+            box.template_palette(context.scene.enn_palette_group, "palette", color=True)
 
         if get_pref().debug:
             layout.prop(context.window_manager, "enn_gp_move_vector")
@@ -259,9 +264,6 @@ class ENN_PT_gn_edit_panel(bpy.types.Panel):
             op.rotate_angle = context.window_manager.enn_gp_rotate_angle
             op = row.operator(ENN_OT_rotate_gp.bl_idname, text="Back")
             op.rotate_angle = -context.window_manager.enn_gp_rotate_angle
-
-        if context.scene.enn_palette_group:
-            layout.template_palette(context.scene.enn_palette_group, "palette", color=True)
 
 
 def register():

@@ -2,10 +2,11 @@ import bpy
 import time
 import threading
 
-from bpy.props import PointerProperty
+from bpy.props import PointerProperty, IntProperty, EnumProperty, StringProperty
 from bpy.app.handlers import persistent
 
 from ..model.model_color import ColorPaletteModel
+from ..operator.functions import enum_add_type_items, enum_shot_orient_items
 
 
 class MyPaletteGroup(bpy.types.PropertyGroup):
@@ -34,6 +35,14 @@ def register():
 
     register_class(MyPaletteGroup)
     bpy.types.Scene.enn_palette_group = bpy.props.PointerProperty(type=MyPaletteGroup)
+    bpy.types.Scene.enn_gp_size = IntProperty(name="Size", default=100, subtype='PIXEL')
+    bpy.types.Scene.enn_gp_add_type = EnumProperty(items=lambda self, context: enum_add_type_items())
+    bpy.types.Scene.enn_gp_text = StringProperty(name="Text", default="Hello World")
+    bpy.types.Scene.enn_gp_obj = PointerProperty(name='Object', type=bpy.types.Object,
+                                    poll=lambda self, obj: obj.type in {'MESH', 'GPENCIL'})
+
+    bpy.types.Scene.enn_gp_obj_shot_angle = EnumProperty(name="Shot Orientation",
+                                            items=lambda _, __: enum_shot_orient_items())
 
     bpy.app.handlers.load_post.append(init_scene_props)
 
@@ -44,3 +53,9 @@ def unregister():
     bpy.app.handlers.load_post.remove(init_scene_props)
     unregister_class(MyPaletteGroup)
     del bpy.types.Scene.enn_palette_group
+    del bpy.types.Scene.enn_gp_size
+    del bpy.types.Scene.enn_gp_add_type
+    del bpy.types.Scene.enn_gp_text
+    del bpy.types.Scene.enn_gp_obj
+    del bpy.types.Scene.enn_gp_obj_shot_angle
+
