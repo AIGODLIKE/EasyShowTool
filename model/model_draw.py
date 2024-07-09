@@ -37,7 +37,8 @@ class DrawPreference:
         return color[0], color[1], color[2], alpha
 
     def __post_init__(self):
-        self.lazy_update = get_pref().gp_performance.lazy_update
+        # self.lazy_update = get_pref().gp_performance.lazy_update
+        self.lazy_update = False
 
         theme = bpy.context.preferences.themes['Default'].view_3d
         self.line_width = get_pref().gp_draw.line_width

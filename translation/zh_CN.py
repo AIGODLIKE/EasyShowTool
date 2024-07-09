@@ -12,8 +12,9 @@ data = {
     'Rotate Snap Degree': '旋转捕捉角度',
     'Draw Box When Dragging': '拖动时绘制框',
     'Drag Box Area When Dragging': '拖动时绘制框区域',
-    'Lazy Update': '延迟更新',
+    'Lazy Update': '懒更新',
     'Detect Edge Radius': '检测边缘半径',
     'Detect Corner Radius': '检测角半径',
     'Detect Rotate Radius': '检测旋转半径',
+    'Shot Orientation': '拍摄方向',
 }

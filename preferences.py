@@ -38,7 +38,7 @@ class GreasePencilDrawProperty(bpy.types.PropertyGroup):
 
 
 class GreasePencilPerformanceProperty(bpy.types.PropertyGroup):
-    lazy_update: BoolProperty(default=False, name='Lazy Update')
+    # lazy_update: BoolProperty(default=False, name='Lazy Update')
     detect_edge_px: IntProperty(default=20, name='Detect Edge Radius', subtype='PIXEL')
     detect_corner_px: IntProperty(default=20, name='Detect Corner Radius', subtype='PIXEL')
     detect_rotate_px: IntProperty(default=20, name='Detect Rotate Radius', subtype='PIXEL')
