@@ -1,7 +1,11 @@
 import bpy
-import json
 import os
+from pathlib import Path
 import importlib
+
+helpers = []
+addon_package = __package__
+addon_id = addon_package.split('.')[0]
 
 
 class TranslationHelper():
@@ -22,26 +26,34 @@ class TranslationHelper():
             pass
 
     def unregister(self):
-        bpy.app.translations.unregister(self.name)
-
-
-# Set
-############
-from . import zh_CN
-
-adjt_zh_CN = TranslationHelper('enn_zh_CN', zh_CN.data)
-adjt_zh_HANS = TranslationHelper('enn_zh_HANS', zh_CN.data, lang='zh_HANS')
+        try:
+            bpy.app.translations.unregister(self.name)
+        except(ValueError):
+            pass
 
 
 def register():
-    if not bpy.app.version < (4, 0, 0):
-        adjt_zh_HANS.register()
+    languages_dir = Path(__file__).parent
 
-    adjt_zh_CN.register()
+    for filename in os.listdir(languages_dir):
+        if not filename.endswith('.py'): continue
+        if filename == '__init__.py': continue
+        
+        module_name = filename[:-3]
+        module = importlib.import_module('.' + module_name, package=addon_package)
+
+        helper = TranslationHelper(addon_id + module_name, module.data)
+        helpers.append(helper)
+
+        if module_name == 'zh_CN':
+            helper_HANS = TranslationHelper(addon_id + 'zh_HANS', module.data, lang='zh_HANS')
+            helpers.append(helper_HANS)
+
+    for h in helpers:
+        h.register()
 
 
 def unregister():
-    if not bpy.app.version < (4, 0, 0):
-        adjt_zh_HANS.unregister()
-
-    adjt_zh_CN.unregister()
+    for h in helpers:
+        h.unregister()
+    helpers.clear()
