@@ -1,6 +1,8 @@
 import bpy
-from bpy.props import IntProperty, PointerProperty, StringProperty, BoolProperty, FloatVectorProperty
+from bpy.props import IntProperty, PointerProperty, StringProperty, BoolProperty, FloatVectorProperty, EnumProperty, \
+    FloatProperty
 from bpy.app.translations import pgettext_iface as _p
+from .operator.functions import enum_shot_orient_items
 
 
 def draw_property_group(layout: bpy.types.UILayout, pointer: bpy.types.PointerProperty):
@@ -17,6 +19,18 @@ class NoteProperty(bpy.types.PropertyGroup):
 
     text = 'Add Note Operator'
     icon = 'TEXT'
+
+
+class GreasePencilAddProperty(bpy.types.PropertyGroup):
+    text: StringProperty(default='Text', name='Text')
+    text_opacity: FloatProperty(default=1.0, name='Text Opacity')
+    obj_opacity: FloatProperty(default=0.6, name='Object Opacity')
+    obj_shot_angle: EnumProperty(name="Shot Orientation",
+                                 items=lambda _, __: enum_shot_orient_items(), )
+    size: IntProperty(default=100, name='Size', subtype='PIXEL')
+
+    text = 'Add'
+    icon = 'GREASEPENCIL'
 
 
 class GreasePencilBehaviorProperty(bpy.types.PropertyGroup):
@@ -50,6 +64,7 @@ class Preference(bpy.types.AddonPreferences):
     # add note operator
     note: PointerProperty(type=NoteProperty)
     # grease pencil
+    gp_add: PointerProperty(type=GreasePencilAddProperty)
     gp_draw: PointerProperty(type=GreasePencilDrawProperty)
     gp_behavior: PointerProperty(type=GreasePencilBehaviorProperty)
     gp_performance: PointerProperty(type=GreasePencilPerformanceProperty)
@@ -61,6 +76,11 @@ class Preference(bpy.types.AddonPreferences):
         col = layout.box().column()
         col.use_property_split = True
         draw_property_group(col, self.note)
+
+        layout = self.layout
+        col = layout.box().column()
+        col.use_property_split = True
+        draw_property_group(col, self.gp_add)
 
         col = layout.box().column()
         col.use_property_split = True
@@ -80,6 +100,7 @@ class Preference(bpy.types.AddonPreferences):
 def register():
     from bpy.utils import register_class
     register_class(NoteProperty)
+    register_class(GreasePencilAddProperty)
     register_class(GreasePencilBehaviorProperty)
     register_class(GreasePencilDrawProperty)
     register_class(GreasePencilPerformanceProperty)
@@ -90,6 +111,7 @@ def unregister():
     from bpy.utils import unregister_class
     unregister_class(Preference)
     unregister_class(NoteProperty)
+    unregister_class(GreasePencilAddProperty)
     unregister_class(GreasePencilBehaviorProperty)
     unregister_class(GreasePencilDrawProperty)
     unregister_class(GreasePencilPerformanceProperty)

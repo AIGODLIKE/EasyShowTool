@@ -292,6 +292,20 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
         return self.color(self.active_layer_index, color)
 
+    def opacity_active(self, opacity: float) -> 'BuildGreasePencilData':
+        """Set the opacity of the active grease pencil annotation layer."""
+        return self.opacity(self.active_layer_index, opacity)
+
+    def thickness_active(self, thickness: int = 1) -> 'BuildGreasePencilData':
+        return self.thickness(self.active_layer_index, thickness)
+
+    def opacity(self, layer_name_or_index: Union[str, int], opacity: float) -> 'BuildGreasePencilData':
+        """Set the opacity of the grease pencil annotation layer."""
+        layer = self._get_layer(layer_name_or_index)
+        if layer:
+            layer.annotation_opacity = opacity
+        return self
+
     def color(self, layer_name_or_index: Union[str, int], color: Color = None) -> 'BuildGreasePencilData':
         """Set the color of the grease pencil annotation layer.
         :param layer_name_or_index: The name or index of the layer.
@@ -301,6 +315,13 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         if layer:
             layer.color = color
 
+        return self
+
+    def thickness(self, layer_name_or_index: Union[str, int], thickness: int) -> 'BuildGreasePencilData':
+        """Set the thickness of the grease pencil annotation layer."""
+        layer = self._get_layer(layer_name_or_index)
+        if layer:
+            layer.thickness = thickness
         return self
 
     def link(self, context: bpy.types.Context) -> 'BuildGreasePencilData':
