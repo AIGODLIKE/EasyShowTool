@@ -167,6 +167,7 @@ class ENN_OT_add_gp(bpy.types.Operator):
         return self.execute(context)
 
     def execute(self, context: bpy.types.Context):
+        ori_active_obj = context.object
         font_gp_data: bpy.types.GreasePencil = None
         obj: bpy.types.Object = bpy.data.objects.get(self.obj)
         nt: bpy.types.NodeTree = context.space_data.edit_tree
@@ -189,6 +190,8 @@ class ENN_OT_add_gp(bpy.types.Operator):
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             gp_data_builder.link(context).join(font_gp_data) \
                 .set_active_layer(-1).move_active(vec, space='v2d').color_active(color=color).to_2d()
+
+        context.view_layer.objects.active = ori_active_obj
 
         return {'FINISHED'}
 
