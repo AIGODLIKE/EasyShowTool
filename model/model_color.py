@@ -20,7 +20,7 @@ class Colors(Enum):
 
 @dataclass
 class ColorPaletteModel:
-    name: ClassVar[str] = '.enn_palette'
+    name: ClassVar[str] = '.est_palette'
     palette: ClassVar[bpy.types.Palette] = field(init=False)
 
     @classmethod

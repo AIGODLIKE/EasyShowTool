@@ -5,14 +5,14 @@ from bpy.props import IntProperty, FloatVectorProperty,IntVectorProperty,StringP
 
 
 def register():
-    wm.enn_gp_move_vector = IntVectorProperty(name='Move Vector', size=2, default=(50, 50))
-    wm.enn_gp_scale = FloatVectorProperty(name='Scale Vector', size=2, default=(1.1, 1.1))
-    wm.enn_gp_rotate_angle = IntProperty(name='Rotate Angle', default=30)
-    wm.enn_gp_icon_filter = StringProperty(name="Icon", default="")
+    wm.est_gp_move_vector = IntVectorProperty(name='Move Vector', size=2, default=(50, 50))
+    wm.est_gp_scale = FloatVectorProperty(name='Scale Vector', size=2, default=(1.1, 1.1))
+    wm.est_gp_rotate_angle = IntProperty(name='Rotate Angle', default=30)
+    wm.est_gp_icon_filter = StringProperty(name="Icon", default="")
 
 def unregister():
-    del wm.enn_gp_move_vector
-    del wm.enn_gp_scale
-    del wm.enn_gp_rotate_angle
-    del wm.enn_gp_icon_filter
+    del wm.est_gp_move_vector
+    del wm.est_gp_scale
+    del wm.est_gp_rotate_angle
+    del wm.est_gp_icon_filter
 

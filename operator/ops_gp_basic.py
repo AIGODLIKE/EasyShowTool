@@ -9,8 +9,8 @@ from ..model.utils import VecTool, ShootAngles
 from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, in_layer_area, load_icon_svg
 
 
-class ENN_OT_toggle_gp_space(bpy.types.Operator):
-    bl_idname = "enn.toggle_gp_space"
+class EST_OT_toggle_gp_space(bpy.types.Operator):
+    bl_idname = "est.toggle_gp_space"
     bl_label = "Toggle Space"
     bl_options = {'UNDO'}
 
@@ -30,8 +30,8 @@ class ENN_OT_toggle_gp_space(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class ENN_OT_remove_gp(bpy.types.Operator):
-    bl_idname = "enn.remove_gp"
+class EST_OT_remove_gp(bpy.types.Operator):
+    bl_idname = "est.remove_gp"
     bl_label = "Remove"
     bl_description = "Remove the selected Grease Pencil Object"
     bl_options = {'UNDO'}
@@ -50,8 +50,8 @@ class ENN_OT_remove_gp(bpy.types.Operator):
 
 
 # noinspection PyPep8Naming
-class ENN_OT_move_gp(bpy.types.Operator):
-    bl_idname = "enn.move_gp"
+class EST_OT_move_gp(bpy.types.Operator):
+    bl_idname = "est.move_gp"
     bl_label = "Move"
     bl_description = "Move the selected Grease Pencil Object"
     bl_options = {'UNDO'}
@@ -73,8 +73,8 @@ class ENN_OT_move_gp(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class ENN_OT_scale_gp(bpy.types.Operator):
-    bl_idname = "enn.scale_gp"
+class EST_OT_scale_gp(bpy.types.Operator):
+    bl_idname = "est.scale_gp"
     bl_label = "Scale"
     bl_description = "Scale the selected Grease Pencil Object"
     bl_options = {'UNDO'}
@@ -100,8 +100,8 @@ class ENN_OT_scale_gp(bpy.types.Operator):
 
 
 # noinspection PyPep8Naming
-class ENN_OT_rotate_gp(bpy.types.Operator):
-    bl_idname = "enn.rotate_gp"
+class EST_OT_rotate_gp(bpy.types.Operator):
+    bl_idname = "est.rotate_gp"
     bl_label = "Rotate"
     bl_description = "Rotate the selected Grease Pencil Object"
     bl_options = {'UNDO'}
@@ -126,8 +126,8 @@ class ENN_OT_rotate_gp(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class ENN_OT_add_gp(bpy.types.Operator):
-    bl_idname = "enn.add_gp"
+class EST_OT_add_gp(bpy.types.Operator):
+    bl_idname = "est.add_gp"
     bl_label = "Add Amazing Note"
     bl_options = {'UNDO'}
 
@@ -157,7 +157,7 @@ class ENN_OT_add_gp(bpy.types.Operator):
     #     if self.add_type == 'TEXT':
     #         layout.prop(self, 'text')
     #     elif self.add_type == 'OBJECT':
-    #         layout.prop(context.window_manager, 'enn_gp_obj')
+    #         layout.prop(context.window_manager, 'est_gp_obj')
     #         layout.prop(self, 'obj_shot_angle')
 
     def invoke(self, context, event):
@@ -172,7 +172,7 @@ class ENN_OT_add_gp(bpy.types.Operator):
         vec: Vector = VecTool.r2d_2_v2d(self.mouse_pos) if self.use_mouse_pos else self.location
         gp_data: bpy.types.GreasePencil = CreateGreasePencilData.empty() if not nt.grease_pencil else nt.grease_pencil
         if self.add_type == 'TEXT':
-            font_gp_data = CreateGreasePencilData.from_text(self.text, self.size, context.scene.enn_gp_text_font.name)
+            font_gp_data = CreateGreasePencilData.from_text(self.text, self.size, context.scene.est_gp_text_font.name)
         elif self.add_type == 'OBJECT':
             euler = getattr(ShootAngles, self.obj_shot_angle)
             if obj.type == 'MESH':
@@ -188,7 +188,7 @@ class ENN_OT_add_gp(bpy.types.Operator):
 
         if not font_gp_data: return {'CANCELLED'}
 
-        color = context.scene.enn_palette_group.palette.colors.active.color
+        color = context.scene.est_palette_group.palette.colors.active.color
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             gp_data_builder.link(context).join(font_gp_data) \
                 .set_active_layer(-1).move_active(vec, space='v2d').color_active(color=color).to_2d()
@@ -200,8 +200,8 @@ class ENN_OT_add_gp(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
-    bl_idname = 'enn.gp_set_active_layer_color'
+class EST_OT_gp_set_active_layer_color(bpy.types.Operator):
+    bl_idname = 'est.gp_set_active_layer_color'
     bl_label = 'Set Active Layer Color'
     bl_description = 'Set the active layer color of the Grease Pencil Object'
     bl_options = {'UNDO'}
@@ -225,7 +225,7 @@ class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
 
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             gp_data_builder.active_layer_index = layer_index
-            color = context.scene.enn_palette_group.palette.colors.active.color
+            color = context.scene.est_palette_group.palette.colors.active.color
             gp_data_builder.color_active(color=color)
         return {'FINISHED'}
 
@@ -233,22 +233,22 @@ class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
 def register():
     from bpy.utils import register_class
 
-    register_class(ENN_OT_toggle_gp_space)
-    register_class(ENN_OT_add_gp)
-    register_class(ENN_OT_remove_gp)
-    register_class(ENN_OT_move_gp)
-    register_class(ENN_OT_rotate_gp)
-    register_class(ENN_OT_scale_gp)
-    register_class(ENN_OT_gp_set_active_layer_color)
+    register_class(EST_OT_toggle_gp_space)
+    register_class(EST_OT_add_gp)
+    register_class(EST_OT_remove_gp)
+    register_class(EST_OT_move_gp)
+    register_class(EST_OT_rotate_gp)
+    register_class(EST_OT_scale_gp)
+    register_class(EST_OT_gp_set_active_layer_color)
 
 
 def unregister():
     from bpy.utils import unregister_class
 
-    unregister_class(ENN_OT_move_gp)
-    unregister_class(ENN_OT_rotate_gp)
-    unregister_class(ENN_OT_scale_gp)
-    unregister_class(ENN_OT_remove_gp)
-    unregister_class(ENN_OT_add_gp)
-    unregister_class(ENN_OT_toggle_gp_space)
-    unregister_class(ENN_OT_gp_set_active_layer_color)
+    unregister_class(EST_OT_move_gp)
+    unregister_class(EST_OT_rotate_gp)
+    unregister_class(EST_OT_scale_gp)
+    unregister_class(EST_OT_remove_gp)
+    unregister_class(EST_OT_add_gp)
+    unregister_class(EST_OT_toggle_gp_space)
+    unregister_class(EST_OT_gp_set_active_layer_color)

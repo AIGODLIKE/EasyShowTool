@@ -13,8 +13,8 @@ from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, in_la
 
 
 # noinspection PyPep8Naming
-class ENN_OT_add_gp_modal(bpy.types.Operator):
-    bl_idname = "enn.add_gp_modal"
+class EST_OT_add_gp_modal(bpy.types.Operator):
+    bl_idname = "est.add_gp_modal"
     bl_label = "Add"
     bl_description = "Add Grease from %s"
     bl_options = {'UNDO', "GRAB_CURSOR", "BLOCKING"}
@@ -28,7 +28,7 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
         return cls.bl_description % property.add_type.title()
 
     def invoke(self, context, event):
-        self.add_type = context.scene.enn_gp_add_type
+        self.add_type = context.scene.est_gp_add_type
         context.window_manager.modal_handler_add(self)
         context.window.cursor_set('PICK_AREA')
         return {'RUNNING_MODAL'}
@@ -44,34 +44,34 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
 
     def _add(self, context, location):
         if self.add_type == 'TEXT':
-            if context.scene.enn_gp_text == '':
+            if context.scene.est_gp_text == '':
                 self.report({'ERROR'}, "Empty")
                 return
-            bpy.ops.enn.add_gp('EXEC_DEFAULT',
+            bpy.ops.est.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
-                               text=context.scene.enn_gp_text,
-                               size=context.scene.enn_gp_size,
+                               text=context.scene.est_gp_text,
+                               size=context.scene.est_gp_size,
                                location=location)
         elif self.add_type == 'OBJECT':
-            if not context.scene.enn_gp_obj:
+            if not context.scene.est_gp_obj:
                 self.report({'ERROR'}, "No object selected")
                 return
-            bpy.ops.enn.add_gp('EXEC_DEFAULT',
+            bpy.ops.est.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
-                               size=context.scene.enn_gp_size,
-                               obj=context.scene.enn_gp_obj.name,
-                               obj_shot_angle=context.scene.enn_gp_obj_shot_angle,
+                               size=context.scene.est_gp_size,
+                               obj=context.scene.est_gp_obj.name,
+                               obj_shot_angle=context.scene.est_gp_obj_shot_angle,
                                location=location)
         elif self.add_type == 'BL_ICON':
-            bpy.ops.enn.add_gp('EXEC_DEFAULT',
+            bpy.ops.est.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
-                               size=context.scene.enn_gp_size,
-                               icon=context.scene.enn_gp_icon,
+                               size=context.scene.est_gp_size,
+                               icon=context.scene.est_gp_icon,
                                location=location)
 
 # noinspection PyPep8Naming
-class ENN_OT_gp_set_active_layer(bpy.types.Operator):
-    bl_idname = "enn.gp_set_active_layer"
+class EST_OT_gp_set_active_layer(bpy.types.Operator):
+    bl_idname = "est.gp_set_active_layer"
     bl_label = "Set Active Layer"
     bl_description = "Set the active layer of the Grease Pencil Object"
 
@@ -128,7 +128,7 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         self.draw_handle.add_to_node_editor(self.view_hover, (self, context))
         context.window_manager.modal_handler_add(self)
         context.area.tag_redraw()
-        self.drag_vm.set_bbox_mode(context.scene.enn_gp_transform_mode)
+        self.drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
@@ -138,8 +138,8 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
 
         if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'MIDDLEMOUSE'}:
             self.update_drag_vm(context, event)
-            if context.scene.enn_gp_transform_mode != self.drag_vm.bbox_model.mode:
-                self.drag_vm.set_bbox_mode(context.scene.enn_gp_transform_mode)
+            if context.scene.est_gp_transform_mode != self.drag_vm.bbox_model.mode:
+                self.drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
 
         if event.type in {'ESC', 'RIGHTMOUSE'}:
             return self._finish()
@@ -166,8 +166,8 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
 
 
 # noinspection PyPep8Naming
-class ENN_OT_gp_drag_modal(bpy.types.Operator):
-    bl_idname = "enn.gp_drag_modal"
+class EST_OT_gp_drag_modal(bpy.types.Operator):
+    bl_idname = "est.gp_drag_modal"
     bl_label = "Transform"
     bl_description = "Move the active Grease Pencil Layer"
     bl_options = {'UNDO'}
@@ -202,13 +202,13 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         self.draw_handle = ViewDrawHandle()
         self.draw_handle.add_to_node_editor(self.view_drag, (self, context))
         context.window_manager.modal_handler_add(self)
-        self.drag_vm.set_bbox_mode(context.scene.enn_gp_transform_mode)
+        self.drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
         self.drag_vm.update_mouse_pos(context, event)
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
-            ENN_OT_gp_set_active_layer.hide()
+            EST_OT_gp_set_active_layer.hide()
             self.drag_vm.update_mouse_pos(context, event)
             if not self.drag_init:
                 self.drag_vm.mouse_init()
@@ -228,7 +228,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
 
     def _finish(self, context) -> set:
         self.draw_handle.remove_from_node_editor()
-        ENN_OT_gp_set_active_layer.show()
+        EST_OT_gp_set_active_layer.show()
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -236,14 +236,14 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
 def register():
     from bpy.utils import register_class
 
-    register_class(ENN_OT_add_gp_modal)
-    register_class(ENN_OT_gp_set_active_layer)
-    register_class(ENN_OT_gp_drag_modal)
+    register_class(EST_OT_add_gp_modal)
+    register_class(EST_OT_gp_set_active_layer)
+    register_class(EST_OT_gp_drag_modal)
 
 
 def unregister():
     from bpy.utils import unregister_class
 
-    unregister_class(ENN_OT_add_gp_modal)
-    unregister_class(ENN_OT_gp_set_active_layer)
-    unregister_class(ENN_OT_gp_drag_modal)
+    unregister_class(EST_OT_add_gp_modal)
+    unregister_class(EST_OT_gp_set_active_layer)
+    unregister_class(EST_OT_gp_drag_modal)

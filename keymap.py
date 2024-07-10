@@ -1,5 +1,5 @@
 import bpy
-from .operator.ops_notes import ENN_OT_edit_note
+from .operator.ops_notes import EST_OT_edit_note
 
 addon_keymaps = []
 
@@ -9,7 +9,7 @@ def register():
     if not wm.keyconfigs.addon: return
 
     km = wm.keyconfigs.addon.keymaps.new(name='Node Editor', space_type='NODE_EDITOR')
-    kmi = km.keymap_items.new(ENN_OT_edit_note.bl_idname, 'LEFTMOUSE', 'DOUBLE_CLICK', ctrl=False, shift=False)
+    kmi = km.keymap_items.new(EST_OT_edit_note.bl_idname, 'LEFTMOUSE', 'DOUBLE_CLICK', ctrl=False, shift=False)
     addon_keymaps.append((km, kmi))
 
 def unregister():
