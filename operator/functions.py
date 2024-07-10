@@ -4,6 +4,7 @@ import bpy
 from ..model.utils import ShootAngles
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..view_model.view_model_detect import MouseDetectModel
+from ..public_path import get_bl_ui_icon_svg
 
 
 def tag_redraw():
@@ -55,7 +56,7 @@ def in_layer_area(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector],
     :return: index of the layer if the pos is in the area, None otherwise
     """
     bboxs: list[GPencilLayerBBox] = [GPencilLayerBBox(gp_data, layer) for layer in
-                                          gp_data.layers]
+                                     gp_data.layers]
     mouse_detect = MouseDetectModel()
     for i, bbox in enumerate(bboxs):
         bbox.calc_bbox(i)
@@ -64,3 +65,28 @@ def in_layer_area(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector],
             return bbox.last_layer_index
 
     return None
+
+
+def get_icons() -> list[str]:
+    """Return the list of built-in icons."""
+    return [icon for icon in bpy.types.UILayout.bl_rna.functions["prop"].parameters["icon"].enum_items.keys()
+            if icon != 'NONE' and  # skip the NONE icon
+            'COLORSET_' not in icon and  # skip the color set icons
+            'BRUSH_DATA_' not in icon and  # skip the brush data icons
+            'EVENT_' not in icon  # skip the event icons
+            ]
+
+
+def load_icon_svg(icon: str) -> bpy.types.Object:
+    SCALE = 10
+    icons = get_icons()
+    if icon.upper() not in icons:
+        return False
+
+    icon_svg = get_bl_ui_icon_svg(icon.lower())
+    if not icon_svg:
+        return False
+
+    bpy.ops.wm.gpencil_import_svg(filepath=icon_svg.resolve(), scale=SCALE)
+
+    return bpy.context.object
