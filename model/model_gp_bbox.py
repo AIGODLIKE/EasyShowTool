@@ -87,7 +87,7 @@ class GPencilBBoxProperty:
         """Return the edge center points of the bounding box in region 2d space."""
         return tuple(map(VecTool.v2d_2_r2d, self.edge_center_points_v2d))
 
-    def corner_extrude_points_r2d(self, extrude: int = 10) -> tuple[Vector, Vector, Vector, Vector]:
+    def corner_extrude_points_r2d(self, extrude: int = 15) -> tuple[Vector, Vector, Vector, Vector]:
         """Return the corner extrude points of the bounding box.
         :param extrude: the extrude distance
         this is not a property because it needs an extrude distance"""
