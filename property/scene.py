@@ -43,16 +43,16 @@ def register():
     bpy.types.Scene.enn_gp_transform_mode = EnumProperty(name="Transform Mode", items=[('LOCAL', 'Local', 'Local'),
                                                                                        ('GLOBAL', 'Global', 'Global')],
                                                          default='LOCAL')
+    # add source
     bpy.types.Scene.enn_gp_size = IntProperty(name="Size", default=100, subtype='PIXEL')
     bpy.types.Scene.enn_gp_add_type = EnumProperty(items=lambda self, context: enum_add_type_items())
     bpy.types.Scene.enn_gp_text = StringProperty(name="Text", default="Hello World")
     bpy.types.Scene.enn_gp_text_font = PointerProperty(type=bpy.types.VectorFont)
     bpy.types.Scene.enn_gp_obj = PointerProperty(name='Object', type=bpy.types.Object,
                                                  poll=lambda self, obj: obj.type in {'MESH', 'GPENCIL'})
-
     bpy.types.Scene.enn_gp_obj_shot_angle = EnumProperty(name="Shot Orientation",
                                                          items=lambda _, __: enum_shot_orient_items())
-
+    bpy.types.Scene.enn_gp_icon = StringProperty(name="Icon", default="BLENDER")
     bpy.app.handlers.load_post.append(init_scene_props)
 
 
@@ -68,4 +68,5 @@ def unregister():
     del bpy.types.Scene.enn_gp_obj
     del bpy.types.Scene.enn_gp_obj_shot_angle
     del bpy.types.Scene.enn_gp_transform_mode
+    del bpy.types.Space.enn_gp_icon
 

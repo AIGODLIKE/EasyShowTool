@@ -6,9 +6,7 @@ from mathutils import Vector
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool, ShootAngles
-from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, in_layer_area
-from .ops_gp_modal import ENN_OT_add_gp_modal
-from ..public_path import get_pref
+from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, in_layer_area, load_icon_svg
 
 
 class ENN_OT_toggle_gp_space(bpy.types.Operator):
@@ -135,16 +133,16 @@ class ENN_OT_add_gp(bpy.types.Operator):
 
     add_type: bpy.props.EnumProperty(name='Type',
                                      items=lambda _, __: enum_add_type_items(), )
-
+    # add source
     text: StringProperty(name="Text", default="Hello World")
     size: IntProperty(name="Size", default=100)
     obj: StringProperty(name="Object", default="")
     obj_shot_angle: EnumProperty(name="Shot Orientation",
                                  items=lambda _, __: enum_shot_orient_items(), )
-
+    icon: StringProperty(name="Icon", default="BLENDER")
+    # location
     location: FloatVectorProperty(size=2, default=(0, 0), options={'SKIP_SAVE', 'HIDDEN'})
     use_mouse_pos: BoolProperty(default=False, options={'SKIP_SAVE', 'HIDDEN'})
-    # mouse position
     mouse_pos: tuple[int, int] = (0, 0)
 
     @classmethod
@@ -183,6 +181,10 @@ class ENN_OT_add_gp(bpy.types.Operator):
                 font_gp_data = CreateGreasePencilData.from_gp_obj(obj, euler=euler)
             else:
                 return {'CANCELLED'}
+        elif self.add_type == 'BL_ICON':
+            icon_obj = load_icon_svg(self.icon)
+            if not icon_obj: return {'CANCELLED'}
+            font_gp_data = CreateGreasePencilData.from_gp_obj(icon_obj, euler=ShootAngles.FRONT)
 
         if not font_gp_data: return {'CANCELLED'}
 

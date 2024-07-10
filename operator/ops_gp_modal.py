@@ -62,7 +62,12 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
                                obj=context.scene.enn_gp_obj.name,
                                obj_shot_angle=context.scene.enn_gp_obj_shot_angle,
                                location=location)
-
+        elif self.add_type == 'BL_ICON':
+            bpy.ops.enn.add_gp('EXEC_DEFAULT',
+                               add_type=self.add_type,
+                               size=context.scene.enn_gp_size,
+                               icon=context.scene.enn_gp_icon,
+                               location=location)
 
 # noinspection PyPep8Naming
 class ENN_OT_gp_set_active_layer(bpy.types.Operator):
