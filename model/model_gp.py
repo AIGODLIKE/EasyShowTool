@@ -147,11 +147,12 @@ class CreateGreasePencilData(GreasePencilCache):
         return gp_data
 
     @staticmethod
-    def from_text(text: str, size: int = 100) -> bpy.types.GreasePencil:
+    def from_text(text: str, size: int = 100, font: str = 'Bfont Regular') -> bpy.types.GreasePencil:
         """
         Create a text object in the scene and convert it to grease pencil data.
         :param text:  the text to display
         :param size:  in pixels
+        :param font:  the font name
         :return: the grease pencil data
         """
         bpy.ops.object.text_add()
@@ -159,6 +160,7 @@ class CreateGreasePencilData(GreasePencilCache):
         text_data = obj.data
         text_data.body = text
         text_data.size = size
+        text_data.font = bpy.data.fonts[font]
 
         bpy.ops.object.select_all(action='DESELECT')
         obj.select_set(True)

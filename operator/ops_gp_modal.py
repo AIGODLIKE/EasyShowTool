@@ -123,17 +123,22 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         self.draw_handle.add_to_node_editor(self.view_hover, (self, context))
         context.window_manager.modal_handler_add(self)
         context.area.tag_redraw()
-        self.drag_vm.set_bbox_mode('LOCAL')
+        self.drag_vm.set_bbox_mode(context.scene.enn_gp_transform_mode)
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
-        if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'MIDDLEMOUSE'}:
-            self.update_drag_vm(context, event)
-        if event.type in {'ESC', 'RIGHTMOUSE'}:
-            return self._finish()
         if self.stop or not context.area or not is_valid_workspace_tool(
                 context) or not self.drag_vm or not self.drag_vm.has_active_layer():
             return self._finish()
+
+        if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'MIDDLEMOUSE'}:
+            self.update_drag_vm(context, event)
+            if context.scene.enn_gp_transform_mode != self.drag_vm.bbox_model.mode:
+                self.drag_vm.set_bbox_mode(context.scene.enn_gp_transform_mode)
+
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            return self._finish()
+
         context.area.tag_redraw()
         return {'PASS_THROUGH'}
 
@@ -192,7 +197,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         self.draw_handle = ViewDrawHandle()
         self.draw_handle.add_to_node_editor(self.view_drag, (self, context))
         context.window_manager.modal_handler_add(self)
-        self.drag_vm.set_bbox_mode('LOCAL')
+        self.drag_vm.set_bbox_mode(context.scene.enn_gp_transform_mode)
         self.drag_vm.update_mouse_pos(context, event)
         return {'RUNNING_MODAL'}
 

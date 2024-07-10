@@ -263,7 +263,7 @@ class ScaleHandler(TransformHandler):
             correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.rotation_2d())
             delta_x, delta_y = correct_delta_vec.xy
         else:
-            delta_x, delta_y = (self.delta_vec_v2d * 2).xy
+            delta_x, delta_y = self.delta_vec_v2d.xy
         size_x_v2d, size_y_v2d = self.bbox_model.size_v2d
 
         return delta_x, delta_y, size_x_v2d, size_y_v2d

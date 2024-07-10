@@ -173,7 +173,7 @@ class ENN_OT_add_gp(bpy.types.Operator):
         vec: Vector = VecTool.r2d_2_v2d(self.mouse_pos) if self.use_mouse_pos else self.location
         gp_data: bpy.types.GreasePencil = CreateGreasePencilData.empty() if not nt.grease_pencil else nt.grease_pencil
         if self.add_type == 'TEXT':
-            font_gp_data = CreateGreasePencilData.from_text(self.text, self.size)
+            font_gp_data = CreateGreasePencilData.from_text(self.text, self.size, context.scene.enn_gp_text_font.name)
         elif self.add_type == 'OBJECT':
             euler = getattr(ShootAngles, self.obj_shot_angle)
             if obj.type == 'MESH':
@@ -223,49 +223,6 @@ class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class ENN_PT_gn_edit_panel(bpy.types.Panel):
-    bl_label = "Edit Grease Pencil Text"
-    bl_idname = "ENN_PT_gn_edit_panel"
-    bl_space_type = 'NODE_EDITOR'
-    bl_region_type = 'UI'
-    bl_category = 'View'
-
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(context.scene, "enn_gp_size")
-
-        box = layout.box()
-        box.label(text="New")
-        row = box.row()
-        row.prop(context.scene, "enn_gp_add_type", expand=True)
-
-        if context.scene.enn_gp_add_type == 'TEXT':
-            box.prop(context.scene, "enn_gp_text")
-        elif context.scene.enn_gp_add_type == 'OBJECT':
-            box.prop(context.scene, "enn_gp_obj")
-            box.prop(context.scene, "enn_gp_obj_shot_angle")
-        # box.operator(ENN_OT_add_gp_modal.bl_idname)
-
-        if context.scene.enn_palette_group:
-            box = layout.box()
-            box.label(text="Palette")
-            box.template_palette(context.scene.enn_palette_group, "palette", color=True)
-
-        if get_pref().debug:
-            layout.prop(context.window_manager, "enn_gp_move_vector")
-            op = layout.operator(ENN_OT_move_gp.bl_idname)
-            op.move_vector = context.window_manager.enn_gp_move_vector
-            layout.prop(context.window_manager, "enn_gp_scale")
-            op = layout.operator(ENN_OT_scale_gp.bl_idname)
-            op.scale_vector = context.window_manager.enn_gp_scale
-            layout.prop(context.window_manager, "enn_gp_rotate_angle")
-            row = layout.row()
-            op = row.operator(ENN_OT_rotate_gp.bl_idname)
-            op.rotate_angle = context.window_manager.enn_gp_rotate_angle
-            op = row.operator(ENN_OT_rotate_gp.bl_idname, text="Back")
-            op.rotate_angle = -context.window_manager.enn_gp_rotate_angle
-
-
 def register():
     from bpy.utils import register_class
 
@@ -276,7 +233,6 @@ def register():
     register_class(ENN_OT_rotate_gp)
     register_class(ENN_OT_scale_gp)
     register_class(ENN_OT_gp_set_active_layer_color)
-    register_class(ENN_PT_gn_edit_panel)
 
 
 def unregister():
@@ -289,4 +245,3 @@ def unregister():
     unregister_class(ENN_OT_add_gp)
     unregister_class(ENN_OT_toggle_gp_space)
     unregister_class(ENN_OT_gp_set_active_layer_color)
-    unregister_class(ENN_PT_gn_edit_panel)

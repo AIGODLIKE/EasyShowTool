@@ -21,6 +21,11 @@ def register_later(lock, t):
     color_model.setup()
     bpy.context.scene.enn_palette_group.palette = color_model.palette
 
+    # font
+    if bpy.context.scene.enn_gp_text_font is None and 'Bfont Regular' not in bpy.data.fonts:
+        bpy.data.curves.new('tmp', type='FONT')  # make sure the built-in font is loaded
+        bpy.context.scene.enn_gp_text_font = bpy.data.fonts['Bfont Regular']
+
 
 @persistent
 def init_scene_props(noob):
@@ -34,15 +39,19 @@ def register():
     from bpy.utils import register_class
 
     register_class(MyPaletteGroup)
-    bpy.types.Scene.enn_palette_group = bpy.props.PointerProperty(type=MyPaletteGroup)
+    bpy.types.Scene.enn_palette_group = PointerProperty(type=MyPaletteGroup)
+    bpy.types.Scene.enn_gp_transform_mode = EnumProperty(name="Transform Mode", items=[('LOCAL', 'Local', 'Local'),
+                                                                                       ('GLOBAL', 'Global', 'Global')],
+                                                         default='LOCAL')
     bpy.types.Scene.enn_gp_size = IntProperty(name="Size", default=100, subtype='PIXEL')
     bpy.types.Scene.enn_gp_add_type = EnumProperty(items=lambda self, context: enum_add_type_items())
     bpy.types.Scene.enn_gp_text = StringProperty(name="Text", default="Hello World")
+    bpy.types.Scene.enn_gp_text_font = PointerProperty(type=bpy.types.VectorFont)
     bpy.types.Scene.enn_gp_obj = PointerProperty(name='Object', type=bpy.types.Object,
-                                    poll=lambda self, obj: obj.type in {'MESH', 'GPENCIL'})
+                                                 poll=lambda self, obj: obj.type in {'MESH', 'GPENCIL'})
 
     bpy.types.Scene.enn_gp_obj_shot_angle = EnumProperty(name="Shot Orientation",
-                                            items=lambda _, __: enum_shot_orient_items())
+                                                         items=lambda _, __: enum_shot_orient_items())
 
     bpy.app.handlers.load_post.append(init_scene_props)
 
@@ -58,4 +67,5 @@ def unregister():
     del bpy.types.Scene.enn_gp_text
     del bpy.types.Scene.enn_gp_obj
     del bpy.types.Scene.enn_gp_obj_shot_angle
+    del bpy.types.Scene.enn_gp_transform_mode
 
