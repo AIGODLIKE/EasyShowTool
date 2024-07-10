@@ -192,6 +192,8 @@ class ENN_OT_add_gp(bpy.types.Operator):
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             gp_data_builder.link(context).join(font_gp_data) \
                 .set_active_layer(-1).move_active(vec, space='v2d').color_active(color=color).to_2d()
+            if self.add_type == 'BL_ICON':
+                gp_data_builder.remove_svg_bound()
 
         context.view_layer.objects.active = ori_active_obj
 
