@@ -244,7 +244,12 @@ class ScaleHandler(TransformHandler):
         pivot_r2d = self.bbox_model.center_r2d
         size_x_v2d, size_y_v2d = self.bbox_model.size_v2d
 
-        delta_x, delta_y = (self.delta_vec_v2d * 2).xy
+        if self.bbox_model.is_local:
+            # rotate the delta vector to the local space
+            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.rotation_2d())
+            delta_x, delta_y = correct_delta_vec.xy
+        else:
+            delta_x, delta_y = (self.delta_vec_v2d * 2).xy
         if self.mouse_pos[0] < pivot_r2d[0]:  # if on the left side
             delta_x = -delta_x
         if self.mouse_pos[1] < pivot_r2d[1]:  # if on the bottom side
@@ -253,7 +258,12 @@ class ScaleHandler(TransformHandler):
         return pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y
 
     def calc_one_side(self):
-        delta_x, delta_y = self.delta_vec_v2d.xy
+        if self.bbox_model.is_local:
+            # rotate the delta vector to the local space
+            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.rotation_2d())
+            delta_x, delta_y = correct_delta_vec.xy
+        else:
+            delta_x, delta_y = (self.delta_vec_v2d * 2).xy
         size_x_v2d, size_y_v2d = self.bbox_model.size_v2d
 
         return delta_x, delta_y, size_x_v2d, size_y_v2d
