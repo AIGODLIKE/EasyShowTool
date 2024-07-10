@@ -27,8 +27,10 @@ def get_tool_icon(icon_name: str) -> str:
     return get_asset_directory().joinpath('tool_icon', 'icons', icon_name).as_posix()
 
 
-def get_bl_ui_icon_svg(name: str) -> Optional[Path]:
+def get_bl_ui_icon_svg(name: Optional[str] = None) -> Optional[Path]:
     d = get_asset_directory().joinpath('bl_ui_icon', 'icons_svg')
+    if not name:
+        return d
     if (p := d.joinpath(name + '.svg')).exists():
         return p
 
