@@ -9,11 +9,7 @@ from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view.view_node_editor import ViewHover, ViewDrawHandle, ViewDrag
 
-from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, enum_add_type_items, enum_shot_orient_items, \
-    in_layer_area
-
-
-# noinspection PyPep8Naming
+from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, in_layer_area
 
 
 # noinspection PyPep8Naming
@@ -225,9 +221,6 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         ENN_OT_gp_set_active_layer.show()
         context.area.tag_redraw()
         return {'FINISHED'}
-
-
-# noinspection PyPep8Naming
 
 
 def register():

@@ -105,6 +105,13 @@ class DrawViewModel:
         blf.size(font_id, size)
         blf.draw(font_id, text)
 
+    def draw_rotate_angle(self):
+        if self.delta_degree:
+            # center = (self.points[0] + self.points[3]) / 2
+            # self.draw_line(center, self.end_pos)
+            # self.draw_line(center, self.start_pos)
+            self.draw_text(f"{round(self.delta_degree, 1)}°", self.end_pos + Vector((0, 20)))
+
     def draw_debug_info(self, dict_info: OrderedDict[str, str]):
         shader.uniform_float("color", self.debug_color)
         textlines = []
@@ -123,9 +130,3 @@ class DrawViewModel:
         dis = round((self.start_pos - self.end_pos).length, 2)
         middle = (self.start_pos + self.end_pos) / 2
         self.draw_text(f"{dis}px", middle)
-
-        if self.delta_degree:
-            center = (self.points[0] + self.points[3]) / 2
-            self.draw_line(center, self.end_pos)
-            self.draw_line(center, self.start_pos)
-            self.draw_text(f"{round(self.delta_degree, 1)}°", self.end_pos + Vector((0, 20)))

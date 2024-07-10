@@ -127,6 +127,7 @@ class ViewDrag(ViewBasic):
         if self.draw_vm.drag:
             self.draw_vm.draw_bbox_edge()
             self.draw_vm.draw_bbox_points()
+            self.draw_vm.draw_rotate_angle()
 
         if self.draw_vm.debug:
             self.draw_vm.draw_debug_info(self.drag_vm.debug_info)
