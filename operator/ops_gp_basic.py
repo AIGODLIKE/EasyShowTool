@@ -6,9 +6,7 @@ from mathutils import Vector
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool, ShootAngles
-from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, in_layer_area
-from .ops_gp_modal import ENN_OT_add_gp_modal
-from ..public_path import get_pref
+from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, in_layer_area, load_icon_svg
 
 
 class ENN_OT_toggle_gp_space(bpy.types.Operator):
@@ -135,16 +133,16 @@ class ENN_OT_add_gp(bpy.types.Operator):
 
     add_type: bpy.props.EnumProperty(name='Type',
                                      items=lambda _, __: enum_add_type_items(), )
-
+    # add source
     text: StringProperty(name="Text", default="Hello World")
     size: IntProperty(name="Size", default=100)
     obj: StringProperty(name="Object", default="")
     obj_shot_angle: EnumProperty(name="Shot Orientation",
                                  items=lambda _, __: enum_shot_orient_items(), )
-
+    icon: StringProperty(name="Icon", default="BLENDER")
+    # location
     location: FloatVectorProperty(size=2, default=(0, 0), options={'SKIP_SAVE', 'HIDDEN'})
     use_mouse_pos: BoolProperty(default=False, options={'SKIP_SAVE', 'HIDDEN'})
-    # mouse position
     mouse_pos: tuple[int, int] = (0, 0)
 
     @classmethod
@@ -167,13 +165,14 @@ class ENN_OT_add_gp(bpy.types.Operator):
         return self.execute(context)
 
     def execute(self, context: bpy.types.Context):
+        ori_active_obj = context.object
         font_gp_data: bpy.types.GreasePencil = None
         obj: bpy.types.Object = bpy.data.objects.get(self.obj)
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         vec: Vector = VecTool.r2d_2_v2d(self.mouse_pos) if self.use_mouse_pos else self.location
         gp_data: bpy.types.GreasePencil = CreateGreasePencilData.empty() if not nt.grease_pencil else nt.grease_pencil
         if self.add_type == 'TEXT':
-            font_gp_data = CreateGreasePencilData.from_text(self.text, self.size)
+            font_gp_data = CreateGreasePencilData.from_text(self.text, self.size, context.scene.enn_gp_text_font.name)
         elif self.add_type == 'OBJECT':
             euler = getattr(ShootAngles, self.obj_shot_angle)
             if obj.type == 'MESH':
@@ -182,6 +181,10 @@ class ENN_OT_add_gp(bpy.types.Operator):
                 font_gp_data = CreateGreasePencilData.from_gp_obj(obj, euler=euler)
             else:
                 return {'CANCELLED'}
+        elif self.add_type == 'BL_ICON':
+            icon_obj = load_icon_svg(self.icon)
+            if not icon_obj: return {'CANCELLED'}
+            font_gp_data = CreateGreasePencilData.from_gp_obj(icon_obj, euler=ShootAngles.FRONT)
 
         if not font_gp_data: return {'CANCELLED'}
 
@@ -189,6 +192,8 @@ class ENN_OT_add_gp(bpy.types.Operator):
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             gp_data_builder.link(context).join(font_gp_data) \
                 .set_active_layer(-1).move_active(vec, space='v2d').color_active(color=color).to_2d()
+
+        context.view_layer.objects.active = ori_active_obj
 
         return {'FINISHED'}
 
@@ -223,49 +228,6 @@ class ENN_OT_gp_set_active_layer_color(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class ENN_PT_gn_edit_panel(bpy.types.Panel):
-    bl_label = "Edit Grease Pencil Text"
-    bl_idname = "ENN_PT_gn_edit_panel"
-    bl_space_type = 'NODE_EDITOR'
-    bl_region_type = 'UI'
-    bl_category = 'View'
-
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(context.scene, "enn_gp_size")
-
-        box = layout.box()
-        box.label(text="New")
-        row = box.row()
-        row.prop(context.scene, "enn_gp_add_type", expand=True)
-
-        if context.scene.enn_gp_add_type == 'TEXT':
-            box.prop(context.scene, "enn_gp_text")
-        elif context.scene.enn_gp_add_type == 'OBJECT':
-            box.prop(context.scene, "enn_gp_obj")
-            box.prop(context.scene, "enn_gp_obj_shot_angle")
-        # box.operator(ENN_OT_add_gp_modal.bl_idname)
-
-        if context.scene.enn_palette_group:
-            box = layout.box()
-            box.label(text="Palette")
-            box.template_palette(context.scene.enn_palette_group, "palette", color=True)
-
-        if get_pref().debug:
-            layout.prop(context.window_manager, "enn_gp_move_vector")
-            op = layout.operator(ENN_OT_move_gp.bl_idname)
-            op.move_vector = context.window_manager.enn_gp_move_vector
-            layout.prop(context.window_manager, "enn_gp_scale")
-            op = layout.operator(ENN_OT_scale_gp.bl_idname)
-            op.scale_vector = context.window_manager.enn_gp_scale
-            layout.prop(context.window_manager, "enn_gp_rotate_angle")
-            row = layout.row()
-            op = row.operator(ENN_OT_rotate_gp.bl_idname)
-            op.rotate_angle = context.window_manager.enn_gp_rotate_angle
-            op = row.operator(ENN_OT_rotate_gp.bl_idname, text="Back")
-            op.rotate_angle = -context.window_manager.enn_gp_rotate_angle
-
-
 def register():
     from bpy.utils import register_class
 
@@ -276,7 +238,6 @@ def register():
     register_class(ENN_OT_rotate_gp)
     register_class(ENN_OT_scale_gp)
     register_class(ENN_OT_gp_set_active_layer_color)
-    register_class(ENN_PT_gn_edit_panel)
 
 
 def unregister():
@@ -289,4 +250,3 @@ def unregister():
     unregister_class(ENN_OT_add_gp)
     unregister_class(ENN_OT_toggle_gp_space)
     unregister_class(ENN_OT_gp_set_active_layer_color)
-    unregister_class(ENN_PT_gn_edit_panel)

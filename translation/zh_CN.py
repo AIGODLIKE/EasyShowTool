@@ -17,4 +17,6 @@ data = {
     'Detect Corner Radius': '检测角半径',
     'Detect Rotate Radius': '检测旋转半径',
     'Shot Orientation': '拍摄方向',
+    'Top Left Front': '左上前',
+    'Top Left Front 45': '左上前 45',
 }

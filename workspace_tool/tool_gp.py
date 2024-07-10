@@ -1,7 +1,8 @@
 import bpy
 from ..public_path import get_tool_icon
-from ..operator.ops_gp_modal import ENN_OT_gp_set_active_layer, ENN_OT_gp_drag_modal
-from ..operator.ops_gp_basic import ENN_OT_add_gp_modal, ENN_OT_remove_gp, ENN_OT_scale_gp, ENN_OT_gp_set_active_layer_color
+from ..operator.ops_gp_modal import ENN_OT_gp_set_active_layer, ENN_OT_gp_drag_modal, ENN_OT_add_gp_modal
+from ..operator.ops_gp_basic import ENN_OT_remove_gp, ENN_OT_scale_gp, \
+    ENN_OT_gp_set_active_layer_color
 
 
 class ENN_TL_gp_add(bpy.types.WorkSpaceTool):
@@ -72,6 +73,33 @@ class ENN_TL_gp_edit(bpy.types.WorkSpaceTool):
          {"type": 'F', "value": 'PRESS', "ctrl": False, "alt": False, "shift": True},
          {"properties": [('scale_vector', (1, -1))]}),
     )
+
+    def draw_settings(self, layout, tool):
+        scene = bpy.context.scene
+        row = layout.row()
+        row.prop(scene, 'enn_gp_transform_mode', text="Transform Orientations", expand=True)
+
+        if scene.enn_palette_group:
+            box = layout.box()
+            box.label(text="Palette", icon='COLOR')
+            box.template_palette(scene.enn_palette_group, "palette", color=True)
+
+        box = layout.box()
+        box.label(text="New")
+        row = box.row()
+        row.prop(scene, "enn_gp_add_type", text='Source', expand=True)
+        box.prop(scene, "enn_gp_size")
+
+        if scene.enn_gp_add_type == 'TEXT':
+            box.template_ID(scene, "enn_gp_text_font", open="font.open", unlink="font.unlink")
+            box.prop(scene, "enn_gp_text")
+        elif scene.enn_gp_add_type == 'OBJECT':
+            box.prop(scene, "enn_gp_obj")
+            box.prop(scene, "enn_gp_obj_shot_angle")
+        elif scene.enn_gp_add_type == 'BL_ICON':
+            row = box.row()
+            row.label(text='Selected')
+            row.label(text=bpy.context.scene.enn_gp_icon, icon=bpy.context.scene.enn_gp_icon)
 
 
 class ENN_TL_gp_color(bpy.types.WorkSpaceTool):

@@ -4,6 +4,7 @@ import bpy
 from dataclasses import dataclass
 from enum import Enum
 from math import radians, degrees
+from math import cos, sin
 
 
 class EulerTool:
@@ -104,6 +105,12 @@ class VecTool:
         cross_z = v1[0] * v2[1] - v1[1] * v2[0]
         return 1 if cross_z >= 0 else -1
 
+    @staticmethod
+    def rotate_by_angle(v: Union[Vector, Sequence], angle: float) -> Vector:
+        """Rotate a vector by an angle."""
+        c = cos(angle)
+        s = sin(angle)
+        return Vector((v[0] * c - v[1] * s, v[0] * s + v[1] * c))
 
 class PointBase:
     """Base class for points in the node editor.

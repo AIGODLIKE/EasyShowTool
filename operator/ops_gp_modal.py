@@ -9,11 +9,7 @@ from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view.view_node_editor import ViewHover, ViewDrawHandle, ViewDrag
 
-from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, enum_add_type_items, enum_shot_orient_items, \
-    in_layer_area
-
-
-# noinspection PyPep8Naming
+from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, in_layer_area
 
 
 # noinspection PyPep8Naming
@@ -66,7 +62,12 @@ class ENN_OT_add_gp_modal(bpy.types.Operator):
                                obj=context.scene.enn_gp_obj.name,
                                obj_shot_angle=context.scene.enn_gp_obj_shot_angle,
                                location=location)
-
+        elif self.add_type == 'BL_ICON':
+            bpy.ops.enn.add_gp('EXEC_DEFAULT',
+                               add_type=self.add_type,
+                               size=context.scene.enn_gp_size,
+                               icon=context.scene.enn_gp_icon,
+                               location=location)
 
 # noinspection PyPep8Naming
 class ENN_OT_gp_set_active_layer(bpy.types.Operator):
@@ -127,17 +128,22 @@ class ENN_OT_gp_set_active_layer(bpy.types.Operator):
         self.draw_handle.add_to_node_editor(self.view_hover, (self, context))
         context.window_manager.modal_handler_add(self)
         context.area.tag_redraw()
-        self.drag_vm.set_bbox_mode('LOCAL')
+        self.drag_vm.set_bbox_mode(context.scene.enn_gp_transform_mode)
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
-        if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'MIDDLEMOUSE'}:
-            self.update_drag_vm(context, event)
-        if event.type in {'ESC', 'RIGHTMOUSE'}:
-            return self._finish()
         if self.stop or not context.area or not is_valid_workspace_tool(
                 context) or not self.drag_vm or not self.drag_vm.has_active_layer():
             return self._finish()
+
+        if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'MIDDLEMOUSE'}:
+            self.update_drag_vm(context, event)
+            if context.scene.enn_gp_transform_mode != self.drag_vm.bbox_model.mode:
+                self.drag_vm.set_bbox_mode(context.scene.enn_gp_transform_mode)
+
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            return self._finish()
+
         context.area.tag_redraw()
         return {'PASS_THROUGH'}
 
@@ -196,7 +202,7 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         self.draw_handle = ViewDrawHandle()
         self.draw_handle.add_to_node_editor(self.view_drag, (self, context))
         context.window_manager.modal_handler_add(self)
-        self.drag_vm.set_bbox_mode('LOCAL')
+        self.drag_vm.set_bbox_mode(context.scene.enn_gp_transform_mode)
         self.drag_vm.update_mouse_pos(context, event)
         return {'RUNNING_MODAL'}
 
@@ -225,9 +231,6 @@ class ENN_OT_gp_drag_modal(bpy.types.Operator):
         ENN_OT_gp_set_active_layer.show()
         context.area.tag_redraw()
         return {'FINISHED'}
-
-
-# noinspection PyPep8Naming
 
 
 def register():
