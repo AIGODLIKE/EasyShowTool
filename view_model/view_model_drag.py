@@ -43,7 +43,7 @@ class DragGreasePencilViewModal:
     # state
     in_drag_area: bool = False
     # snap
-    snap_degree: int = field(default_factory=lambda: get_pref().gp_behavior.snap_degree)
+    snap_degree: int = field(default_factory=lambda: get_pref().gp_performance.snap_degree)
     # copy
     already_copied: bool = False
     # debug
