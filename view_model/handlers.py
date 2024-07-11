@@ -283,7 +283,7 @@ class ScaleHandler(TransformHandler):
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
 
-        if self.pos_edge_center[0] == pivot_r2d[0]:
+        if EdgeCenter.point_on_bottom(self.pt_edge_center) or EdgeCenter.point_on_top(self.pt_edge_center):
             vec_scale = Vector((1, scale_y, 0))
         else:
             vec_scale = Vector((scale_x, 1, 0))
