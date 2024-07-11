@@ -1,16 +1,20 @@
-## Intro 'Easy Show Tool'
+## Intro
 
 **Easy Show Tool** is a blender addon that allow you to add complex and amazing note in node editor. It is quick, fast
 and easy to use.
 
-The notes you created will be **stored in the blend file**, so it is easy to share with others who has not installed
-this addon, which helps them to understand your wonderful nodes jobs
+The notes you created will be **stored in the blend file**, so it is easy for others who has not installed
+this addon to see it, which helps them to understand how your wonderful nodes work.
 
-## Documentation
+![](docs/statics/images/all.png)
 
-You can launch the documentation in addon preferences.
+## How To Use
 
-**Or** [English](docs/README.md) | [中文 TODO]
+[Online Documentation](https://atticus-lv.github.io/EasyShowTool/)
+
+You can also launch the documentation in addon preferences on your local machine.
+![](docs/statics/images/launch_docs.png)
+
 
 
 
