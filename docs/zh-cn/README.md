@@ -4,7 +4,7 @@
 >
 > 你创建的注释将被**存储在 blend 文件中**，所以哪些没用这个插件的其他人也可以看到这些注释，这有助于他们理解你炫酷的节点如何工作。
 
-![](../statics/images/all.png)
+![](../statics/images/all.jpg)
 
 ---
 
@@ -14,7 +14,7 @@
 
 > 轻松添加和编辑文本注释（来自文本编辑器）
 
-![](../statics/images/note.png)
+![](../statics/images/note.jpg)
 
 1. 点击添加按钮以添加新的文本框
 2. 双击文本框以编辑文本
