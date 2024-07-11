@@ -7,7 +7,7 @@
 > this addon to see it, which helps them to understand how your wonderful nodes work.
 
 
-![](statics/images/all.png)
+![](statics/images/all.jpg)
 
 
 ---
@@ -18,7 +18,7 @@
 
 > easy add and edit text annotation (from text editor)
 
-![](statics/images/note.png)
+![](statics/images/note.jpg)
 
 1. Click The add button to add a new text frame
 2. Double click the text frame to edit the text
