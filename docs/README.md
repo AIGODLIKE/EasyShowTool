@@ -26,7 +26,7 @@
 
 ## Complex Annotation
 
-_You need to switch to the tool first_
+> _You need to switch to the tool first_
 
 [Check Keymap for more details](keymap.md)
 
@@ -34,26 +34,49 @@ _You need to switch to the tool first_
 
 > Double click to add a new complex annotation, make sure you have selected the type you want to add
 
-+ text
-    + custom font
-+ object _need to select the object first_
-    + gpencil object
-    + mesh object
-+ blender icon
+**text**
++ custom font
++ custom color
 
-#### Transform
+![](statics/gif/create_text.gif)
+  
+**object**
++ mesh & gpencil
++ shot angle
 
-Transform Orientations: local will consider the object's rotation, global will not
+![](statics/gif/create_object.gif)
 
-+ move
-    + drag, need to hover the annotation
-+ rotate
-    + move the mouse out of the corner
-    + shift to snap angle
-+ scale
-    + move mouse to corner / edge center
-    + F to flip
+**blender icon**
++ search icon
+
+![](statics/gif/create_icon.gif)
+
+#### Transform Tool
+
+> Transform Orientations: local will consider the object's rotation, global will not
+
+![](statics/gif/local_mode.gif)
+
+**move**
++ screen pan support
+
+![](statics/gif/move.gif)
+
+**rotate**
++ move the mouse out of the corner
++ shift to snap angle (before drag or when dragging)
+
+![](statics/gif/rotate.gif)
+
+**scale**
++ F to flip
 + color
-  new annotation will use the active color(preset color is compatible with socket color)
-    + C to set the active color, need to hover the annotation
+
+![](statics/gif/scale.gif)
+
+#### Color
+
++ C to drop color
+
+![](statics/gif/color.gif)
     
