@@ -8,6 +8,10 @@ this addon to see it, which helps them to understand how your wonderful nodes wo
 
 ![](docs/statics/images/all.jpg)
 
+## Download
+
+[Releases](https://github.com/atticus-lv/EasyShowTool/releases)
+
 ## How To Use
 
 [Online Documentation](https://atticus-lv.github.io/EasyShowTool/)
