@@ -52,6 +52,7 @@ class DrawViewModel:
         batch.draw(shader)
 
     def draw_bbox_area(self):
+        gpu.state.blend_set('ALPHA')
         shader.uniform_float("color", self.color_area)
         batch = batch_for_shader(shader, 'TRIS', {"pos": self.points}, indices=indices)
         batch.draw(shader)

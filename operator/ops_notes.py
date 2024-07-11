@@ -7,8 +7,8 @@ NOTE_DATA_NAME: str = '.NodeNote'  # use . to hide the text data
 
 
 # noinspection PyPep8Naming
-class ENN_OT_add_note(bpy.types.Operator):
-    bl_idname = "enn.add_note"
+class EST_OT_add_note(bpy.types.Operator):
+    bl_idname = "est.add_note"
     bl_label = "Add Note"
     bl_description = "Add a note"
     bl_options = {'REGISTER', 'UNDO'}
@@ -45,8 +45,8 @@ class ENN_OT_add_note(bpy.types.Operator):
 
 
 # noinspection PyPep8Naming
-class ENN_OT_edit_note(bpy.types.Operator):
-    bl_idname = "enn.edit_note"
+class EST_OT_edit_note(bpy.types.Operator):
+    bl_idname = "est.edit_note"
     bl_label = "Edit Note"
     bl_description = "Edit the note"
 
@@ -79,15 +79,15 @@ class ENN_OT_edit_note(bpy.types.Operator):
 
 def header_menu(self, context):
     layout = self.layout
-    layout.operator(ENN_OT_add_note.bl_idname, icon='TEXT')
-    # layout.operator(ENN_OT_edit_note.bl_idname, icon='CURRENT_FILE')
+    layout.operator(EST_OT_add_note.bl_idname, icon='TEXT')
+    # layout.operator(EST_OT_edit_note.bl_idname, icon='CURRENT_FILE')
 
 
 def register():
     from bpy.utils import register_class
 
-    register_class(ENN_OT_add_note)
-    register_class(ENN_OT_edit_note)
+    register_class(EST_OT_add_note)
+    register_class(EST_OT_edit_note)
 
     bpy.types.NODE_HT_header.append(header_menu)
 
@@ -96,5 +96,5 @@ def unregister():
     from bpy.utils import unregister_class
     bpy.types.NODE_HT_header.remove(header_menu)
 
-    unregister_class(ENN_OT_add_note)
-    unregister_class(ENN_OT_edit_note)
+    unregister_class(EST_OT_add_note)
+    unregister_class(EST_OT_edit_note)

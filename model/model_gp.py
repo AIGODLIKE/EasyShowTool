@@ -326,6 +326,22 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
             layer.thickness = thickness
         return self
 
+    def remove_svg_bound(self) -> 'BuildGreasePencilData':
+        """Remove the svg bound of the grease pencil data."""
+        stroke_remove = None
+        layer = self._get_layer(self.active_layer_index)
+        if layer:
+            frame = layer.frames[0]
+            for i, stroke in enumerate(frame.strokes):
+                if (i == 0 or i == len(frame.strokes) - 1) and len(stroke.points) == 37:
+                    stroke_remove = stroke
+                    break
+
+            if stroke_remove:
+                frame.strokes.remove(stroke_remove)
+
+        return self
+
     def link(self, context: bpy.types.Context) -> 'BuildGreasePencilData':
         """Link the grease pencil data to the node group. So that the grease pencil can be seen in the node editor."""
         if context.area.type != 'NODE_EDITOR':

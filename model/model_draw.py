@@ -54,7 +54,7 @@ class DrawPreference:
         self.color = self.color_alpha(theme.lastsel_point, 0.3)
         self.color_highlight = self.color_alpha(theme.lastsel_point, 0.8)
         self.color_hover = self.color_alpha(theme.vertex_select, 0.8)
-        self.color_area = self.color_alpha(theme.face, 0.5)
+        self.color_area = self.color_alpha(theme.face, 0.2)
         self.debug_color = self.color_alpha(theme.face_back, 0.8)
 
 

@@ -19,4 +19,5 @@ data = {
     'Shot Orientation': '拍摄方向',
     'Top Left Front': '左上前',
     'Top Left Front 45': '左上前 45',
+    'Add Amazing notes to your node editor': '在节点编辑器中添加神奇的注释',
 }

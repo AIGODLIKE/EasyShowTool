@@ -31,7 +31,7 @@ def has_active_node(context: bpy.types.Context, bl_idname: Optional[str] = None)
 
 
 def is_valid_workspace_tool(context) -> bool:
-    return context.workspace.tools.from_space_node().idname in {'enn.gp_edit_tool', 'enn.gp_color_tool'}
+    return context.workspace.tools.from_space_node().idname in {'est.gp_edit_tool', 'est.gp_color_tool'}
 
 
 def enum_add_type_items() -> list[tuple[str, str, str]]:
