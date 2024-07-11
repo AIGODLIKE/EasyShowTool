@@ -1,5 +1,5 @@
 import bpy
-from .operator.ops_notes import EST_OT_edit_note
+from .bl_operator.ops_notes import EST_OT_edit_note
 
 addon_keymaps = []
 

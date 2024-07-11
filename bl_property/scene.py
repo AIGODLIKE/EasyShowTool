@@ -6,7 +6,7 @@ from bpy.props import PointerProperty, IntProperty, EnumProperty, StringProperty
 from bpy.app.handlers import persistent
 
 from ..model.model_color import ColorPaletteModel
-from ..operator.functions import enum_add_type_items, enum_shot_orient_items
+from ..bl_operator.functions import enum_add_type_items, enum_shot_orient_items
 
 
 class MyPaletteGroup(bpy.types.PropertyGroup):

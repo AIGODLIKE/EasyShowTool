@@ -2,7 +2,7 @@ import bpy
 from bpy.props import IntProperty, PointerProperty, StringProperty, BoolProperty, FloatVectorProperty, EnumProperty, \
     FloatProperty
 from bpy.app.translations import pgettext_iface as _p
-from .operator.op_doc_server import EST_OT_launch_doc
+from .bl_operator.op_doc_server import EST_OT_launch_doc
 
 
 def draw_property_group(layout: bpy.types.UILayout, pointer: bpy.types.PointerProperty):

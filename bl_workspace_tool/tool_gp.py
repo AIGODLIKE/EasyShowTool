@@ -1,7 +1,7 @@
 import bpy
 from ..public_path import get_tool_icon
-from ..operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_drag_modal, EST_OT_add_gp_modal
-from ..operator.ops_gp_basic import EST_OT_remove_gp, EST_OT_scale_gp, \
+from ..bl_operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_drag_modal, EST_OT_add_gp_modal
+from ..bl_operator.ops_gp_basic import EST_OT_remove_gp, EST_OT_scale_gp, \
     EST_OT_gp_set_active_layer_color
 
 
