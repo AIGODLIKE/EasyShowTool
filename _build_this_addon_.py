@@ -20,6 +20,12 @@ def copy_files() -> Path:
     sub_dir = tg_dir.joinpath(parent_path.name)
     sub_dir.mkdir()
 
+    for root, dirs, files in os.walk(Path(__file__).parent):
+        if '__pycache__' in dirs:
+            pycache_folder = os.path.join(root, '__pycache__')
+            shutil.rmtree(pycache_folder)
+            print(f'Removed {pycache_folder}')
+
     for file in parent_path.glob('*'):
         if file.is_dir():
             if file.name == parent_path.name: continue
