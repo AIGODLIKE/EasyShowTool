@@ -2,7 +2,7 @@ import bpy
 from bpy.props import IntProperty, PointerProperty, StringProperty, BoolProperty, FloatVectorProperty, EnumProperty, \
     FloatProperty
 from bpy.app.translations import pgettext_iface as _p
-from .operator.functions import enum_shot_orient_items
+from .operator.op_doc_server import EST_OT_launch_doc
 
 
 def draw_property_group(layout: bpy.types.UILayout, pointer: bpy.types.PointerProperty):
@@ -53,6 +53,13 @@ class Preference(bpy.types.AddonPreferences):
 
     def draw(self, context):
         layout = self.layout
+
+        col = layout.column()
+        row = col.row()
+        row.alignment = 'CENTER'
+        row.scale_y = 1.5
+        row.operator(EST_OT_launch_doc.bl_idname, text='Documentation', icon='HELP')
+
         col = layout.box().column()
         col.use_property_split = True
         draw_property_group(col, self.note)
