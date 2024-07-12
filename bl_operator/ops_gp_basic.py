@@ -9,6 +9,7 @@ from ..model.utils import VecTool, ShootAngles
 from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, get_pos_layer_index, load_icon_svg, \
     get_edit_tree_gp_data
 
+from ..public_path import get_pref
 
 class EST_OT_toggle_gp_space(bpy.types.Operator):
     bl_idname = "est.toggle_gp_space"
@@ -189,7 +190,7 @@ class EST_OT_add_gp(bpy.types.Operator):
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             gp_data_builder.link(context).join(font_gp_data) \
                 .set_active_layer(-1).move_active(vec, space='v2d').color_active(color=color).to_2d()
-            if self.add_type == 'BL_ICON':
+            if self.add_type == 'BL_ICON' and get_pref().gp_performance.try_remove_svg_bound_stroke:
                 gp_data_builder.remove_svg_bound()
 
         context.view_layer.objects.active = ori_active_obj
