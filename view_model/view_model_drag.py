@@ -116,9 +116,13 @@ class DragGreasePencilViewModal:
     def _handle_copy(self, event):
         """Handle the copy event in the modal."""
         if not self.already_copied and event.alt:
+            ori_obj = bpy.context.object
+            ori_obj.select_set(True)
             with self.build_model:  # clean up in with statement
                 self.build_model.copy_active().to_2d()
                 self.already_copied = True
+            bpy.context.view_layer.objects.active = ori_obj
+            ori_obj.select_set(True)
 
     def _collect_kwargs(self) -> dict[str, Any]:
         return {
