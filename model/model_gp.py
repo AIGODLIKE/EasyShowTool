@@ -179,6 +179,8 @@ class CreateGreasePencilData(GreasePencilCache):
         bpy.ops.object.select_all(action='DESELECT')
         bpy.context.view_layer.objects.active = obj
         obj.select_set(True)
+        bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+        obj.location = (0, 0, 0) # set origin to geometry, and clear location, so that the object will be at the center
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True, isolate_users=True)
 
     @staticmethod
