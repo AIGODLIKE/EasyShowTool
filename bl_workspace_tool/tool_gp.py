@@ -1,6 +1,6 @@
 import bpy
 from ..public_path import get_tool_icon
-from ..bl_operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_drag_modal, EST_OT_add_gp_modal
+from ..bl_operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_drag_modal, EST_OT_add_gp_modal,EST_OT_move_gp_modal
 from ..bl_operator.ops_gp_basic import EST_OT_remove_gp, EST_OT_scale_gp, \
     EST_OT_gp_set_active_layer_color
 
@@ -30,6 +30,11 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
     bl_label = "Move"
     bl_icon = get_tool_icon('gp_edit_tool')
     bl_keymap = (
+        # GSR
+        (EST_OT_move_gp_modal.bl_idname,
+         {"type": 'G', "value": 'PRESS', "shift": False, "ctrl": False},
+         {"properties": []}),
+        # add
         (EST_OT_gp_set_active_layer.bl_idname,
          {"type": "LEFTMOUSE", "value": "CLICK"},
          {"properties": []},  # [("deselect_all", True)]

@@ -102,7 +102,7 @@ class DragGreasePencilViewModal:
         self._update_bbox(context)
         pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
         cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
-        self.delta_vec_v2d = Vector((cur_v2d[0] - pre_v2d[0], cur_v2d[1] - pre_v2d[1]))
+        self.delta_vec_v2d = cur_v2d - pre_v2d
 
         for callback in self.on_mouse_move:
             callback()

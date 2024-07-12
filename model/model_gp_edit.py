@@ -58,6 +58,17 @@ class EditGreasePencilStroke(GPencilStroke):
 class EditGreasePencilLayer(EditGreasePencilStroke):
     """Grease Pencil Layer, easy to manipulate Layer data."""
 
+    def get_layer_points(self, layer: bpy.types.GPencilLayer) -> dict[bpy.types.GPencilStroke, np.ndarray]:
+        """Return all the points in the layer."""
+
+        return {stroke: self.get_stroke_points(stroke) for frame in layer.frames for stroke in frame.strokes}
+
+    def set_layer_points(self, layer: bpy.types.GPencilLayer, points: dict[bpy.types.GPencilStroke, np.ndarray]):
+        """Set all the points in the layer."""
+        for frame in layer.frames:
+            for stroke in frame.strokes:
+                stroke.points.foreach_set('co', points[stroke].ravel())
+
     def move_layer(self, layer: bpy.types.GPencilLayer, v: Vector):
         for frame in layer.frames:
             for stroke in frame.strokes:
@@ -85,8 +96,6 @@ class EditGreasePencilLayer(EditGreasePencilStroke):
             for frame in layer.frames:
                 for stroke in frame.strokes:
                     self._scale_stroke(stroke, scale, pivot)
-
-
 
     def display_in_2d(self, layer: bpy.types.GPencilLayer):
         self._set_display_mode(layer, '2DSPACE')

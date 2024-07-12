@@ -7,15 +7,22 @@ from typing import Union
 from mathutils import Vector
 from .utils import VecTool
 
+
 class GPencilStroke:
 
     @staticmethod
     @contextmanager
     def stroke_points(stroke: bpy.types.GPencilStroke) -> np.ndarray:
         """Get the vertices from the stroke."""
+        yield GPencilStroke.get_stroke_points(stroke)
+
+    @staticmethod
+    def get_stroke_points(stroke: bpy.types.GPencilStroke) -> np.ndarray:
+        """Get the vertices from the stroke."""
         points = np.empty(len(stroke.points) * 3, dtype='f')
         stroke.points.foreach_get('co', points)
-        yield points.reshape((len(stroke.points), 3))
+        return points.reshape((len(stroke.points), 3))
+
 
 @dataclass
 class GreasePencilProperty:
@@ -92,6 +99,7 @@ class GreasePencilProperty:
         if not layer:
             raise ValueError(f'Layer {layer_name_or_index} not found.')
         return layer
+
 
 class GPencilBBoxProperty:
     """Properties for the bounding box to use

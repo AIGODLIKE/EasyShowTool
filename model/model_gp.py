@@ -317,6 +317,17 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         self.del_later(obj_list=[self_obj, tmp_obj])
         return self.join(self_tmp_data)
 
+    def store_active(self) -> 'BuildGreasePencilData':
+        """Store the active grease pencil layer."""
+        self.active_layer_points = self.edit_layer.get_layer_points(self.active_layer)
+        return self
+
+    def restore_active(self) -> 'BuildGreasePencilData':
+        """Restore the active grease pencil layer."""
+        if hasattr(self, 'active_layer_points'):
+            self.edit_layer.set_layer_points(self.active_layer, self.active_layer_points)
+        return self
+
     def move_active(self, v: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Move the active grease pencil layer."""
         return self.move(self.active_layer_name, v, space)
