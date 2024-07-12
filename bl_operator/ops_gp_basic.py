@@ -11,6 +11,7 @@ from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_item
 
 from ..public_path import get_pref
 
+
 class EST_OT_toggle_gp_space(bpy.types.Operator):
     bl_idname = "est.toggle_gp_space"
     bl_label = "Toggle Space"
@@ -174,9 +175,9 @@ class EST_OT_add_gp(bpy.types.Operator):
         elif self.add_type == 'OBJECT':
             euler = getattr(ShootAngles, self.obj_shot_angle)
             if obj.type == 'MESH':
-                font_gp_data = CreateGreasePencilData.from_mesh_obj(obj, euler=euler)
+                font_gp_data = CreateGreasePencilData.from_mesh_obj(obj, self.size, euler=euler)
             elif obj.type == 'GPENCIL':
-                font_gp_data = CreateGreasePencilData.from_gp_obj(obj, euler=euler)
+                font_gp_data = CreateGreasePencilData.from_gp_obj(obj, self.size, euler=euler)
             else:
                 return {'CANCELLED'}
         elif self.add_type == 'BL_ICON':
