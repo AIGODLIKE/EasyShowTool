@@ -10,7 +10,7 @@ bl_info = {
     "category": "Node"
 }
 
-from . import bl_operator, keymap, preferences, bl_workspace_tool, bl_property, translation
+from . import bl_operator, keymap, preferences, bl_workspace_tool, bl_property, bl_translation
 
 modules = [
     bl_property,
@@ -18,7 +18,7 @@ modules = [
     bl_workspace_tool,
     preferences,
     keymap,
-    translation
+    bl_translation
 ]
 
 
