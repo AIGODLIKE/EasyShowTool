@@ -197,10 +197,10 @@ class CreateGreasePencilData(GreasePencilCache):
         new_obj.scale = (size, size, size)
         bpy.context.view_layer.objects.active = new_obj
         CreateGreasePencilData.apply_transform(new_obj)
-        new_obj.rotation_euler = euler.value
-        CreateGreasePencilData.apply_transform(new_obj)
         CreateGreasePencilData.convert_2_gp()
         gp_obj = bpy.context.object
+        gp_obj.rotation_euler = euler.value
+        CreateGreasePencilData.apply_transform(gp_obj)
         gp_data = gp_obj.data
         CreateGreasePencilData.del_later(gp_obj)
 
