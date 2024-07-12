@@ -85,7 +85,7 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
             box.template_palette(scene.est_palette_group, "palette", color=True)
 
         box = layout.box()
-        box.label(text="New")
+        box.label(text="New", icon='ADD')
         row = box.row()
         row.prop(scene, "est_gp_add_type", text='Source', expand=True)
         box.prop(scene, "est_gp_size")
