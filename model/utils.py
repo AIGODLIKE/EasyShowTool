@@ -4,7 +4,7 @@ import bpy
 from dataclasses import dataclass
 from enum import Enum
 from math import radians, degrees
-from math import cos, sin
+from math import cos, sin, pow
 
 
 class EulerTool:
@@ -41,6 +41,29 @@ class ColorTool:
         else:
             hex = hex_color
         return [int(hex[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+
+    @staticmethod
+    def set_alpha(color: list[float, float, float], alpha: float) -> list[float, float, float]:
+        """Set the alpha value of the color."""
+        return color + [alpha]
+
+    @staticmethod
+    def srgb_2_linear(c, gamma=2.4):
+        if c < 0:
+            return 0
+        elif c < 0.04045:
+            return c / 12.92
+        else:
+            return ((c + 0.055) / 1.055) ** gamma
+
+    @staticmethod
+    def linear_2_srgb(c, gamma_value=2.4):
+        if c < 0.0031308:
+            srgb = 0.0 if c < 0.0 else c * 12.92
+        else:
+            srgb = 1.055 * pow(c, 1.0 / gamma_value) - 0.055
+
+        return srgb
 
 
 class VecTool:
@@ -111,6 +134,7 @@ class VecTool:
         c = cos(angle)
         s = sin(angle)
         return Vector((v[0] * c - v[1] * s, v[0] * s + v[1] * c))
+
 
 class PointBase:
     """Base class for points in the node editor.

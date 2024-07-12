@@ -187,7 +187,7 @@ class EST_OT_add_gp(bpy.types.Operator):
             CreateGreasePencilData.del_later(icon_obj)
         if not font_gp_data: return {'CANCELLED'}
 
-        color = context.scene.est_palette_group.palette.colors.active.color
+        color = context.scene.est_palette_color
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             gp_data_builder.link(context).join(font_gp_data) \
                 .set_active_layer(-1) \
@@ -222,7 +222,7 @@ class EST_OT_gp_set_active_layer_color(bpy.types.Operator):
 
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             gp_data_builder.active_layer_index = layer_index
-            color = context.scene.est_palette_group.palette.colors.active.color
+            color = context.scene.est_palette_color
             gp_data_builder.color_active(color=color)
         return {'FINISHED'}
 
