@@ -6,7 +6,8 @@ from mathutils import Vector
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool, ShootAngles
-from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, in_layer_area, load_icon_svg
+from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, get_pos_layer_index, load_icon_svg, \
+    get_edit_tree_gp_data
 
 
 class EST_OT_toggle_gp_space(bpy.types.Operator):
@@ -63,9 +64,7 @@ class EST_OT_move_gp(bpy.types.Operator):
         return has_edit_tree(context)
 
     def execute(self, context):
-        nt: bpy.types.NodeTree = context.space_data.edit_tree
-        gp_data: bpy.types.GreasePencil = nt.grease_pencil
-        if not gp_data:
+        if not (gp_data := get_edit_tree_gp_data(context)):
             return {'CANCELLED'}
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             gp_data_builder.move_active(self.move_vector)
@@ -86,9 +85,7 @@ class EST_OT_scale_gp(bpy.types.Operator):
         return has_edit_tree(context)
 
     def execute(self, context):
-        nt: bpy.types.NodeTree = context.space_data.edit_tree
-        gp_data: bpy.types.GreasePencil = nt.grease_pencil
-        if not gp_data:
+        if not (gp_data := get_edit_tree_gp_data(context)):
             return {'CANCELLED'}
         bbox = GPencilLayerBBox(gp_data)
         bbox.calc_active_layer_bbox()
@@ -113,9 +110,8 @@ class EST_OT_rotate_gp(bpy.types.Operator):
         return has_edit_tree(context)
 
     def execute(self, context):
-        nt: bpy.types.NodeTree = context.space_data.edit_tree
-        gp_data: bpy.types.GreasePencil = nt.grease_pencil
-        if not gp_data: return {'CANCELLED'}
+        if not (gp_data := get_edit_tree_gp_data(context)):
+            return {'CANCELLED'}
 
         bbox = GPencilLayerBBox(gp_data)
         bbox.calc_active_layer_bbox()
@@ -171,6 +167,7 @@ class EST_OT_add_gp(bpy.types.Operator):
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         vec: Vector = VecTool.r2d_2_v2d(self.mouse_pos) if self.use_mouse_pos else self.location
         gp_data: bpy.types.GreasePencil = CreateGreasePencilData.empty() if not nt.grease_pencil else nt.grease_pencil
+
         if self.add_type == 'TEXT':
             font_gp_data = CreateGreasePencilData.from_text(self.text, self.size, context.scene.est_gp_text_font.name)
         elif self.add_type == 'OBJECT':
@@ -211,16 +208,10 @@ class EST_OT_gp_set_active_layer_color(bpy.types.Operator):
         return has_edit_tree(context)
 
     def invoke(self, context, event):
-        nt: bpy.types.NodeTree = context.space_data.edit_tree
-        gp_data: bpy.types.GreasePencil = nt.grease_pencil
-        if not gp_data: return {'CANCELLED'}
-        try:
-            layer_index = in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
-        except ReferenceError:  # ctrl z
-            layer_index = None
-        except AttributeError:  # switch to other tool
-            layer_index = None
-        if layer_index is None:
+        if not (gp_data := get_edit_tree_gp_data(context)):
+            return {'CANCELLED'}
+
+        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y))) is None:
             return {'FINISHED'}
 
         with BuildGreasePencilData(gp_data) as gp_data_builder:

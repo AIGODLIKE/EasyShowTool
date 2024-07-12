@@ -9,7 +9,7 @@ from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view.view_node_editor import ViewHover, ViewDrawHandle, ViewDrag
 
-from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, in_layer_area
+from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, get_pos_layer_index
 
 
 # noinspection PyPep8Naming
@@ -69,6 +69,7 @@ class EST_OT_add_gp_modal(bpy.types.Operator):
                                icon=context.scene.est_gp_icon,
                                location=location)
 
+
 # noinspection PyPep8Naming
 class EST_OT_gp_set_active_layer(bpy.types.Operator):
     bl_idname = "est.gp_set_active_layer"
@@ -110,13 +111,7 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
         if not gp_data: return {'CANCELLED'}
         drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
 
-        try:
-            layer_index = in_layer_area(gp_data, (event.mouse_region_x, event.mouse_region_y))
-        except ReferenceError:  # ctrl z
-            layer_index = None
-        except AttributeError:  # switch to other tool
-            layer_index = None
-        if layer_index is None:
+        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y))) is None:
             return {'FINISHED'}
 
         drag_vm.bbox_model.active_layer_index = layer_index

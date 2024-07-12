@@ -22,12 +22,22 @@ def has_edit_tree(context: bpy.types.Context) -> bool:
 
 
 def has_active_node(context: bpy.types.Context, bl_idname: Optional[str] = None) -> bool:
+    """Check if there is an active node in the active node tree."""
     if context.space_data.edit_tree.nodes.active is None:
         return False
     if bl_idname:
         if context.space_data.edit_tree.nodes.active.bl_idname != bl_idname:
             return False
     return True
+
+
+def get_edit_tree_gp_data(context: bpy.types.Context) -> Union[bpy.types.GreasePencil, None]:
+    """Check if there is an active grease pencil data on the active node tree."""
+    nt: bpy.types.NodeTree = context.space_data.edit_tree
+    gp_data: bpy.types.GreasePencil = nt.grease_pencil
+    if not gp_data:
+        return None
+    return gp_data
 
 
 def is_valid_workspace_tool(context) -> bool:
@@ -49,23 +59,20 @@ def enum_shot_orient_items() -> list[tuple[str, str, str]]:
     return [(euler.name, euler.name.replace('_', ' ').title(), '') for euler in ShootAngles]
 
 
-def in_layer_area(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather: int = 0, ) -> Union[
-    int, None]:
-    """check if the pos is in the area defined by the points
-    :param gp_data: the grease pencil data
-    :param pos: the position to check
-    :param feather: the feather to expand the area, unit: pixel
-    :return: index of the layer if the pos is in the area, None otherwise
-    """
-    bboxs: list[GPencilLayerBBox] = [GPencilLayerBBox(gp_data, layer) for layer in
-                                     gp_data.layers]
-    mouse_detect = MouseDetectModel()
-    for i, bbox in enumerate(bboxs):
-        bbox.calc_bbox(i)
-        mouse_detect.bind_bbox(bbox)
-        if mouse_detect.in_area(pos, feather):
-            return bbox.last_layer_index
-
+def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather=0) -> Union[int, None]:
+    try:
+        bboxs: list[GPencilLayerBBox] = [GPencilLayerBBox(gp_data, layer) for layer in
+                                         gp_data.layers]
+        mouse_detect = MouseDetectModel()
+        for i, bbox in enumerate(bboxs):
+            bbox.calc_bbox(i)
+            mouse_detect.bind_bbox(bbox)
+            if mouse_detect.in_area(pos, feather):
+                return bbox.last_layer_index
+    except ReferenceError:  # ctrl z will cause the reference error
+        return None
+    except AttributeError:  # switch to other tool will cause the attribute error
+        return None
     return None
 
 
