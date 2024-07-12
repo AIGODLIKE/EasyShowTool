@@ -41,9 +41,12 @@ def get_color_palettes_directory() -> Path:
     return get_asset_directory().joinpath('color_palette')
 
 
-def get_color_palettes() -> dict[str, list[str]]:
+def get_color_palettes() -> dict[str,list[str]]:
     """Return the color palette directory and file names.
     """
     d = get_color_palettes_directory()
-    # make dict with key as directory name and value as list of file names
-    return {p.name: [f.stem for f in p.iterdir() if f.suffix == '.png'] for p in d.iterdir() if p.is_dir()}
+    res = {}
+    for p in d.iterdir():
+        if p.is_dir():
+            res[p.name] = [f.stem for f in p.iterdir() if f.name.endswith('.jpg')]
+    return res

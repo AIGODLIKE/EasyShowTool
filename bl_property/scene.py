@@ -2,25 +2,16 @@ import bpy
 import time
 import threading
 
-from bpy.props import PointerProperty, IntProperty, EnumProperty, StringProperty
+from bpy.props import PointerProperty, IntProperty, EnumProperty, StringProperty, FloatVectorProperty
 from bpy.app.handlers import persistent
 
 from ..model.model_color import ColorPaletteModel
 from ..bl_operator.functions import enum_add_type_items, enum_shot_orient_items
 
 
-class MyPaletteGroup(bpy.types.PropertyGroup):
-    palette: PointerProperty(type=bpy.types.Palette)
-
-
 def register_later(lock, t):
     while not hasattr(bpy.context, 'scene'):
         time.sleep(5)
-    # print("Start register palette")
-    color_model = ColorPaletteModel()
-    color_model.setup()
-    color_model.ensure_palette_images()
-    bpy.context.scene.est_palette_group.palette = color_model.palette
 
     # font
     if bpy.context.scene.est_gp_text_font is None and 'Bfont Regular' not in bpy.data.fonts:
@@ -37,10 +28,10 @@ def init_scene_props(noob):
 
 
 def register():
-    from bpy.utils import register_class
+    ColorPaletteModel.register_color_icon()
 
-    register_class(MyPaletteGroup)
-    bpy.types.Scene.est_palette_group = PointerProperty(type=MyPaletteGroup)
+    bpy.types.Scene.est_palette_color = FloatVectorProperty(name="Color", size=3, subtype='COLOR_GAMMA', min=0.0, max=1.0,
+                                                            default=(0.8, 0.8, 0.8))
     bpy.types.Scene.est_gp_transform_mode = EnumProperty(name="Transform Mode", items=[('LOCAL', 'Local', 'Local'),
                                                                                        ('GLOBAL', 'Global', 'Global')],
                                                          default='LOCAL')
@@ -58,11 +49,9 @@ def register():
 
 
 def unregister():
-    from bpy.utils import unregister_class
+    ColorPaletteModel.unregister_color_icon()
 
     bpy.app.handlers.load_post.remove(init_scene_props)
-    unregister_class(MyPaletteGroup)
-    del bpy.types.Scene.est_palette_group
     del bpy.types.Scene.est_gp_size
     del bpy.types.Scene.est_gp_add_type
     del bpy.types.Scene.est_gp_text
@@ -70,4 +59,4 @@ def unregister():
     del bpy.types.Scene.est_gp_obj_shot_angle
     del bpy.types.Scene.est_gp_transform_mode
     del bpy.types.Space.est_gp_icon
-
+    del bpy.types.Space.est_palette_color

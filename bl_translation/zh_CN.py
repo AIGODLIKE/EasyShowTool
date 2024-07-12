@@ -11,6 +11,7 @@ data = {
     'Move Vector': '移动向量',
     'Scale Vector': '缩放向量',
     'Rotate Angle': '旋转角度',
+    'SocketColor': '接口颜色',
     'Rotate Snap Degree': '旋转捕捉角度',
     'Draw Box When Dragging': '拖动时绘制框',
     'Drag Box Area When Dragging': '拖动时绘制框区域',

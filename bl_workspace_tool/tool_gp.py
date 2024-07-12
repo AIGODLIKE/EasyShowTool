@@ -79,11 +79,6 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
         row = layout.row()
         row.prop(scene, 'est_gp_transform_mode', text="Transform Orientations", expand=True)
 
-        if scene.est_palette_group:
-            box = layout.box()
-            box.label(text="Palette", icon='COLOR')
-            box.template_palette(scene.est_palette_group, "palette", color=True)
-
         box = layout.box()
         box.label(text="New")
         row = box.row()
@@ -100,6 +95,8 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
             row = box.row()
             row.label(text='Selected')
             row.label(text=bpy.context.scene.est_gp_icon, icon=bpy.context.scene.est_gp_icon)
+
+        box.prop(scene, 'est_palette_color', text='Color')
 
 
 class EST_TL_gp_color(bpy.types.WorkSpaceTool):
