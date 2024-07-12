@@ -5,7 +5,7 @@ import bpy
 from ..model.utils import ShootAngles
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..view_model.view_model_detect import MouseDetectModel
-from ..public_path import get_bl_ui_icon_svg
+from ..public_path import get_svg_icon
 
 
 def tag_redraw():
@@ -79,14 +79,16 @@ def get_icons() -> list[str]:
                         'BRUSH_DATA_' not in icon and  # skip the brush data icons
                         'EVENT_' not in icon  # skip the event icons
                         ]
-    icons = [icon for icon in icons if icon.lower() + '.svg' in os.listdir(get_bl_ui_icon_svg())]
+    icons = [icon for icon in icons if icon.lower() + '.svg' in os.listdir(get_svg_icon())]
     return icons
 
 
 def load_icon_svg(icon: str) -> Union[bpy.types.Object, None]:
     SCALE = 2
 
-    icon_svg = get_bl_ui_icon_svg(icon.lower())
-    bpy.ops.wm.gpencil_import_svg(filepath=str(icon_svg.resolve()), scale=SCALE)
+    if (icon_svg := get_svg_icon(icon.lower())) is None:
+        return None
+
+    bpy.ops.wm.gpencil_import_svg(filepath=icon_svg, scale=SCALE)
 
     return bpy.context.object

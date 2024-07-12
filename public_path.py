@@ -8,7 +8,7 @@ def get_pref(data_path: Optional[str] = None) -> Union[bpy.types.AddonPreference
     if data_path is None:
         return pref
 
-    # 递归查找属性
+    # search attribute by path
     def search_attr(obj, path: str):
         if '.' in path:
             path = path.split('.')
@@ -27,11 +27,11 @@ def get_tool_icon(icon_name: str) -> str:
     return get_asset_directory().joinpath('bl_ui_icon', 'icons_tool', icon_name).as_posix()
 
 
-def get_bl_ui_icon_svg(name: Optional[str] = None) -> Optional[Path]:
+def get_svg_icon(name: Optional[str] = None) -> Union[str, None]:
     d = get_asset_directory().joinpath('bl_ui_icon', 'icons_svg')
     if not name:
-        return d
+        return d.as_posix()
     if (p := d.joinpath(name + '.svg')).exists():
-        return p
+        return p.as_posix()
 
     return None
