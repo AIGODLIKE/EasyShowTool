@@ -102,7 +102,7 @@ class DragGreasePencilViewModal:
         self._update_bbox(context)
         pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
         cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
-        self.delta_vec_v2d = Vector((cur_v2d[0] - pre_v2d[0], cur_v2d[1] - pre_v2d[1]))
+        self.delta_vec_v2d = cur_v2d - pre_v2d
 
         for callback in self.on_mouse_move:
             callback()
@@ -116,9 +116,13 @@ class DragGreasePencilViewModal:
     def _handle_copy(self, event):
         """Handle the copy event in the modal."""
         if not self.already_copied and event.alt:
+            ori_obj = bpy.context.object
+            ori_obj.select_set(True)
             with self.build_model:  # clean up in with statement
                 self.build_model.copy_active().to_2d()
                 self.already_copied = True
+            bpy.context.view_layer.objects.active = ori_obj
+            ori_obj.select_set(True)
 
     def _collect_kwargs(self) -> dict[str, Any]:
         return {

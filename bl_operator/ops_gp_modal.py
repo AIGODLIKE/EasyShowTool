@@ -1,15 +1,74 @@
 import bpy
 from bpy.props import StringProperty
 from typing import ClassVar
+from mathutils import Vector
 
 from ..model.model_gp import BuildGreasePencilData
+from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool, ShootAngles, ColorTool
 from ..model.model_color import ColorPaletteModel
 from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view.view_node_editor import ViewHover, ViewDrawHandle, ViewDrag
 
-from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, get_pos_layer_index
+from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, get_pos_layer_index, get_edit_tree_gp_data
+
+
+class EST_OT_move_gp_modal(bpy.types.Operator):
+    bl_idname = "est.move_gp_modal"
+    bl_label = "Move"
+
+    bl_options = {'UNDO', "GRAB_CURSOR", "BLOCKING"}
+
+    build_model: BuildGreasePencilData = None
+    move_handler: MoveHandler = None
+
+    mouse_pos: tuple[int, int] = [0, 0]
+    mouse_pos_prev: tuple[int, int] = [0, 0]
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context) and get_edit_tree_gp_data(context) and is_valid_workspace_tool(context)
+
+    def invoke(self, context, event):
+        gp_data = get_edit_tree_gp_data(context)
+        self.build_model = BuildGreasePencilData(gp_data)
+        self.build_model.store_active()
+        self.move_handler = MoveHandler()
+        self.move_handler.build_model = self.build_model
+
+        self.mouse_pos = event.mouse_region_x, event.mouse_region_y
+        self.mouse_pos_prev = self.mouse_pos
+
+        context.window_manager.modal_handler_add(self)
+        context.window.cursor_set('MOVE_X')
+        EST_OT_gp_set_active_layer.hide()
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context, event):
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            self.build_model.restore_active()
+            self._finish(context)
+            return {'CANCELLED'}
+        if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
+            self.mouse_pos_prev = self.mouse_pos
+            self.mouse_pos = event.mouse_region_x, event.mouse_region_y
+
+            pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
+            cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
+            self.move_handler.end_pos = self.mouse_pos
+            self.move_handler.delta_vec_v2d = cur_v2d - pre_v2d
+            self.move_handler.accept_event(event)
+        if event.type == 'LEFTMOUSE':
+            self._finish(context)
+            return {'FINISHED'}
+        context.area.tag_redraw()
+        return {'RUNNING_MODAL'}
+
+    def _finish(self, context) -> set:
+        EST_OT_gp_set_active_layer.show()
+        context.area.tag_redraw()
+        return {'FINISHED'}
 
 
 # noinspection PyPep8Naming
@@ -231,6 +290,7 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
 def register():
     from bpy.utils import register_class
 
+    register_class(EST_OT_move_gp_modal)
     register_class(EST_OT_add_gp_modal)
     register_class(EST_OT_gp_set_active_layer)
     register_class(EST_OT_gp_drag_modal)
@@ -239,6 +299,7 @@ def register():
 def unregister():
     from bpy.utils import unregister_class
 
+    unregister_class(EST_OT_move_gp_modal)
     unregister_class(EST_OT_add_gp_modal)
     unregister_class(EST_OT_gp_set_active_layer)
     unregister_class(EST_OT_gp_drag_modal)

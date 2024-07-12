@@ -2,7 +2,7 @@ import bpy
 import time
 import threading
 
-from bpy.props import PointerProperty, IntProperty, EnumProperty, StringProperty, FloatVectorProperty
+from bpy.props import PointerProperty, IntProperty, EnumProperty, StringProperty, FloatVectorProperty, FloatProperty
 from bpy.app.handlers import persistent
 
 from ..model.model_color import ColorPaletteModel
@@ -30,13 +30,16 @@ def init_scene_props(noob):
 def register():
     ColorPaletteModel.register_color_icon()
 
-    bpy.types.Scene.est_palette_color = FloatVectorProperty(name="Color", size=3, subtype='COLOR_GAMMA', min=0.0, max=1.0,
+    bpy.types.Scene.est_palette_color = FloatVectorProperty(name="Color", size=3, subtype='COLOR_GAMMA', min=0.0,
+                                                            max=1.0,
                                                             default=(0.8, 0.8, 0.8))
     bpy.types.Scene.est_gp_transform_mode = EnumProperty(name="Transform Mode", items=[('LOCAL', 'Local', 'Local'),
                                                                                        ('GLOBAL', 'Global', 'Global')],
                                                          default='LOCAL')
     # add source
-    bpy.types.Scene.est_gp_size = IntProperty(name="Size", default=500)
+    bpy.types.Scene.est_gp_opacity = FloatProperty(name="Opacity", default=1.0, min=0.0, max=1.0)
+    bpy.types.Scene.est_gp_thickness = IntProperty(name="Thickness", default=1, min=1, max=10)
+    bpy.types.Scene.est_gp_size = IntProperty(name="Size", default=500, soft_min=200, soft_max=2000)
     bpy.types.Scene.est_gp_add_type = EnumProperty(items=lambda self, context: enum_add_type_items())
     bpy.types.Scene.est_gp_text = StringProperty(name="Text", default="Hello World")
     bpy.types.Scene.est_gp_text_font = PointerProperty(type=bpy.types.VectorFont)

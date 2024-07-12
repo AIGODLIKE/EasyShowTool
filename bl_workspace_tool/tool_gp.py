@@ -1,6 +1,6 @@
 import bpy
 from ..public_path import get_tool_icon
-from ..bl_operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_drag_modal, EST_OT_add_gp_modal
+from ..bl_operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_drag_modal, EST_OT_add_gp_modal,EST_OT_move_gp_modal
 from ..bl_operator.ops_gp_basic import EST_OT_remove_gp, EST_OT_scale_gp, \
     EST_OT_gp_set_active_layer_color
 
@@ -30,6 +30,11 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
     bl_label = "Move"
     bl_icon = get_tool_icon('gp_edit_tool')
     bl_keymap = (
+        # GSR
+        (EST_OT_move_gp_modal.bl_idname,
+         {"type": 'G', "value": 'PRESS', "shift": False, "ctrl": False},
+         {"properties": []}),
+        # add
         (EST_OT_gp_set_active_layer.bl_idname,
          {"type": "LEFTMOUSE", "value": "CLICK"},
          {"properties": []},  # [("deselect_all", True)]
@@ -84,6 +89,13 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
         row = box.row()
         row.prop(scene, "est_gp_add_type", text='Source', expand=True)
         box.prop(scene, "est_gp_size")
+        col = box.column(align=True)
+        row = col.row(align=True)
+        row.prop(scene, 'est_palette_color', text='Color')
+        row.popover(panel='EST_PT_palette_viewer', text='Preset', icon='COLOR')
+        col.prop(scene, "est_gp_opacity",slider=True)
+        col.prop(scene, "est_gp_thickness",slider=True)
+
 
         if scene.est_gp_add_type == 'TEXT':
             box.template_ID(scene, "est_gp_text_font", open="font.open", unlink="font.unlink")
@@ -93,10 +105,8 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
             box.prop(scene, "est_gp_obj_shot_angle")
         elif scene.est_gp_add_type == 'BL_ICON':
             row = box.row()
-            row.label(text='Selected')
+            row.alignment = 'RIGHT'
             row.label(text=bpy.context.scene.est_gp_icon, icon=bpy.context.scene.est_gp_icon)
-
-        box.prop(scene, 'est_palette_color', text='Color')
 
 
 class EST_TL_gp_color(bpy.types.WorkSpaceTool):
