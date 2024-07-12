@@ -84,16 +84,6 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
             box.label(text="Palette", icon='COLOR')
             box.template_palette(scene.est_palette_group, "palette", color=True)
 
-        if (nt := bpy.context.space_data.edit_tree):
-            if (gp := nt.grease_pencil):
-                if gp.layers:
-                    col = layout.column(align=True)
-                    col.label(text="Active Layer", icon='GP_SELECT_STROKES')
-                    layer = gp.layers.active
-                    col.prop(layer, "color", text="Color")
-                    col.prop(layer, "thickness", text="Thickness")
-                    col.prop(layer, "annotation_opacity", text="Opacity")
-
         box = layout.box()
         box.label(text="New", icon='ADD')
         row = box.row()
