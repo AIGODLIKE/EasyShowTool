@@ -184,7 +184,7 @@ class EST_OT_add_gp(bpy.types.Operator):
             icon_obj = load_icon_svg(self.icon)
             if not icon_obj: return {'CANCELLED'}
             font_gp_data = CreateGreasePencilData.from_gp_obj(icon_obj, self.size, euler=ShootAngles.FRONT)
-
+            CreateGreasePencilData.del_later(icon_obj)
         if not font_gp_data: return {'CANCELLED'}
 
         color = context.scene.est_palette_group.palette.colors.active.color
