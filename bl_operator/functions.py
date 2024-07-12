@@ -60,6 +60,8 @@ def enum_shot_orient_items() -> list[tuple[str, str, str]]:
 
 
 def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather=0) -> Union[int, None]:
+    """get the layer index by the mouse position."""
+    # TODO select through if some layers are overlapped
     try:
         bboxs: list[GPencilLayerBBox] = [GPencilLayerBBox(gp_data, layer) for layer in
                                          gp_data.layers]
