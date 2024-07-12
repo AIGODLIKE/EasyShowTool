@@ -74,12 +74,15 @@ class EST_PT_active_layer(bpy.types.Panel):
         layout = self.layout
         layout.use_property_split = True
         gp_data = get_edit_tree_gp_data(context)
-        if gp_data.layers:
-            col = layout.column(align=True)
-            layer = gp_data.layers.active
-            col.prop(layer, "color", text="Color")
-            col.prop(layer, "thickness", text="Thickness")
-            col.prop(layer, "annotation_opacity", text="Opacity")
+
+        if not gp_data.layers: return
+        col = layout.column(align=True)
+        layer = gp_data.layers.active
+
+        if not layer: return
+        col.prop(layer, "color", text="Color")
+        col.prop(layer, "thickness", text="Thickness")
+        col.prop(layer, "annotation_opacity", text="Opacity")
 
 
 def register():
