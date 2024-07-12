@@ -1,24 +1,17 @@
-from contextlib import contextmanager
 from math import radians, degrees
-from typing import Union
 import bpy
 import numpy as np
 from mathutils import Vector, Matrix
 from typing import Literal
 
+from .model_gp_bbox import GPencilLayerBBox
+from .model_gp_property import GPencilStroke
+
 
 # below Edit Class is all in 3d space
 
-class EditGreasePencilStroke:
+class EditGreasePencilStroke(GPencilStroke):
     """Grease Pencil Stroke, easy to manipulate Stroke data."""
-
-    @staticmethod
-    @contextmanager
-    def stroke_points(stroke: bpy.types.GPencilStroke) -> np.ndarray:
-        """Get the vertices from the stroke."""
-        points = np.empty(len(stroke.points) * 3, dtype='f')
-        stroke.points.foreach_get('co', points)
-        yield points.reshape((len(stroke.points), 3))
 
     def _move_stroke(self, stroke: bpy.types.GPencilStroke, v: Vector):
         """Move the grease pencil data."""
@@ -92,6 +85,8 @@ class EditGreasePencilLayer(EditGreasePencilStroke):
             for frame in layer.frames:
                 for stroke in frame.strokes:
                     self._scale_stroke(stroke, scale, pivot)
+
+
 
     def display_in_2d(self, layer: bpy.types.GPencilLayer):
         self._set_display_mode(layer, '2DSPACE')

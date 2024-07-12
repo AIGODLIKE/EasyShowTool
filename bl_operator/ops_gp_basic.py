@@ -183,14 +183,18 @@ class EST_OT_add_gp(bpy.types.Operator):
         elif self.add_type == 'BL_ICON':
             icon_obj = load_icon_svg(self.icon)
             if not icon_obj: return {'CANCELLED'}
-            font_gp_data = CreateGreasePencilData.from_gp_obj(icon_obj, euler=ShootAngles.FRONT)
+            font_gp_data = CreateGreasePencilData.from_gp_obj(icon_obj, self.size, euler=ShootAngles.FRONT)
 
         if not font_gp_data: return {'CANCELLED'}
 
         color = context.scene.est_palette_group.palette.colors.active.color
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             gp_data_builder.link(context).join(font_gp_data) \
-                .set_active_layer(-1).move_active(vec, space='v2d').color_active(color=color).to_2d()
+                .set_active_layer(-1) \
+                .move_active(vec, space='v2d') \
+                .fit_size(Vector((self.size, self.size)), keep_aspect_ratio=True) \
+                .color_active(color=color) \
+                .to_2d()
             if self.add_type == 'BL_ICON' and get_pref().gp_performance.try_remove_svg_bound_stroke:
                 gp_data_builder.remove_svg_bound()
 
