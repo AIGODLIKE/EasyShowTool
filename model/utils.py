@@ -42,6 +42,10 @@ class ColorTool:
             hex = hex_color
         return [int(hex[i:i + 2], 16) / 255 for i in (0, 2, 4)]
 
+    @staticmethod
+    def set_alpha(color: list[float, float, float], alpha: float) -> list[float, float, float]:
+        """Set the alpha value of the color."""
+        return color + [alpha]
 
 class VecTool:
     """Vec utility class. use to convert between view 2d , region 2d and 3d space."""

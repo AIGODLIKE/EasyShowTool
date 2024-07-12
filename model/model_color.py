@@ -1,12 +1,16 @@
+import enum
+
 import bpy
 from enum import Enum
 from typing import Final, Callable, ClassVar
 from dataclasses import dataclass, field
 from .utils import ColorTool
 from mathutils import Color
+from pathlib import Path
+from ..public_path import get_color_palettes_directory, get_color_palettes
 
 
-class Colors(Enum):
+class SocketColor(Enum):
     GREY: Final[str] = '#A1A1A1'  # float color
     ORANGE: Final[str] = '#ED9E5C'  # object color
     GREEN_GEO: Final[str] = '#00D6A3'  # geometry color
@@ -18,6 +22,27 @@ class Colors(Enum):
     PINK_MAT: Final[str] = '#EB7582'  # material color
 
 
+custom_colors = [
+    '#ffffff',
+    '#e5e5e5',
+    '#a6a6a6',
+    '#808080',
+    '#383838',
+    '#000000',
+    '#ff5733',
+    '#d4302f',
+    '#d4302f',
+    '#ffeb3c',
+    '#ffc300',
+    '#ff8d1a',
+    '#a5d63f',
+    '#44cf7c',
+    '#00baad',
+    '#2a82e4',
+    '#7848ea',
+]
+
+
 @dataclass
 class ColorPaletteModel:
     name: ClassVar[str] = '.est_palette'
@@ -27,6 +52,42 @@ class ColorPaletteModel:
     def setup(cls):
         cls.palette = bpy.data.palettes.get(cls.name, bpy.data.palettes.new(cls.name))
         cls.palette.colors.clear()
-        for color in Colors:
+        for color in SocketColor:
             c = cls.palette.colors.new()
             c.color = ColorTool.hex_2_rgb(color.value)
+
+    def ensure_palette_images(self):
+        path = get_color_palettes_directory()
+        d = path.joinpath(SocketColor.__name__)
+        custom_colors_dir = path.joinpath('custom')
+
+        if not d.exists():
+            d.mkdir()
+        if not custom_colors_dir.exists():
+            custom_colors_dir.mkdir()
+
+        exists = get_color_palettes()
+
+        for color in SocketColor:
+            if color.name in exists[SocketColor.__name__]: continue
+            full_name = color.value
+            filepath = d.joinpath(full_name + '.jpg')
+            if filepath.exists(): continue
+            self.save_color_image(color.value, filepath)
+
+        for color_str in custom_colors:
+            if color_str in exists['custom']: continue
+            full_name = color_str
+            filepath = custom_colors_dir.joinpath(full_name + '.jpg')
+            if filepath.exists(): continue
+            self.save_color_image(color_str, filepath)
+
+    def save_color_image(self, color: list[float, float, float], path: Path, size=16):
+        c = ColorTool.set_alpha(ColorTool.hex_2_rgb(color), 1.0)
+        pixels = list(c) * size * size
+        image = bpy.data.images.new('tmp', width=size, height=size)
+        image.pixels = pixels
+        image.file_format = 'JPEG'
+        image.filepath_raw = path.as_posix()
+        image.save()
+        bpy.data.images.remove(image)

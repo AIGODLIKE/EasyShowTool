@@ -15,10 +15,11 @@ class MyPaletteGroup(bpy.types.PropertyGroup):
 
 def register_later(lock, t):
     while not hasattr(bpy.context, 'scene'):
-        time.sleep(3)
+        time.sleep(5)
     # print("Start register palette")
     color_model = ColorPaletteModel()
     color_model.setup()
+    color_model.ensure_palette_images()
     bpy.context.scene.est_palette_group.palette = color_model.palette
 
     # font
