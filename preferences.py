@@ -26,7 +26,7 @@ class GreasePencilDrawProperty(bpy.types.PropertyGroup):
     drag: BoolProperty(default=True, name='Draw Box When Dragging')
     drag_area: BoolProperty(default=False, name='Drag Box Area When Dragging')
 
-    text = 'Draw'
+    text = 'Tool Draw'
     icon = 'EDITMODE_HLT'
 
 
@@ -37,12 +37,16 @@ class GreasePencilPerformanceProperty(bpy.types.PropertyGroup):
     detect_corner_px: IntProperty(default=20, name='Detect Corner Radius', subtype='PIXEL')
     detect_rotate_px: IntProperty(default=20, name='Detect Rotate Radius', subtype='PIXEL')
 
-    text = 'Performance'
+    try_remove_svg_bound_stroke: BoolProperty(default=True, name='Add Blender Icon: Try to Remove Icon Bound')
+
+    text = 'Tool Behavior'
     icon = 'MODIFIER'
 
 
 class Preference(bpy.types.AddonPreferences):
     bl_idname = __package__
+
+    ui_tab:EnumProperty(items=[('GENERAL', 'General', ''), ('NOTE', 'Note', ''), ('GP', 'Grease Pencil', '')], name='UI Tab', default='GENERAL')
     # add note operator
     note: PointerProperty(type=NoteProperty)
     # grease pencil

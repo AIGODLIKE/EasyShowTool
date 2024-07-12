@@ -44,7 +44,7 @@ def register():
                                                                                        ('GLOBAL', 'Global', 'Global')],
                                                          default='LOCAL')
     # add source
-    bpy.types.Scene.est_gp_size = IntProperty(name="Size", default=100, subtype='PIXEL')
+    bpy.types.Scene.est_gp_size = IntProperty(name="Size", default=500)
     bpy.types.Scene.est_gp_add_type = EnumProperty(items=lambda self, context: enum_add_type_items())
     bpy.types.Scene.est_gp_text = StringProperty(name="Text", default="Hello World")
     bpy.types.Scene.est_gp_text_font = PointerProperty(type=bpy.types.VectorFont)

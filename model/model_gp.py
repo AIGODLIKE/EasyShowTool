@@ -3,85 +3,10 @@ import numpy as np
 from mathutils import Vector, Euler, Color
 from typing import Literal, Optional, Union, ClassVar
 from dataclasses import dataclass, field
-from .utils import VecTool, ShootAngles, ColorTool
-from .model_gp_edit import EditGreasePencilLayer, EditGreasePencilStroke
-
-
-@dataclass
-class GreasePencilProperty:
-    """Grease Pencil Property, a base class for grease pencil data get/set"""
-    gp_data: bpy.types.GreasePencil
-
-    @property
-    def name(self) -> str:
-        return self.gp_data.name
-
-    def has_active_layer(self):
-        return self.active_layer_index != -1
-
-    @property
-    def active_layer_name(self) -> str:
-        """Return the active layer name."""
-        return self.active_layer.info if self.has_active_layer() else ''
-
-    @active_layer_name.setter
-    def active_layer_name(self, name: str):
-        """Set the active layer name."""
-        if self.has_active_layer():
-            self.active_layer.info = name
-
-    @property
-    def active_layer(self) -> bpy.types.GPencilLayer:
-        """Return the active layer."""
-        return self.gp_data.layers.active
-
-    @property
-    def active_layer_index(self) -> int:
-        """Return the active layer index."""
-        try:
-            index = self.gp_data.layers.active_index
-            return index
-        except ReferenceError:
-            return -1
-
-    @active_layer_index.setter
-    def active_layer_index(self, index: int):
-        """Set the active layer index."""
-        if self.is_empty():
-            return
-        if index < 0:
-            self.gp_data.layers.active_index = len(self.gp_data.layers) - 1
-        elif 0 <= index < len(self.gp_data.layers):
-            self.gp_data.layers.active_index = index
-        else:
-            self.gp_data.layers.active_index = 0
-
-    def is_empty(self) -> bool:
-        """Check if the grease pencil data is empty."""
-        try:
-            return not self.gp_data.layers
-        except ReferenceError:
-            return True
-
-    @property
-    def layer_names(self) -> list[str]:
-        return [layer.info for layer in self.gp_data.layers]
-
-    def _get_layer(self, layer_name_or_index: Union[int, str]) -> bpy.types.GPencilLayer:
-        """Handle the layer.
-        :param layer_name_or_index: The name or index of the layer.
-        :return: The layer object.
-        """
-        if isinstance(layer_name_or_index, int):
-            try:
-                layer = self.gp_data.layers[layer_name_or_index]
-            except ValueError:
-                raise ValueError(f'Layer index {layer_name_or_index} not found.')
-        else:
-            layer = self.gp_data.layers.get(layer_name_or_index, None)
-        if not layer:
-            raise ValueError(f'Layer {layer_name_or_index} not found.')
-        return layer
+from .utils import VecTool, ShootAngles
+from .model_gp_edit import EditGreasePencilLayer
+from .model_gp_property import GreasePencilProperty
+from .model_gp_bbox import GPencilLayerBBox
 
 
 class GreasePencilCache:
@@ -167,6 +92,8 @@ class CreateGreasePencilData(GreasePencilCache):
         CreateGreasePencilData.convert_2_gp()
 
         gp_obj = bpy.context.object
+        CreateGreasePencilData.apply_transform(gp_obj)
+
         gp_data: bpy.types.GreasePencil = gp_obj.data
         layer = gp_data.layers[0]
         layer.info = text
@@ -179,6 +106,8 @@ class CreateGreasePencilData(GreasePencilCache):
         bpy.ops.object.select_all(action='DESELECT')
         bpy.context.view_layer.objects.active = obj
         obj.select_set(True)
+        bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+        obj.location = (0, 0, 0)  # set origin to geometry, and clear location, so that the object will be at the center
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True, isolate_users=True)
 
     @staticmethod
@@ -197,10 +126,10 @@ class CreateGreasePencilData(GreasePencilCache):
         new_obj.scale = (size, size, size)
         bpy.context.view_layer.objects.active = new_obj
         CreateGreasePencilData.apply_transform(new_obj)
-        new_obj.rotation_euler = euler.value
-        CreateGreasePencilData.apply_transform(new_obj)
         CreateGreasePencilData.convert_2_gp()
         gp_obj = bpy.context.object
+        gp_obj.rotation_euler = euler.value
+        CreateGreasePencilData.apply_transform(gp_obj)
         gp_data = gp_obj.data
         CreateGreasePencilData.del_later(gp_obj)
 
@@ -400,6 +329,18 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
     def rotate_active(self, degree: int, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Rotate the active grease pencil layer."""
         return self.rotate(self.active_layer_name, degree, pivot, space)
+
+    def fit_size(self, size: Vector, keep_aspect_ratio: bool = True) -> 'BuildGreasePencilData':
+        """Fit the size of the active grease pencil layer."""
+        bbox = GPencilLayerBBox(self.active_layer)
+        bbox.gp_data = self.gp_data
+        bbox.calc_bbox(self.active_layer_index)
+        scale = Vector((size[0] / (bbox.max_x - bbox.min_x), size[1] / (bbox.max_y - bbox.min_y)))
+        if keep_aspect_ratio:
+            scale = Vector((min(scale), min(scale)))
+        self.edit_layer.scale_layer(self.active_layer, scale, bbox.center)
+
+        return self
 
     def move(self, layer_name_or_index: Union[str, int], v: Vector,
              space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':

@@ -1,104 +1,10 @@
 import bpy
 import numpy as np
 from mathutils import Vector, Euler
-from typing import Sequence, Union, ClassVar, Optional, Literal
+from typing import  Union, Literal
 from dataclasses import dataclass, field
 
-from .utils import VecTool
-from .model_gp_edit import EditGreasePencilStroke
-from .model_gp import GreasePencilProperty
-
-
-class GPencilBBoxProperty:
-    """Properties for the bounding box to use
-    v2d: view 2d space e.g. in node editor, `node.location` is in v2d space
-    r2d: region 2d space e.g. in the region, event.mouse_region_x is in r2d space
-    """
-    max_x: float = 0
-    min_x: float = 0
-    max_y: float = 0
-    min_y: float = 0
-    center: Vector = Vector((0, 0, 0))  # 3d
-    # The indices of the bounding box points, use for gpu batch drawing
-    indices: ClassVar = ((0, 1, 2), (2, 1, 3))
-
-    @property
-    def center_v2d(self) -> Vector:
-        return VecTool.loc3d_2_v2d(self.center)
-
-    @property
-    def center_r2d(self) -> Vector:
-        return VecTool.v2d_2_r2d(self.center_v2d)
-
-    @property
-    def size(self) -> tuple[float, float]:
-        return self.max_x - self.min_x, self.max_y - self.min_y
-
-    @property
-    def size_v2d(self) -> Vector:
-        return VecTool.loc3d_2_v2d(self.size)
-
-    @property
-    def top_left(self) -> tuple[float, float]:
-        return self.min_x, self.max_y
-
-    @property
-    def top_right(self) -> tuple[float, float]:
-        return self.max_x, self.max_y
-
-    @property
-    def bottom_left(self) -> tuple[float, float]:
-        return self.min_x, self.min_y
-
-    @property
-    def bottom_right(self) -> tuple[float, float]:
-        return self.max_x, self.min_y
-
-    @property
-    def bbox_points_3d(self) -> tuple[Vector, Vector, Vector, Vector]:
-        """Return the bounding box points.
-        top_left, top_right, bottom_left, bottom_right"""
-        return Vector(self.top_left), Vector(self.top_right), Vector(self.bottom_left), Vector(self.bottom_right)
-
-    @property
-    def bbox_points_v2d(self) -> tuple[Vector, Vector, Vector, Vector]:
-        return tuple(map(VecTool.loc3d_2_v2d, self.bbox_points_3d))
-
-    @property
-    def bbox_points_r2d(self) -> tuple[Vector, Vector, Vector, Vector]:
-        return tuple(map(VecTool.v2d_2_r2d, self.bbox_points_v2d))
-
-    @property
-    def edge_center_points_3d(self) -> tuple[Vector, Vector, Vector, Vector]:
-        """Return the edge center points of the bounding box."""
-        top_center = (self.max_x + self.min_x) / 2, self.max_y
-        bottom_center = (self.max_x + self.min_x) / 2, self.min_y
-        left_center = self.min_x, (self.max_y + self.min_y) / 2
-        right_center = self.max_x, (self.max_y + self.min_y) / 2
-        return Vector(top_center), Vector(bottom_center), Vector(left_center), Vector(right_center)
-
-    @property
-    def edge_center_points_v2d(self) -> tuple[Vector, Vector, Vector, Vector]:
-        """Return the edge center points of the bounding box in node editor view."""
-        return tuple(map(VecTool.loc3d_2_v2d, self.edge_center_points_3d))
-
-    @property
-    def edge_center_points_r2d(self) -> tuple[Vector, Vector, Vector, Vector]:
-        """Return the edge center points of the bounding box in region 2d space."""
-        return tuple(map(VecTool.v2d_2_r2d, self.edge_center_points_v2d))
-
-    def corner_extrude_points_r2d(self, extrude: int = 15) -> tuple[Vector, Vector, Vector, Vector]:
-        """Return the corner extrude points of the bounding box.
-        :param extrude: the extrude distance
-        this is not a property because it needs an extrude distance"""
-        points = self.bbox_points_r2d
-        # point to center vector
-        vecs = [point - self.center_r2d for point in points]
-        # normalize and scale
-        extrude_vecs = [vec.normalized() * extrude for vec in vecs]
-        new_points = [Vector(point) + vec for point, vec in zip(points, extrude_vecs)]
-
-        return new_points
+from .model_gp_property import GPencilStroke, GreasePencilProperty, GPencilBBoxProperty
 
 
 @dataclass
@@ -209,7 +115,7 @@ class GPencilLayerBBox(GreasePencilProperty, GPencilBBoxProperty):
 
         all_points = []
         for stroke in frame.strokes:
-            with EditGreasePencilStroke.stroke_points(stroke) as points:
+            with GPencilStroke.stroke_points(stroke) as points:
                 all_points.append(points)
         # if empty
         if not all_points:
