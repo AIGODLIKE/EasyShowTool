@@ -96,7 +96,9 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
             row.label(text='Selected')
             row.label(text=bpy.context.scene.est_gp_icon, icon=bpy.context.scene.est_gp_icon)
 
-        box.prop(scene, 'est_palette_color', text='Color')
+        row = box.row(align=True)
+        row.prop(scene, 'est_palette_color', text='Color')
+        row.popover(panel='EST_PT_palette_viewer', text='Preset', icon='COLOR')
 
 
 class EST_TL_gp_color(bpy.types.WorkSpaceTool):

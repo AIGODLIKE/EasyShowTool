@@ -16,6 +16,7 @@ class EST_OT_set_icon(bpy.types.Operator):
 
     def execute(self, context):
         context.scene.est_gp_icon = self.icon
+        context.area.tag_redraw()
         return {'FINISHED'}
 
 
