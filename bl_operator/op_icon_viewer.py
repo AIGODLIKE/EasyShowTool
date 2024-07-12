@@ -27,6 +27,7 @@ class EST_PT_icon_viewer(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = "Tool"
     bl_options = {'HEADER_LAYOUT_EXPAND'}
+    bl_order = 2
 
     @classmethod
     def poll(cls, context):
@@ -61,6 +62,7 @@ class EST_PT_active_layer(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = "Tool"
     bl_options = {'HEADER_LAYOUT_EXPAND'}
+    bl_order = 1
 
     @classmethod
     def poll(cls, context):
@@ -83,7 +85,7 @@ class EST_PT_active_layer(bpy.types.Panel):
         if not layer: return
         col.prop(layer, "color", text="Color")
         col.prop(layer, "thickness", text="Thickness")
-        col.prop(layer, "annotation_opacity", text="Opacity")
+        col.prop(layer, "annotation_opacity", text="Opacity", slider=True)
 
 
 def register():

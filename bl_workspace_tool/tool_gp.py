@@ -84,6 +84,13 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
         row = box.row()
         row.prop(scene, "est_gp_add_type", text='Source', expand=True)
         box.prop(scene, "est_gp_size")
+        col = box.column(align=True)
+        row = col.row(align=True)
+        row.prop(scene, 'est_palette_color', text='Color')
+        row.popover(panel='EST_PT_palette_viewer', text='Preset', icon='COLOR')
+        col.prop(scene, "est_gp_opacity",slider=True)
+        col.prop(scene, "est_gp_thickness",slider=True)
+
 
         if scene.est_gp_add_type == 'TEXT':
             box.template_ID(scene, "est_gp_text_font", open="font.open", unlink="font.unlink")
@@ -93,12 +100,8 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
             box.prop(scene, "est_gp_obj_shot_angle")
         elif scene.est_gp_add_type == 'BL_ICON':
             row = box.row()
-            row.label(text='Selected')
+            row.alignment = 'RIGHT'
             row.label(text=bpy.context.scene.est_gp_icon, icon=bpy.context.scene.est_gp_icon)
-
-        row = box.row(align=True)
-        row.prop(scene, 'est_palette_color', text='Color')
-        row.popover(panel='EST_PT_palette_viewer', text='Preset', icon='COLOR')
 
 
 class EST_TL_gp_color(bpy.types.WorkSpaceTool):

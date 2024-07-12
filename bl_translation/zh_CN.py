@@ -22,6 +22,7 @@ data = {
     'Shot Orientation': '拍摄方向',
     'Top Left Front': '左上前',
     'Top Left Front 45': '左上前 45',
+    'Add Note': '添加注释',
     'Add Amazing notes to your node editor': '在节点编辑器中添加神奇的注释',
     'Add Blender Icon: Try to Remove Icon Bound': '添加 Blender 图标：尝试移除图标边界',
 }
