@@ -1,6 +1,6 @@
 ### v0.1.1
 
-> develop
+> 2024.7.14
 
 **New Feature**
 
@@ -21,6 +21,7 @@
 
 + fix error report when first use
 + alt + click to copy move will change active object
++ no 3d view import icon will no longer report error
 
 ### v0.1.0
 
