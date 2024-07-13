@@ -1,7 +1,10 @@
+import contextlib
 import os
 from typing import Optional, Union, Sequence
 from mathutils import Vector
 import bpy
+from contextlib import contextmanager
+
 from ..model.utils import ShootAngles
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..view_model.view_model_detect import MouseDetectModel
@@ -78,6 +81,14 @@ def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Ve
     return None
 
 
+@contextmanager
+def ensure_3d_view(context: bpy.types.Context):
+    ori_ui_type = context.area.type
+    context.area.type = 'VIEW_3D'
+    yield
+    context.area.type = ori_ui_type
+
+
 def get_icons() -> list[str]:
     """Return the list of built-in icons."""
     icons: list[str] = [icon for icon in
@@ -97,7 +108,7 @@ def load_icon_svg(icon: str) -> Union[bpy.types.Object, None]:
 
     if (icon_svg := get_svg_icon(icon.lower())) is None:
         return None
-
-    bpy.ops.wm.gpencil_import_svg(filepath=icon_svg, scale=SCALE)
+    with ensure_3d_view(bpy.context):  # the svg import operator need a 3d view to work(Strange)
+        bpy.ops.wm.gpencil_import_svg(filepath=icon_svg, scale=SCALE)
 
     return bpy.context.object
