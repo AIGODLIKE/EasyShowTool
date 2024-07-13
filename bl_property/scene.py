@@ -61,5 +61,5 @@ def unregister():
     del bpy.types.Scene.est_gp_obj
     del bpy.types.Scene.est_gp_obj_shot_angle
     del bpy.types.Scene.est_gp_transform_mode
-    del bpy.types.Space.est_gp_icon
-    del bpy.types.Space.est_palette_color
+    del bpy.types.Scene.est_gp_icon
+    del bpy.types.Scene.est_palette_color
