@@ -1,7 +1,7 @@
 name = "Easy Show Tool"
 id = "EasyShowTool"
 maintainer = "Atticus, AIGODLIKE Community"
-version = "0.1.0"
+version = "0.1.1"
 tagline = "Adds notes to your node editor"
 blender_version_min = "4.2.0"
 type = "add-on"
