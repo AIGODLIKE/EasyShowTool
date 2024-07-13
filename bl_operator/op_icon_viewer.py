@@ -2,6 +2,7 @@ import bpy
 import re
 from bpy.props import StringProperty
 from .functions import get_icons, has_edit_tree, is_valid_workspace_tool, get_edit_tree_gp_data
+from bpy.app.translations import pgettext_iface as _p
 
 ICONS = []
 
@@ -71,7 +72,7 @@ class EST_PT_active_layer(bpy.types.Panel):
     def draw_header(self, context):
         layout = self.layout
         layer_name = get_edit_tree_gp_data(context).layers.active.info
-        layout.label(text=layer_name, icon='GP_SELECT_STROKES')
+        layout.label(text=_p('Active') + ' : ' + layer_name, icon='GP_SELECT_STROKES')
 
     def draw(self, context):
         layout = self.layout
@@ -83,7 +84,9 @@ class EST_PT_active_layer(bpy.types.Panel):
         layer = gp_data.layers.active
 
         if not layer: return
-        col.prop(layer, "color", text="Color")
+        row = col.row(align=True)
+        row.prop(layer, "color", text="Color")
+        row.popover(panel="EST_PT_palette_viewer_active", text="Preset", icon='COLOR')
         col.prop(layer, "thickness", text="Thickness")
         col.prop(layer, "annotation_opacity", text="Opacity", slider=True)
 
