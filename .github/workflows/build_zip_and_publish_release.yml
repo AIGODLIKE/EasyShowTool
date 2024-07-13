@@ -38,5 +38,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: /home/runner/work/EasyShowTool/EasyShowTool/EasyShowTool.zip
-          asset_name: EasyShowTool.zip
+          asset_name: EasyShowTool_${{ github.ref_name }}.zip
           asset_content_type: application/zip
