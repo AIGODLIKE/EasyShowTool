@@ -140,4 +140,4 @@ class DrawViewModel:
         self.draw_box(points)
         # draw the distance between start and end pos
         dis = round((self.start_pos - self.end_pos).length, 2)
-        self.draw_text(f"{dis}px", self.end_pos + Vector((0, 20)))
+        self.draw_text(f"{dis}px", self.end_pos + Vector((0, -20)))
