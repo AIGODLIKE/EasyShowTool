@@ -30,12 +30,12 @@ class MouseDetectModel:
             'corner': self._near_corners(pos, self.d_corner),
             'edge_center': self._near_edge_center(pos, self.d_edge),
             'corner_extrude': self._near_corners_extrude(pos, self.d_rotate + self.d_corner, self.d_rotate),
-            'in_area': self.in_area(pos, self.d_edge)
+            'in_area': self.in_bbox_area(pos, self.d_edge)
         }
 
-    def in_area(self, pos: Union[Sequence, Vector], feather: int = 0) -> bool:
+    def in_bbox_area(self, pos: Union[Sequence, Vector], feather: int = 0) -> bool:
         """check if the pos is in the area defined by the points
-        :param pos: the position to check, in v2d/r2d space
+        :param pos: the position to check, in r2d space
         :param feather: the feather to expand the area, unit: pixel
         :return: True if the pos is in the area, False otherwise
         """
@@ -59,6 +59,28 @@ class MouseDetectModel:
                 if (p1[1] > y) != (p2[1] > y) and (x < (p2[0] - p1[0]) * (y - p1[1]) / (p2[1] - p1[1]) + p1[0]):
                     inside = not inside
             return inside
+
+    def bbox_in_area(self, points: list[Vector]) -> bool:
+        """check if the bbox is in the area defined by the points
+        :param points: points that define the area, order: top_left, top_right, bottom_left, bottom_right
+        """
+        top_left, top_right, bottom_left, bottom_right = points
+        bbox_points = self.bbox_model.bbox_points_r2d
+        if not self.bbox_model.is_local:
+            for p in bbox_points:
+                if not (top_left[0] < p[0] < top_right[0] and bottom_left[1] < p[1] < top_left[1]):
+                    return False
+
+            return True
+        else:
+            polygon = [top_left, top_right, bottom_right, bottom_left]
+            for i in range(4):
+                p1, p2 = polygon[i], polygon[(i + 1) % 4]
+                for p in bbox_points:
+                    if (p1[1] > p[1]) != (p2[1] > p[1]) and (
+                            p[0] < (p2[0] - p1[0]) * (p[1] - p1[1]) / (p2[1] - p1[1]) + p1[0]):
+                        return False
+            return True
 
     def _near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 20) -> \
             Union[tuple[Vector, int], None]:

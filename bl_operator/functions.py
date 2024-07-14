@@ -72,7 +72,7 @@ def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Ve
         for i, bbox in enumerate(bboxs):
             bbox.calc_bbox(i)
             mouse_detect.bind_bbox(bbox)
-            if mouse_detect.in_area(pos, feather):
+            if mouse_detect.in_bbox_area(pos, feather):
                 return bbox.last_layer_index
     except ReferenceError:  # ctrl z will cause the reference error
         return None

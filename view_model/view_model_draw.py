@@ -83,6 +83,11 @@ class DrawViewModel:
         batch = batch_for_shader(shader, 'LINES', {"pos": [start_pos, end_pos]})
         batch.draw(shader)
 
+    def draw_box(self, points: Sequence[Vector]):
+        shader.uniform_float("color", self.color_hover)
+        batch = batch_for_shader(shader, 'LINE_LOOP', {"pos": points})
+        batch.draw(shader)
+
     def _draw_text_left_bottom(self, text_lines: Sequence[str], size=24, space: int = 5):
         font_id = 0
         shader.uniform_float("color", self.color)
@@ -127,7 +132,12 @@ class DrawViewModel:
         if not self.start_pos or not self.end_pos: return
         if self.end_pos[0] == 0 and self.end_pos[1] == 0: return
         if self.start_pos[0] == 0 and self.start_pos[1] == 0: return
+        # draw the line between start and end pos
         self.draw_line(self.start_pos, self.end_pos)
+        # draw a selected box with the start and end pos
+        points = [self.start_pos, Vector((self.end_pos.x, self.start_pos.y)),
+                  self.end_pos, Vector((self.start_pos.x, self.end_pos.y))]
+        self.draw_box(points)
+        # draw the distance between start and end pos
         dis = round((self.start_pos - self.end_pos).length, 2)
-        middle = (self.start_pos + self.end_pos) / 2
-        self.draw_text(f"{dis}px", middle)
+        self.draw_text(f"{dis}px", self.end_pos + Vector((0, 20)))
