@@ -153,6 +153,40 @@ class DragGreasePencilViewModal:
             self.drag_rotate_handler.handle(event=event, models=models, **pass_in_args)
         elif self.in_drag_area and self.drag_move_handler:
             self.drag_move_handler.handle(event=event, models=models, **pass_in_args)
+        else:
+            self._handle_select()
+
+    def _handle_select(self):
+        # drag box points to detect if a layer is selected
+        if self.start_pos[0] > self.end_pos[0]:
+            # right to left
+            left = self.end_pos[0]
+            right = self.start_pos[0]
+        else:
+            left = self.start_pos[0]
+            right = self.end_pos[0]
+        if self.start_pos[1] > self.end_pos[1]:
+            # bottom to top
+            bottom = self.end_pos[1]
+            top = self.start_pos[1]
+        else:
+            bottom = self.start_pos[1]
+            top = self.end_pos[1]
+
+        top_left = Vector((left, top))
+        bottom_right = Vector((right, bottom))
+        top_right = Vector((right, top))
+        bottom_left = Vector((left, bottom))
+        points = [top_left, top_right, bottom_left, bottom_right]
+        selected = []
+
+        bbox_model = GPencilLayerBBox(self.gp_data)
+        detect_model = MouseDetectModel().bind_bbox(bbox_model)
+        for layer in self.gp_data.layers:
+            bbox_model.calc_bbox(layer.info)
+            bbox_model.calc_bbox(layer.info)
+            if detect_model.bbox_in_area(points):
+                selected.append(layer.info)
 
     def _update_bbox(self, context):
         """Update the Grease Pencil Data. Some data may be changed in the modal."""
