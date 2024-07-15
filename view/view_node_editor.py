@@ -81,7 +81,7 @@ class ViewHover(ViewBasic):
     def update(self):
         self.draw_vm.update_draw_data(points=self.drag_vm.bbox_model.bbox_points_r2d,
                                       edge_points=self.drag_vm.bbox_model.edge_center_points_r2d,
-                                      layer_points=self.drag_vm.selected_layers_points)
+                                      layer_points=self.drag_vm.selected_layers_points_r2d)
 
     def draw(self) -> None:
         self.draw_vm.draw_bbox_edge()
@@ -95,8 +95,8 @@ class ViewHover(ViewBasic):
         if self.drag_vm.pos_corner_extrude:
             self.draw_vm.draw_rotate_widget(point=self.drag_vm.pos_corner_extrude)
 
-        if self.drag_vm.selected_layers_points:
-            for points in self.drag_vm.selected_layers_points.values():
+        if self.drag_vm.selected_layers_points_r2d and self.draw_vm.debug:
+            for points in self.drag_vm.selected_layers_points_r2d:
                 self.draw_vm.draw_box(points)
 
         if self.draw_vm.debug:

@@ -64,6 +64,7 @@ class DrawData:
     points: list[Vector, Vector, Vector, Vector]
     edge_points: list[Vector, Vector, Vector, Vector]
     layer_points:list[list[Vector]] = None # for selected layers points
+
     start_pos: Optional[Vector] = None
     end_pos: Optional[Vector] = None
     # from transform handles

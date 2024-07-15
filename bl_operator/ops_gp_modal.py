@@ -158,7 +158,7 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
         if cls.view_hover:
             cls.view_hover.show()
         if cls.drag_vm:
-            cls.drag_vm._update_bbox(bpy.context)
+            cls.drag_vm._update_active_bbox(bpy.context)
 
     def invoke(self, context, event):
         self.stop = False
@@ -174,6 +174,7 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
             return {'FINISHED'}
 
         drag_vm.bbox_model.active_layer_index = layer_index
+        drag_vm.clear_selected_layers_points()
         drag_vm.bbox_model.calc_active_layer_bbox()
         self.__class__.drag_vm = drag_vm
         self.__class__.view_hover = ViewHover(self.drag_vm)
