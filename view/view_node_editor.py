@@ -10,9 +10,6 @@ from ..model.model_draw import DrawData, DrawPreference
 from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view_model.view_model_draw import DrawViewModel
 
-shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-indices = GPencilLayerBBox.indices
-
 
 class ViewDrawHandle:
     handle = None
