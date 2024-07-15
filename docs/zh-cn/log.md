@@ -1,3 +1,14 @@
+### v0.1.2
+> 2024.7.15
+
+**Fix**
+
++ enable in background failed
++ no 3d view import icon will no longer report error
++ alt copy error when no context object
++ error report when no active layer
+
+
 ### v0.1.1
 
 > 2024.7.14
