@@ -1,6 +1,7 @@
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from mathutils import Vector
-from typing import Literal, Optional, Callable, Final, Any
+from typing import Literal, Optional, Callable, Final, Any, ClassVar
 import bpy
 from collections import OrderedDict
 
@@ -15,6 +16,7 @@ from .handlers import TransformHandler
 class DragGreasePencilViewModal:
     # need to pass in
     gp_data: bpy.types.GreasePencil
+    last_gp_data: ClassVar[bpy.types.GreasePencil] = None
     # callback
     on_mouse_init: list[Callable] = field(default_factory=list)
     on_mouse_move: list[Callable] = field(default_factory=list)
@@ -42,6 +44,7 @@ class DragGreasePencilViewModal:
     delta_vec_v2d: Vector = Vector((0, 0))
     # state
     in_drag_area: bool = False
+    selected_layers_points: ClassVar[dict[str, list[Vector]]] = {}
     # snap
     snap_degree: int = field(default_factory=lambda: get_pref().gp_performance.snap_degree)
     # copy
@@ -54,6 +57,12 @@ class DragGreasePencilViewModal:
         self.bbox_model = GPencilLayerBBox(self.gp_data)
         self.build_model = BuildGreasePencilData(self.gp_data)
         self.detect_model = MouseDetectModel().bind_bbox(self.bbox_model)
+
+        if self.__class__.last_gp_data is None:
+            self.__class__.last_gp_data = self.gp_data
+        elif self.__class__.last_gp_data != self.gp_data:
+            self.__class__.last_gp_data = self.gp_data
+            self.__class__.clear_selected_layers_points()
 
     def has_active_layer(self) -> bool:
         return self.build_model.has_active_layer()
@@ -116,11 +125,18 @@ class DragGreasePencilViewModal:
     def _handle_copy(self, event):
         """Handle the copy event in the modal."""
         if not self.already_copied and event.alt:
-            ori_obj = bpy.context.object
+            with self.keep_context_select():
+                with self.build_model:  # clean up in with statement
+                    self.build_model.copy_active().to_2d()
+                    self.already_copied = True
+
+    @staticmethod
+    @contextmanager
+    def keep_context_select():
+        if ori_obj := bpy.context.object:
             ori_obj.select_set(True)
-            with self.build_model:  # clean up in with statement
-                self.build_model.copy_active().to_2d()
-                self.already_copied = True
+        yield
+        if ori_obj:
             bpy.context.view_layer.objects.active = ori_obj
             ori_obj.select_set(True)
 
@@ -145,6 +161,47 @@ class DragGreasePencilViewModal:
             self.drag_rotate_handler.handle(event=event, models=models, **pass_in_args)
         elif self.in_drag_area and self.drag_move_handler:
             self.drag_move_handler.handle(event=event, models=models, **pass_in_args)
+        else:
+            self._handle_select()
+
+    def _handle_select(self):
+        # drag box points to detect if a layer is selected
+        if self.start_pos[0] > self.end_pos[0]:
+            # right to left
+            left = self.end_pos[0]
+            right = self.start_pos[0]
+        else:
+            left = self.start_pos[0]
+            right = self.end_pos[0]
+        if self.start_pos[1] > self.end_pos[1]:
+            # bottom to top
+            bottom = self.end_pos[1]
+            top = self.start_pos[1]
+        else:
+            bottom = self.start_pos[1]
+            top = self.end_pos[1]
+
+        top_left = Vector((left, top))
+        bottom_right = Vector((right, bottom))
+        top_right = Vector((right, top))
+        bottom_left = Vector((left, bottom))
+        points = [top_left, top_right, bottom_left, bottom_right]
+
+        bbox_model = GPencilLayerBBox(self.gp_data)
+        detect_model = MouseDetectModel().bind_bbox(bbox_model)
+        for layer in self.gp_data.layers:
+            bbox_model.calc_bbox(layer.info)
+            if detect_model.bbox_in_area(points):
+                points = bbox_model.bbox_points_r2d
+                self.store_selected_layers_points(layer.info, points)
+
+    @classmethod
+    def store_selected_layers_points(cls, name, layers_points):
+        cls.selected_layers_points[name] = layers_points
+
+    @classmethod
+    def clear_selected_layers_points(cls):
+        cls.selected_layers_points.clear()
 
     def _update_bbox(self, context):
         """Update the Grease Pencil Data. Some data may be changed in the modal."""

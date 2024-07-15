@@ -19,8 +19,8 @@ class EST_PT_active_layer(bpy.types.Panel):
 
     def draw_header(self, context):
         layout = self.layout
-        layer_name = get_edit_tree_gp_data(context).layers.active.info
-        layout.label(text=_p('Active') + ' : ' + layer_name, icon='GP_SELECT_STROKES')
+        if layer := get_edit_tree_gp_data(context).layers.active:
+            layout.label(text=_p('Active') + ' : ' + layer.info, icon='GP_SELECT_STROKES')
 
     def draw(self, context):
         layout = self.layout

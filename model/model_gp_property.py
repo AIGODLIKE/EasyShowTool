@@ -73,6 +73,13 @@ class GreasePencilProperty:
         else:
             self.gp_data.layers.active_index = 0
 
+        self._select_active_layer()
+
+    def _select_active_layer(self):
+        if self.active_layer is None: return
+        for layer in self.gp_data.layers:
+            layer.select = layer == self.active_layer
+
     def is_empty(self) -> bool:
         """Check if the grease pencil data is empty."""
         try:

@@ -10,9 +10,6 @@ from ..model.model_draw import DrawData, DrawPreference
 from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view_model.view_model_draw import DrawViewModel
 
-shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-indices = GPencilLayerBBox.indices
-
 
 class ViewDrawHandle:
     handle = None
@@ -83,7 +80,8 @@ class ViewHover(ViewBasic):
 
     def update(self):
         self.draw_vm.update_draw_data(points=self.drag_vm.bbox_model.bbox_points_r2d,
-                                      edge_points=self.drag_vm.bbox_model.edge_center_points_r2d)
+                                      edge_points=self.drag_vm.bbox_model.edge_center_points_r2d,
+                                      layer_points=self.drag_vm.selected_layers_points)
 
     def draw(self) -> None:
         self.draw_vm.draw_bbox_edge()
@@ -96,6 +94,10 @@ class ViewHover(ViewBasic):
             self.draw_vm.draw_scale_corner_widget()
         if self.drag_vm.pos_corner_extrude:
             self.draw_vm.draw_rotate_widget(point=self.drag_vm.pos_corner_extrude)
+
+        if self.drag_vm.selected_layers_points:
+            for points in self.drag_vm.selected_layers_points.values():
+                self.draw_vm.draw_box(points)
 
         if self.draw_vm.debug:
             self.draw_vm.draw_debug_info(self.drag_vm.debug_info)

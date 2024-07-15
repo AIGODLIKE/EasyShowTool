@@ -10,7 +10,6 @@ import blf
 from ..model.model_draw import DrawData, DrawPreference
 from ..model.model_gp_bbox import GPencilLayerBBox
 
-shader = gpu.shader.from_builtin('UNIFORM_COLOR')
 indices = GPencilLayerBBox.indices
 
 
@@ -18,6 +17,8 @@ indices = GPencilLayerBBox.indices
 class DrawViewModel:
     draw_data: DrawData
     draw_preference: DrawPreference
+
+    shader = gpu.shader.from_builtin('UNIFORM_COLOR')
 
     def __getattr__(self, item):
         """Get the attribute from the draw data or draw preference."""
@@ -41,21 +42,21 @@ class DrawViewModel:
         return color[0], color[1], color[2], alpha
 
     def draw_bbox_points(self):
-        shader.uniform_float("color", self.color_highlight)
-        batch = batch_for_shader(shader, 'POINTS', {"pos": self.points})
-        batch.draw(shader)
+        self.shader.uniform_float("color", self.color_highlight)
+        batch = batch_for_shader(self.shader, 'POINTS', {"pos": self.points})
+        batch.draw(self.shader)
 
     def draw_bbox_edge(self, highlight: bool = False):
         gpu.state.point_size_set(10)
-        batch = batch_for_shader(shader, 'LINE_STRIP', {"pos": self.coords})
-        shader.uniform_float("color", self.color if not highlight else self.color_highlight)
-        batch.draw(shader)
+        batch = batch_for_shader(self.shader, 'LINE_STRIP', {"pos": self.coords})
+        self.shader.uniform_float("color", self.color if not highlight else self.color_highlight)
+        batch.draw(self.shader)
 
     def draw_bbox_area(self):
         gpu.state.blend_set('ALPHA')
-        shader.uniform_float("color", self.color_area)
-        batch = batch_for_shader(shader, 'TRIS', {"pos": self.points}, indices=indices)
-        batch.draw(shader)
+        self.shader.uniform_float("color", self.color_area)
+        batch = batch_for_shader(self.shader, 'TRIS', {"pos": self.points}, indices=indices)
+        batch.draw(self.shader)
 
     def draw_rotate_widget(self, point: Vector):
         gpu.state.point_size_set(self.rotate_px)
@@ -63,29 +64,34 @@ class DrawViewModel:
 
     def draw_scale_corner_widget(self):
         gpu.state.point_size_set(self.corner_px)
-        shader.uniform_float("color", self.color_hover)
-        batch = batch_for_shader(shader, 'POINTS', {"pos": self.points})
-        batch.draw(shader)
+        self.shader.uniform_float("color", self.color_hover)
+        batch = batch_for_shader(self.shader, 'POINTS', {"pos": self.points})
+        batch.draw(self.shader)
 
     def draw_scale_edge_widget(self):
         gpu.state.point_size_set(self.edge_px)
-        shader.uniform_float("color", self.color_hover)
-        batch = batch_for_shader(shader, 'POINTS', {"pos": self.edge_points})
-        batch.draw(shader)
+        self.shader.uniform_float("color", self.color_hover)
+        batch = batch_for_shader(self.shader, 'POINTS', {"pos": self.edge_points})
+        batch.draw(self.shader)
 
     def draw_shapes(self, point: np.ndarray):
-        shader.uniform_float("color", self.color_hover)
-        batch = batch_for_shader(shader, 'POINTS', {"pos": point})
-        batch.draw(shader)
+        self.shader.uniform_float("color", self.color_hover)
+        batch = batch_for_shader(self.shader, 'POINTS', {"pos": point})
+        batch.draw(self.shader)
 
     def draw_line(self, start_pos, end_pos):
-        shader.uniform_float("color", self.color_hover)
-        batch = batch_for_shader(shader, 'LINES', {"pos": [start_pos, end_pos]})
-        batch.draw(shader)
+        self.shader.uniform_float("color", self.color_hover)
+        batch = batch_for_shader(self.shader, 'LINES', {"pos": [start_pos, end_pos]})
+        batch.draw(self.shader)
+
+    def draw_box(self, points: Sequence[Vector]):
+        self.shader.uniform_float("color", self.color_hover)
+        batch = batch_for_shader(self.shader, 'LINE_LOOP', {"pos": points})
+        batch.draw(self.shader)
 
     def _draw_text_left_bottom(self, text_lines: Sequence[str], size=24, space: int = 5):
         font_id = 0
-        shader.uniform_float("color", self.color)
+        self.shader.uniform_float("color", self.color)
         # start from the bottom left corner
         x, y = 20, 20
         # draw some text
@@ -100,7 +106,7 @@ class DrawViewModel:
 
     def draw_text(self, text: str, pos: Vector, size=24):
         font_id = 0
-        shader.uniform_float("color", self.color)
+        self.shader.uniform_float("color", self.color)
         blf.color(font_id, 1, 1, 1, 1)
         blf.position(font_id, pos.x, pos.y, 0)
         blf.size(font_id, size)
@@ -114,7 +120,7 @@ class DrawViewModel:
             self.draw_text(f"{round(self.delta_degree, 1)}°", self.end_pos + Vector((0, 20)))
 
     def draw_debug_info(self, dict_info: OrderedDict[str, str]):
-        shader.uniform_float("color", self.debug_color)
+        self.shader.uniform_float("color", self.debug_color)
         textlines = []
 
         for k, v in dict_info.items():
@@ -127,7 +133,12 @@ class DrawViewModel:
         if not self.start_pos or not self.end_pos: return
         if self.end_pos[0] == 0 and self.end_pos[1] == 0: return
         if self.start_pos[0] == 0 and self.start_pos[1] == 0: return
+        # draw the line between start and end pos
         self.draw_line(self.start_pos, self.end_pos)
+        # draw a selected box with the start and end pos
+        points = [self.start_pos, Vector((self.end_pos.x, self.start_pos.y)),
+                  self.end_pos, Vector((self.start_pos.x, self.end_pos.y))]
+        self.draw_box(points)
+        # draw the distance between start and end pos
         dis = round((self.start_pos - self.end_pos).length, 2)
-        middle = (self.start_pos + self.end_pos) / 2
-        self.draw_text(f"{dis}px", middle)
+        self.draw_text(f"{dis}px", self.end_pos + Vector((0, -20)))
