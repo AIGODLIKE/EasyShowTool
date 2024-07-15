@@ -1,12 +1,12 @@
 ### v0.1.2
 > 2024.7.15
 
-**Fix**
+**修复**
 
-+ enable in background failed
-+ no 3d view import icon will no longer report error
-+ alt copy error when no context object
-+ error report when no active layer
++ 后台启用失败
++ 没有 3D 视图导入图标将不再报告错误
++ 没有上下文对象时的 alt 复制错误
++ 无活动层时的错误报告
 
 
 ### v0.1.1
