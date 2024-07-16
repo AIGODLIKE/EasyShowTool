@@ -1,5 +1,6 @@
 import bpy
 from .bl_operator.ops_notes import EST_OT_edit_note
+from .bl_operator.ops_gp_modal import EST_OT_gp_view
 
 addon_keymaps = []
 
@@ -11,6 +12,11 @@ def register():
     km = wm.keyconfigs.addon.keymaps.new(name='Node Editor', space_type='NODE_EDITOR')
     kmi = km.keymap_items.new(EST_OT_edit_note.bl_idname, 'LEFTMOUSE', 'DOUBLE_CLICK', ctrl=False, shift=False)
     addon_keymaps.append((km, kmi))
+
+    km = wm.keyconfigs.addon.keymaps.new(name='Node Editor', space_type='NODE_EDITOR')
+    kmi = km.keymap_items.new(EST_OT_gp_view.bl_idname, 'MOUSEMOVE', 'ANY', ctrl=False, shift=False)
+    addon_keymaps.append((km, kmi))
+
 
 def unregister():
     wm = bpy.context.window_manager

@@ -16,6 +16,9 @@ class ViewDrawHandle:
     func: Union['ViewBasic', Callable]
     log: ClassVar[list[str]] = []
 
+    def is_empty(self):
+        return self.handle is None
+
     def add_to_node_editor(self, func: Union['ViewBasic', Callable], args: tuple):
         # print('add_to_node_editor', func.__class__.__name__)
         self.log.append('Add: ' + func.__class__.__name__)

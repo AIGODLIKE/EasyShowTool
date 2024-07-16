@@ -66,7 +66,7 @@ class EST_OT_move_gp_modal(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def _finish(self, context) -> set:
-        EST_OT_gp_set_active_layer.show()
+        EST_OT_gp_view.show()
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -129,24 +129,20 @@ class EST_OT_add_gp_modal(bpy.types.Operator):
                                location=location)
 
 
-# noinspection PyPep8Naming
-class EST_OT_gp_set_active_layer(bpy.types.Operator):
-    bl_idname = "est.gp_set_active_layer"
-    bl_label = "Set Active Layer"
-    bl_description = "Set the active layer of the Grease Pencil Object"
+class EST_OT_gp_view(bpy.types.Operator):
+    bl_idname = "est.gp_view"
+    bl_label = "View"
 
-    # set class variable because need to call from other operator
-    # also this operator is designed to be modal and single instance
     draw_handle: ClassVar[ViewDrawHandle] = None
     drag_vm: ClassVar[DragGreasePencilViewModal] = None
     view_hover: ClassVar[ViewHover] = None
     # call stop
     stop: bool = False
-    is_dragging: ClassVar[bool] = False  # allow to call from other operator
 
     @classmethod
     def poll(cls, context):
-        return has_edit_tree(context)
+        return has_edit_tree(context) and is_valid_workspace_tool(context) and get_edit_tree_gp_data(
+            context) and cls.draw_handle.is_empty()
 
     @classmethod
     def hide(cls):
@@ -165,15 +161,9 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
         if self.draw_handle:
             self.draw_handle.remove_from_node_editor()
 
-        if not (gp_data := get_edit_tree_gp_data(context)):
-            return {'CANCELLED'}
-
+        gp_data = get_edit_tree_gp_data(context)
         drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
 
-        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y))) is None:
-            return {'FINISHED'}
-
-        drag_vm.bbox_model.active_layer_index = layer_index
         drag_vm.clear_selected_layers_points()
         drag_vm.bbox_model.calc_active_layer_bbox()
         self.__class__.drag_vm = drag_vm
@@ -221,6 +211,30 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
 
 
 # noinspection PyPep8Naming
+class EST_OT_gp_set_active_layer(bpy.types.Operator):
+    bl_idname = "est.gp_set_active_layer"
+    bl_label = "Set Active Layer"
+    bl_description = "Set the active layer of the Grease Pencil Object"
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context) and is_valid_workspace_tool(context) and get_edit_tree_gp_data(context)
+
+    def invoke(self, context, event):
+        gp_data = get_edit_tree_gp_data(context)
+
+        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y))) is None:
+            return {'FINISHED'}
+
+        drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
+        drag_vm.bbox_model.active_layer_index = layer_index
+        drag_vm.clear_selected_layers_points()
+        drag_vm.bbox_model.calc_active_layer_bbox()
+        drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
+        return {'FINISHED'}
+
+
+# noinspection PyPep8Naming
 class EST_OT_gp_drag_modal(bpy.types.Operator):
     bl_idname = "est.gp_drag_modal"
     bl_label = "Transform"
@@ -263,7 +277,7 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
 
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
-            EST_OT_gp_set_active_layer.hide()
+            EST_OT_gp_view.hide()
             self.drag_vm.update_mouse_pos(context, event)
             if not self.drag_init:
                 self.drag_vm.mouse_init()
@@ -283,7 +297,7 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
 
     def _finish(self, context) -> set:
         self.draw_handle.remove_from_node_editor()
-        EST_OT_gp_set_active_layer.show()
+        EST_OT_gp_view.show()
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -293,6 +307,7 @@ def register():
 
     register_class(EST_OT_move_gp_modal)
     register_class(EST_OT_add_gp_modal)
+    register_class(EST_OT_gp_view)
     register_class(EST_OT_gp_set_active_layer)
     register_class(EST_OT_gp_drag_modal)
 
@@ -302,5 +317,6 @@ def unregister():
 
     unregister_class(EST_OT_move_gp_modal)
     unregister_class(EST_OT_add_gp_modal)
+    unregister_class(EST_OT_gp_view)
     unregister_class(EST_OT_gp_set_active_layer)
     unregister_class(EST_OT_gp_drag_modal)
