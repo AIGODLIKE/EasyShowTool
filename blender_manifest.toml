@@ -8,4 +8,4 @@ type = "add-on"
 schema_version = "1.0.0"
 tags = ["NODE","INTERFACE"]
 license = ["SPDX:GPL-3.0-or-later"]
-website = "https://github.com/atticus-lv/"
+website = "https://github.com/atticus-lv/EasyShowTool"

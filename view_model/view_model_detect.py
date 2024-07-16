@@ -60,17 +60,19 @@ class MouseDetectModel:
                     inside = not inside
             return inside
 
-    def bbox_in_area(self, points: list[Vector]) -> bool:
+    def bbox_in_area(self, points: list[Vector],all = True) -> bool:
         """check if the bbox is in the area defined by the points
         :param points: points that define the area, order: top_left, top_right, bottom_left, bottom_right
+        :param all: if True, all the points need to be in the area, otherwise, any point in the area is ok
         """
         top_left, top_right, bottom_left, bottom_right = points
         bbox_points = self.bbox_model.bbox_points_r2d
         if not self.bbox_model.is_local:
             for p in bbox_points:
                 if not (top_left[0] < p[0] < top_right[0] and bottom_left[1] < p[1] < top_left[1]):
-                    return False
-
+                    return False # if not in the area
+                if all:
+                    return True
             return True
         else:
             polygon = [top_left, top_right, bottom_right, bottom_left]
@@ -79,7 +81,9 @@ class MouseDetectModel:
                 for p in bbox_points:
                     if not ((p1[1] > p[1]) != (p2[1] > p[1]) and (
                             p[0] < (p2[0] - p1[0]) * (p[1] - p1[1]) / (p2[1] - p1[1]) + p1[0])):
-                        return False
+                        return False # if not in the area
+                    if all:
+                        return True
             return True
 
     def _near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 20) -> \

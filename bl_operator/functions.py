@@ -80,6 +80,11 @@ def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Ve
         return None
     return None
 
+def ensure_builtin_font():
+    """if a old file is loaded, the font may not be loaded, so load the built-in font."""
+    if bpy.context.scene.est_gp_text_font is None and 'Bfont Regular' not in bpy.data.fonts:
+        bpy.data.curves.new('tmp', type='FONT')  # make sure the built-in font is loaded
+        bpy.context.scene.est_gp_text_font = bpy.data.fonts['Bfont Regular']
 
 @contextmanager
 def ensure_3d_view(context: bpy.types.Context):

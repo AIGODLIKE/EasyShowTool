@@ -4,12 +4,7 @@ import subprocess
 import threading
 import sys
 from pathlib import Path
-
-_runtime = {
-    # 'port': None,
-    # 'thread': None,
-    # 'pid': None,
-}
+from typing import ClassVar, Union
 
 
 def get_document_dir() -> Path:
@@ -49,13 +44,23 @@ class EST_OT_launch_doc(bpy.types.Operator):
     bl_label = 'Documentation'
     bl_options = {'REGISTER', 'UNDO'}
 
+    thread: ClassVar[Union[ServerThread, None]] = None
+
+    @classmethod
+    def launch_doc_server(cls):
+        cls.stop_doc_server()
+        cls.thread = ServerThread()
+        cls.thread.start()
+
+    @classmethod
+    def stop_doc_server(cls):
+        if cls.thread:
+            cls.thread.stop()
+            cls.thread = None
+
     def execute(self, context):
-        if _runtime.get('thread'):
-            _runtime['thread'].stop()
-            _runtime['thread'] = None
-        _runtime['thread'] = ServerThread()
-        _runtime['thread'].start()
-        bpy.ops.wm.url_open(url=f'http://localhost:{_runtime["thread"].port}')
+        self.launch_doc_server()
+        bpy.ops.wm.url_open(url=f'http://localhost:{self.thread.port}')
         return {'FINISHED'}
 
 
@@ -64,7 +69,5 @@ def register():
 
 
 def unregister():
+    EST_OT_launch_doc.stop_doc_server()
     bpy.utils.unregister_class(EST_OT_launch_doc)
-    if _runtime.get('thread'):
-        _runtime['thread'].stop()
-        _runtime['thread'] = None
