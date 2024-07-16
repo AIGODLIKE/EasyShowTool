@@ -162,6 +162,8 @@ class EST_OT_gp_view(bpy.types.Operator):
             self.draw_handle.remove_from_node_editor()
 
         gp_data = get_edit_tree_gp_data(context)
+        if not gp_data.layers.active:
+            return {'CANCELLED'}
         drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
 
         drag_vm.clear_selected_layers_points()
