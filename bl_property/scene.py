@@ -6,7 +6,7 @@ from bpy.props import PointerProperty, IntProperty, EnumProperty, StringProperty
 from bpy.app.handlers import persistent
 
 from ..model.model_color import ColorPaletteModel
-from ..bl_operator.functions import enum_add_type_items, enum_shot_orient_items
+from ..bl_operator.functions import enum_add_type_items, enum_shot_orient_items, ensure_builtin_font
 
 
 def register_later(lock, t):
@@ -14,9 +14,7 @@ def register_later(lock, t):
         time.sleep(5)
 
     # font
-    if bpy.context.scene.est_gp_text_font is None and 'Bfont Regular' not in bpy.data.fonts:
-        bpy.data.curves.new('tmp', type='FONT')  # make sure the built-in font is loaded
-        bpy.context.scene.est_gp_text_font = bpy.data.fonts['Bfont Regular']
+    ensure_builtin_font()
 
 
 @persistent

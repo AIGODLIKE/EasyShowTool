@@ -7,7 +7,7 @@ from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool, ShootAngles
 from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, get_pos_layer_index, load_icon_svg, \
-    get_edit_tree_gp_data
+    get_edit_tree_gp_data, ensure_builtin_font
 
 from ..public_path import get_pref
 
@@ -171,6 +171,7 @@ class EST_OT_add_gp(bpy.types.Operator):
         gp_data: bpy.types.GreasePencil = CreateGreasePencilData.empty() if not nt.grease_pencil else nt.grease_pencil
 
         if self.add_type == 'TEXT':
+            ensure_builtin_font()
             font_gp_data = CreateGreasePencilData.from_text(self.text, self.size, context.scene.est_gp_text_font.name)
         elif self.add_type == 'OBJECT':
             euler = getattr(ShootAngles, self.obj_shot_angle)
