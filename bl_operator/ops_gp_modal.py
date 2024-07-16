@@ -165,9 +165,9 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
         if self.draw_handle:
             self.draw_handle.remove_from_node_editor()
 
-        nt: bpy.types.NodeTree = context.space_data.edit_tree
-        gp_data: bpy.types.GreasePencil = nt.grease_pencil
-        if not gp_data: return {'CANCELLED'}
+        if not (gp_data := get_edit_tree_gp_data(context)):
+            return {'CANCELLED'}
+
         drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
 
         if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y))) is None:
