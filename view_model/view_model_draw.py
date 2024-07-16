@@ -18,7 +18,7 @@ class DrawViewModel:
     draw_data: DrawData
     draw_preference: DrawPreference
 
-    shader = gpu.shader.from_builtin('UNIFORM_COLOR')
+    shader: gpu.types.GPUShader = field(init=False)
 
     def __getattr__(self, item):
         """Get the attribute from the draw data or draw preference."""
@@ -33,6 +33,7 @@ class DrawViewModel:
                 setattr(self.draw_data, key, value)
 
     def __post_init__(self):
+        self.shader = gpu.shader.from_builtin('UNIFORM_COLOR')
         gpu.state.line_width_set(self.line_width)
         gpu.state.point_size_set(self.point_size)
         gpu.state.blend_set('ALPHA')
