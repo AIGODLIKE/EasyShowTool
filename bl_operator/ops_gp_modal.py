@@ -4,11 +4,10 @@ from typing import ClassVar
 from mathutils import Vector
 
 from ..model.model_gp import BuildGreasePencilData
-from ..model.model_gp_bbox import GPencilLayerBBox
-from ..model.utils import VecTool, ShootAngles, ColorTool
-from ..model.model_color import ColorPaletteModel
+from ..model.utils import VecTool
 from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..view_model.view_model_drag import DragGreasePencilViewModal
+from ..view_model.view_model_select import SelectedGPLayersRuntime
 from ..view.view_node_editor import ViewHover, ViewDrawHandle, ViewDrag
 
 from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, get_pos_layer_index, get_edit_tree_gp_data
@@ -53,7 +52,7 @@ class EST_OT_move_gp_modal(bpy.types.Operator):
         if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
             self.mouse_pos_prev = self.mouse_pos
             self.mouse_pos = event.mouse_region_x, event.mouse_region_y
-
+            self.move_handler.selected_layers = SelectedGPLayersRuntime.selected_layers()
             pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
             cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
             self.move_handler.end_pos = self.mouse_pos

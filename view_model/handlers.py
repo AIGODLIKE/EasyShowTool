@@ -70,6 +70,8 @@ class TransformHandler:
     # callback
     call_before: Optional[Callable] = None
     call_after: Optional[Callable] = None
+    # use for multi-layer
+    selected_layers: list[str] = None
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         ...  # subclass should implement this method
@@ -109,7 +111,11 @@ class MoveHandler(TransformHandler):
         """Handle the move event in the modal."""
         if not self.delta_vec_v2d:
             return False
-        self.build_model.move_active(self.delta_vec_v2d, space='v2d')
+        if not self.selected_layers:
+            self.build_model.move_active(self.delta_vec_v2d, space='v2d')
+        else:
+            for layer in self.selected_layers:
+                self.build_model.move(layer, self.delta_vec_v2d, space='v2d')
         self.delta_move = self.delta_vec_v2d
         self.total_move += self.delta_vec_v2d
         if self.view_pan.is_on_region_edge(self.end_pos):
@@ -147,14 +153,14 @@ class RotateHandler(TransformHandler):
         # snap
         if not event.shift:
             self.delta_degree += degree
-            self.build_model.rotate_active(degree, self.pivot , space='v2d')
+            self.build_model.rotate_active(degree, self.pivot, space='v2d')
             self.total_degree += degree
         else:
             self.snap_degree_count += abs(degree)
             if self.snap_degree_count > self.snap_degree:
                 self.snap_degree_count = 0
                 self.delta_degree += self.snap_degree * inverse
-                self.build_model.rotate_active(self.snap_degree * inverse, self.pivot , space='v2d')
+                self.build_model.rotate_active(self.snap_degree * inverse, self.pivot, space='v2d')
                 self.total_degree += self.snap_degree * inverse
         return True
 

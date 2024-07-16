@@ -20,3 +20,7 @@ class SelectedGPLayersRuntime:
 
     def get_selected_layers_points_r2d(self) -> list[list[Vector]]:
         return [[VecTool.v2d_2_r2d(p) for p in points] for points in self.selected_layers_points_v2d.values()]
+
+    @classmethod
+    def selected_layers(cls) -> list[str]:
+        return list(cls.selected_layers_points_v2d.keys())
