@@ -42,7 +42,7 @@ class EST_OT_move_gp_modal(bpy.types.Operator):
 
         context.window_manager.modal_handler_add(self)
         context.window.cursor_set('MOVE_X')
-        EST_OT_gp_set_active_layer.hide()
+        EST_OT_gp_view.hide()
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):

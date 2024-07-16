@@ -9,6 +9,7 @@ from ..public_path import get_pref
 from ..model.model_gp import VecTool, BuildGreasePencilData
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..view_model.view_model_detect import MouseDetectModel
+from .view_model_select import SelectedGPLayersRuntime
 from .handlers import TransformHandler
 
 
@@ -17,9 +18,8 @@ class DragGreasePencilViewModal:
     # need to pass in
     gp_data: bpy.types.GreasePencil
     last_gp_data: ClassVar[bpy.types.GreasePencil] = None
-    # callback
-    on_mouse_init: list[Callable] = field(default_factory=list)
-    on_mouse_move: list[Callable] = field(default_factory=list)
+    #
+    select_runtime: SelectedGPLayersRuntime = SelectedGPLayersRuntime()
     # drag_handle
     drag_scale_handler: Optional[TransformHandler] = None
     drag_move_handler: Optional[TransformHandler] = None
@@ -28,6 +28,10 @@ class DragGreasePencilViewModal:
     bbox_model: GPencilLayerBBox = field(init=False)
     build_model: BuildGreasePencilData = field(init=False)
     detect_model: MouseDetectModel = field(init=False)
+    # callback
+    on_mouse_init: list[Callable] = field(default_factory=list)
+    on_mouse_move: list[Callable] = field(default_factory=list)
+
     # state / on points
     pos_edge_center: Vector = None
     pos_corner: Vector = None
@@ -44,7 +48,6 @@ class DragGreasePencilViewModal:
     delta_vec_v2d: Vector = Vector((0, 0))
     # state
     in_drag_area: bool = False
-    selected_layers_points_v2d: ClassVar[dict[str, list[Vector]]] = {}
     # snap
     snap_degree: int = field(default_factory=lambda: get_pref().gp_performance.snap_degree)
     # copy
@@ -190,22 +193,21 @@ class DragGreasePencilViewModal:
 
         bbox_model = GPencilLayerBBox(self.gp_data)
         detect_model = MouseDetectModel().bind_bbox(bbox_model)
-        self.selected_layers_points_v2d.clear()
+        self.select_runtime.clear()
         for layer in self.gp_data.layers:
             bbox_model.calc_bbox(layer.info)
             if detect_model.bbox_in_area(box_area_points):
                 points = list(bbox_model.bbox_points_v2d)
                 points[2], points[3] = points[3], points[2]
-                self.selected_layers_points_v2d[layer.info] = points
+                self.select_runtime.update(layer.info, points)
                 layer.select = True
 
     @property
     def selected_layers_points_r2d(self) -> list[list[Vector]]:
-        return [[VecTool.v2d_2_r2d(p) for p in points] for points in self.selected_layers_points_v2d.values()]
+        return self.select_runtime.get_selected_layers_points_r2d()
 
-    @classmethod
-    def clear_selected_layers_points(cls):
-        cls.selected_layers_points_v2d.clear()
+    def clear_selected_layers_points(self):
+        self.select_runtime.clear()
 
     def _update_active_bbox(self, context):
         """Update the Grease Pencil Data. Some data may be changed in the modal."""
