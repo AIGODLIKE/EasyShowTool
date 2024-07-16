@@ -1,4 +1,3 @@
-import gpu.shader
 import bpy
 from mathutils import Color, Vector
 
