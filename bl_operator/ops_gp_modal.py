@@ -60,6 +60,7 @@ class EST_OT_move_gp_modal(bpy.types.Operator):
             self.move_handler.accept_event(event)
         if event.type == 'LEFTMOUSE':
             self._finish(context)
+            SelectedGPLayersRuntime.update_from_gp_data(self.build_model.gp_data)
             return {'FINISHED'}
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}

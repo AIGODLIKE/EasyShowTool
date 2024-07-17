@@ -1,6 +1,9 @@
 from typing import ClassVar
+
+import bpy.types
 from mathutils import Vector
 from ..model.utils import VecTool
+from ..model.model_gp_bbox import GPencilLayerBBox
 
 
 class SelectedGPLayersRuntime:
@@ -24,3 +27,12 @@ class SelectedGPLayersRuntime:
     @classmethod
     def selected_layers(cls) -> list[str]:
         return list(cls.selected_layers_points_v2d.keys())
+
+    @classmethod
+    def update_from_gp_data(cls, gp_data: bpy.types.GreasePencil):
+        bbox_model = GPencilLayerBBox(gp_data)
+        for layer_name in cls.selected_layers_points_v2d.keys():
+            bbox_model.calc_bbox(layer_name)
+            points = list(bbox_model.bbox_points_v2d)
+            points[2], points[3] = points[3], points[2]  # swap the bottom left and bottom right
+            cls.update(layer_name, points)
