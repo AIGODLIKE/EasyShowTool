@@ -1,33 +1,19 @@
 from mathutils import Vector, Euler
-from typing import Sequence, Union, Final, ClassVar,Literal
+from typing import Sequence, Union, ClassVar, Literal
 import bpy
 from dataclasses import dataclass
-from enum import Enum
 from math import radians, degrees
 from math import cos, sin, pow
 
 
 class EulerTool:
     @staticmethod
-    def to_rad(degree: Sequence) -> Euler:
-        return Euler((radians(d) for d in degree), 'XYZ')
+    def to_rad(degree: Sequence, order: str = 'XYZ') -> Euler:
+        return Euler((radians(d) for d in degree), order)
 
     @staticmethod
-    def to_deg(radian: Sequence) -> Euler:
-        return Euler((degrees(d) for d in radian), 'XYZ')
-
-
-class ShootAngles(Enum):
-    """Euler angles for the shooting.
-    shoot will be on top(xy plane, z up), so the enum members are the angles to rotate the object to face the camera."""
-    TOP_LEFT_FRONT: Euler = Euler(EulerTool.to_rad((-67.8044, -32.8686, -13.4876)), 'XYZ')
-    TOP_LEFT_FRONT_45: Euler = Euler(EulerTool.to_rad((-35.2644, -30, -35.2644)), 'XYZ')
-
-    TOP: Euler = Euler(EulerTool.to_rad((0, 0, 0)), 'XYZ')
-    FRONT: Euler = Euler(EulerTool.to_rad((-90, 0, 0)), 'XYZ')
-    LEFT: Euler = Euler(EulerTool.to_rad((0, -90, -90)), 'XYZ')
-    RIGHT: Euler = Euler(EulerTool.to_rad((0, 90, 90)), 'XYZ')
-    BOTTOM: Euler = Euler(EulerTool.to_rad((0, 180, 0)), 'XYZ')
+    def to_deg(radian: Sequence, order: str = 'XYZ') -> Euler:
+        return Euler((degrees(d) for d in radian), order)
 
 
 class ColorTool:
@@ -139,43 +125,51 @@ class VecTool:
 @dataclass(slots=True)
 class PointArea:
     """4 points to define an area."""
-    top: Vector
-    bottom: Vector
-    left: Vector
-    right: Vector
+    top: int | float
+    bottom: int | float
+    left: int | float
+    right: int | float
 
-    @property
-    def center(self) -> Vector:
-        return (self.top + self.bottom + self.left + self.right) / 4
-
-    @property
-    def width(self) -> float:
-        return (self.right - self.left).length
-
-    @property
-    def height(self) -> float:
-        return (self.top - self.bottom).length
+    indices: ClassVar = ((0, 1, 2), (2, 1, 3))  # for gpu batch drawing fan
 
     @property
     def top_left(self) -> Vector:
-        return Vector((self.left[0], self.top[1]))
+        return Vector((self.left, self.top))
 
     @property
     def top_right(self) -> Vector:
-        return Vector((self.right[0], self.top[1]))
+        return Vector((self.right, self.top))
 
     @property
     def bottom_left(self) -> Vector:
-        return Vector((self.left[0], self.bottom[1]))
+        return Vector((self.left, self.bottom))
 
     @property
     def bottom_right(self) -> Vector:
-        return Vector((self.right[0], self.bottom[1]))
+        return Vector((self.right, self.bottom))
 
-    def draw_tri_order(self) -> list[Vector]:
+    @property
+    def top_center(self) -> Vector:
+        return (self.top_left + self.top_right) / 2
+
+    @property
+    def bottom_center(self) -> Vector:
+        return (self.bottom_left + self.bottom_right) / 2
+
+    @property
+    def left_center(self) -> Vector:
+        return (self.top_left + self.bottom_left) / 2
+
+    @property
+    def right_center(self) -> Vector:
+        return (self.top_right + self.bottom_right) / 2
+
+    @property
+    def order_points(self) -> list[Vector]:
         return [self.top_left, self.top_right, self.bottom_left, self.bottom_right]
 
-    def draw_line_order(self) -> list[Vector]:
+    @property
+    def line_order_points(self) -> list[Vector]:
         return [self.top_left, self.top_right, self.bottom_right, self.bottom_left]
 
 

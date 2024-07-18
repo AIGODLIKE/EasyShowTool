@@ -5,7 +5,7 @@ from mathutils import Vector
 import bpy
 from contextlib import contextmanager
 
-from ..model.utils import ShootAngles
+from ..model.data_enums import ShootAngles
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..view_model.view_model_detect import MouseDetectModel
 from ..public_path import get_svg_icon
@@ -56,10 +56,6 @@ def enum_add_type_items() -> list[tuple[str, str, str]]:
     }
     return [(key, value, "") for key, value in data.items()]
 
-
-def enum_shot_orient_items() -> list[tuple[str, str, str]]:
-    """Return the items for the shot_orient enum property."""
-    return [(euler.name, euler.name.replace('_', ' ').title(), '') for euler in ShootAngles]
 
 
 def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather=0) -> Union[int, None]:

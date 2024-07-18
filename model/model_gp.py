@@ -3,7 +3,8 @@ import numpy as np
 from mathutils import Vector, Euler, Color
 from typing import Literal, Optional, Union, ClassVar
 from dataclasses import dataclass, field
-from .utils import VecTool, ShootAngles
+from .utils import VecTool
+from .data_enums import ShootAngles
 from .model_gp_edit import EditGreasePencilLayer
 from .model_gp_property import GreasePencilProperty
 from .model_gp_bbox import GPencilLayerBBox
