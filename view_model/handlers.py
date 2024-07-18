@@ -8,6 +8,7 @@ from typing import ClassVar
 from ..model.utils import Coord, EdgeCenter, VecTool
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.model_gp import BuildGreasePencilData
+from .view_model_detect import MouseState
 
 
 @dataclass
@@ -72,12 +73,16 @@ class TransformHandler:
     call_after: Optional[Callable] = None
     # use for multi-layer
     selected_layers: list[str] = None
+    # mouse
+    mouse_state: MouseState = None
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         ...  # subclass should implement this method
 
-    def handle(self, event: bpy.types.Event, models: Optional[dict] = None, **kwargs) -> bool:
+    def handle(self, event: bpy.types.Event, mouse_state: MouseState, models: Optional[dict] = None, **kwargs) -> bool:
         # if key in self.__dict__: # set the attribute
+        if self.mouse_state is None:
+            self.mouse_state = mouse_state
         if self.bbox_model is None or self.build_model is None:
             if models:
                 self.bbox_model = models.get('bbox_model', None)
@@ -99,8 +104,6 @@ class MoveHandler(TransformHandler):
     total_move: Vector = Vector((0, 0))  # value between the last mouse move and the first mouse move
     delta_move: Vector = None  # compare to the last mouse move
     # in
-    delta_vec_v2d: Vector = None
-    end_pos: tuple[int, int] = (0, 0)
 
     view_pan: ViewPan = None
 
@@ -109,16 +112,18 @@ class MoveHandler(TransformHandler):
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the move event in the modal."""
-        if not self.delta_vec_v2d:
+        delta_vec_v2d = self.mouse_state.delta_vec_v2d
+        end_pos = self.mouse_state.end_pos
+        if not delta_vec_v2d:
             return False
         if not self.selected_layers:
-            self.build_model.move_active(self.delta_vec_v2d, space='v2d')
+            self.build_model.move_active(delta_vec_v2d, space='v2d')
         else:
             for layer in self.selected_layers:
-                self.build_model.move(layer, self.delta_vec_v2d, space='v2d')
-        self.delta_move = self.delta_vec_v2d
-        self.total_move += self.delta_vec_v2d
-        if self.view_pan.is_on_region_edge(self.end_pos):
+                self.build_model.move(layer, delta_vec_v2d, space='v2d')
+        self.delta_move = delta_vec_v2d
+        self.total_move += delta_vec_v2d
+        if self.view_pan.is_on_region_edge(end_pos):
             pan_vec = self.view_pan.edge_pan(event)
             self.build_model.move_active(pan_vec, space='v2d')
             self.total_move += pan_vec
@@ -132,8 +137,6 @@ class RotateHandler(TransformHandler):
     delta_degree: float = 0
     # in
     pivot: Vector = None
-    mouse_pos: tuple[int, int] = (0, 0)
-    mouse_pos_prev: tuple[int, int] = (0, 0)
     snap_degree: int = 0
     snap_degree_count: int = 0
 
@@ -143,11 +146,7 @@ class RotateHandler(TransformHandler):
             self.pivot = self.bbox_model.center_v2d
             self.pivot_r2d = self.bbox_model.center_r2d
 
-        vec_1 = Vector(self.mouse_pos) - self.pivot_r2d
-        vec_2 = Vector(self.mouse_pos_prev) - self.pivot_r2d
-        # clockwise or counterclockwise
-        inverse: Literal[1, -1] = VecTool.rotation_direction(vec_1, vec_2)
-        angle = inverse * vec_1.angle(vec_2)
+        inverse, angle = self.mouse_state.get_rotate_delta_angle(self.pivot_r2d)
         degree = degrees(angle)
 
         # snap
@@ -213,8 +212,6 @@ class ScaleHandler(TransformHandler):
     pivot_local: Vector = None
     degree_local: float = 0
     # pass in
-    delta_vec_v2d: Vector = None
-    mouse_pos: tuple[int, int] = (0, 0)
     pos_edge_center: Vector = None
     pos_corner: Vector = None
     pt_edge_center: int = 0
@@ -225,6 +222,9 @@ class ScaleHandler(TransformHandler):
         :return: True if the scale is handled, False otherwise. Event will be accepted if True."""
         unify_scale = event.shift
         center_scale = event.ctrl
+
+        self.delta_vec_v2d = self.mouse_state.delta_vec_v2d
+        self.mouse_pos = self.mouse_state.mouse_pos
 
         if self.pos_edge_center:
             if center_scale:

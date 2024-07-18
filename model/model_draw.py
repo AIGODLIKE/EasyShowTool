@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from mathutils import Vector, Color
 import bpy
-from typing import Optional, ClassVar, Literal
+from typing import Optional, ClassVar, Literal, Sequence
 from pathlib import Path
 import bmesh
 import numpy as np
@@ -63,7 +63,7 @@ class DrawData:
     """Draw data for grease pencil, collect all the draw data need here"""
     points: list[Vector, Vector, Vector, Vector]
     edge_points: list[Vector, Vector, Vector, Vector]
-    layer_points:list[list[Vector]] = None # for selected layers points
+    layer_points: list[Sequence[Vector]] = None  # for selected layers points
 
     start_pos: Optional[Vector] = None
     end_pos: Optional[Vector] = None

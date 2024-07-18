@@ -9,6 +9,7 @@ from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view_model.view_model_select import SelectedGPLayersRuntime
 from ..view.view_node_editor import ViewHover, ViewDrawHandle, ViewDrag
+from ..view_model.view_model_detect import MouseState
 
 from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, get_pos_layer_index, get_edit_tree_gp_data
 
@@ -22,8 +23,7 @@ class EST_OT_move_gp_modal(bpy.types.Operator):
     build_model: BuildGreasePencilData = None
     move_handler: MoveHandler = None
 
-    mouse_pos: tuple[int, int] = [0, 0]
-    mouse_pos_prev: tuple[int, int] = [0, 0]
+    mouse_state: MouseState = None
 
     @classmethod
     def poll(cls, context):
@@ -36,8 +36,11 @@ class EST_OT_move_gp_modal(bpy.types.Operator):
         self.move_handler = MoveHandler()
         self.move_handler.build_model = self.build_model
 
-        self.mouse_pos = event.mouse_region_x, event.mouse_region_y
-        self.mouse_pos_prev = self.mouse_pos
+        self.mouse_state = MouseState()
+        self.move_handler.mouse_state = self.mouse_state
+
+        self.mouse_state.init()
+        self.mouse_state.update_mouse_position(event)
 
         context.window_manager.modal_handler_add(self)
         context.window.cursor_set('MOVE_X')
@@ -50,13 +53,8 @@ class EST_OT_move_gp_modal(bpy.types.Operator):
             self._finish(context)
             return {'CANCELLED'}
         if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
-            self.mouse_pos_prev = self.mouse_pos
-            self.mouse_pos = event.mouse_region_x, event.mouse_region_y
+            self.mouse_state.update_mouse_position(event)
             self.move_handler.selected_layers = SelectedGPLayersRuntime.selected_layers()
-            pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
-            cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
-            self.move_handler.end_pos = self.mouse_pos
-            self.move_handler.delta_vec_v2d = cur_v2d - pre_v2d
             self.move_handler.accept_event(event)
         if event.type == 'LEFTMOUSE':
             self._finish(context)

@@ -109,21 +109,21 @@ class ViewHover(ViewBasic):
 class ViewDrag(ViewBasic):
     def __post_init__(self):
         gp_data_bbox: GPencilLayerBBox = self.drag_vm.bbox_model
-        start_pos = Vector(self.drag_vm.start_pos)
-        end_pos = Vector(self.drag_vm.end_pos)
+        start_pos = Vector(self.drag_vm.mouse_state.start_pos)
+        end_pos = Vector(self.drag_vm.mouse_state.end_pos)
 
         self.draw_data: DrawData = DrawData(gp_data_bbox.bbox_points_r2d,
                                             gp_data_bbox.edge_center_points_r2d,
-                                            start_pos,
-                                            end_pos)
+                                            start_pos=start_pos,
+                                            end_pos=end_pos)
         self.draw_preference = DrawPreference()
         self.draw_vm = DrawViewModel(self.draw_data, self.draw_preference)
 
     def update(self):
         self.draw_vm.update_draw_data(points=self.drag_vm.bbox_model.bbox_points_r2d,
                                       edge_points=self.drag_vm.bbox_model.edge_center_points_r2d,
-                                      start_pos=Vector(self.drag_vm.start_pos),
-                                      end_pos=Vector(self.drag_vm.end_pos))
+                                      start_pos=Vector(self.drag_vm.mouse_state.start_pos),
+                                      end_pos=Vector(self.drag_vm.mouse_state.end_pos))
 
     def draw(self) -> None:
         if self.draw_vm.drag_area:

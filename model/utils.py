@@ -1,5 +1,5 @@
 from mathutils import Vector, Euler
-from typing import Sequence, Union, Final, ClassVar
+from typing import Sequence, Union, Final, ClassVar,Literal
 import bpy
 from dataclasses import dataclass
 from enum import Enum
@@ -120,7 +120,7 @@ class VecTool:
         return Vector((VecTool._size_2(location[0], r=True), VecTool._size_2(location[1], r=True)))
 
     @staticmethod
-    def rotation_direction(v1: Union[Vector, Sequence], v2: Union[Vector, Sequence]) -> int:
+    def rotation_direction(v1: Union[Vector, Sequence], v2: Union[Vector, Sequence]) -> Literal[1, -1]:
         """Return the rotation direction of two vectors.
         CounterClockwise: 1
         Clockwise: -1
@@ -134,6 +134,49 @@ class VecTool:
         c = cos(angle)
         s = sin(angle)
         return Vector((v[0] * c - v[1] * s, v[0] * s + v[1] * c))
+
+
+@dataclass(slots=True)
+class PointArea:
+    """4 points to define an area."""
+    top: Vector
+    bottom: Vector
+    left: Vector
+    right: Vector
+
+    @property
+    def center(self) -> Vector:
+        return (self.top + self.bottom + self.left + self.right) / 4
+
+    @property
+    def width(self) -> float:
+        return (self.right - self.left).length
+
+    @property
+    def height(self) -> float:
+        return (self.top - self.bottom).length
+
+    @property
+    def top_left(self) -> Vector:
+        return Vector((self.left[0], self.top[1]))
+
+    @property
+    def top_right(self) -> Vector:
+        return Vector((self.right[0], self.top[1]))
+
+    @property
+    def bottom_left(self) -> Vector:
+        return Vector((self.left[0], self.bottom[1]))
+
+    @property
+    def bottom_right(self) -> Vector:
+        return Vector((self.right[0], self.bottom[1]))
+
+    def draw_tri_order(self) -> list[Vector]:
+        return [self.top_left, self.top_right, self.bottom_left, self.bottom_right]
+
+    def draw_line_order(self) -> list[Vector]:
+        return [self.top_left, self.top_right, self.bottom_right, self.bottom_left]
 
 
 class PointBase:
