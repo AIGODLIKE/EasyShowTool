@@ -47,28 +47,19 @@ def is_valid_workspace_tool(context) -> bool:
     return context.workspace.tools.from_space_node().idname in {'est.gp_edit_tool', 'est.gp_color_tool'}
 
 
-def enum_add_type_items() -> list[tuple[str, str, str]]:
-    """Return the items for the add_type enum property."""
-    data: dict = {
-        'TEXT': "Text",
-        'OBJECT': "Object",
-        'BL_ICON': "Icon",
-    }
-    return [(key, value, "") for key, value in data.items()]
-
-
-
 def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather=0) -> Union[int, None]:
     """get the layer index by the mouse position."""
     # TODO select through if some layers are overlapped
     try:
-        bboxs: list[GPencilLayerBBox] = [GPencilLayerBBox(gp_data, layer) for layer in
-                                         gp_data.layers]
+        bbox = GPencilLayerBBox(gp_data)
         mouse_detect = MouseDetectModel()
-        for i, bbox in enumerate(bboxs):
+        mouse_detect.bind_bbox(bbox)
+
+        for i, layer in enumerate(gp_data.layers):
             bbox.calc_bbox(i)
-            mouse_detect.bind_bbox(bbox)
             if mouse_detect.in_bbox_area(pos, feather):
+                if gp_data.layers.active_index == i:
+                    continue
                 return bbox.last_layer_index
     except ReferenceError:  # ctrl z will cause the reference error
         return None
@@ -76,11 +67,13 @@ def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Ve
         return None
     return None
 
+
 def ensure_builtin_font():
     """if a old file is loaded, the font may not be loaded, so load the built-in font."""
     if bpy.context.scene.est_gp_text_font is None and 'Bfont Regular' not in bpy.data.fonts:
         bpy.data.curves.new('tmp', type='FONT')  # make sure the built-in font is loaded
         bpy.context.scene.est_gp_text_font = bpy.data.fonts['Bfont Regular']
+
 
 @contextmanager
 def ensure_3d_view(context: bpy.types.Context):
