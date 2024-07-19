@@ -135,10 +135,10 @@ class MouseDetectModel:
 
 @dataclass
 class MouseState:
-    mouse_pos: tuple[int, int] = (0, 0)
-    mouse_pos_prev: tuple[int, int] = (0, 0)
-    start_pos: tuple[int, int] = (0, 0)
-    end_pos: tuple[int, int] = (0, 0)
+    mouse_pos: Vector = Vector((0, 0))
+    mouse_pos_prev: Vector = Vector((0, 0))
+    start_pos: Vector = Vector((0, 0))
+    end_pos: Vector = Vector((0, 0))
 
     delta_vec_r2d: Vector = Vector((0, 0))
     delta_vec_v2d: Vector = Vector((0, 0))
@@ -146,17 +146,19 @@ class MouseState:
     on_mouse_init: list[Callable] = field(default_factory=list)
     on_mouse_move: list[Callable] = field(default_factory=list)
 
-    def init(self):
-        self.mouse_pos = self.mouse_pos_prev
+    def init(self, event):
+        self.mouse_pos = Vector((event.mouse_region_x, event.mouse_region_y))
+        self.start_pos = Vector((event.mouse_region_x, event.mouse_region_y))
+        self.end_pos = self.mouse_pos
         for callback in self.on_mouse_init:
             callback()
 
     def update_mouse_position(self, event):
         """Update the mouse position and the delta vector. Prepare for the handle_drag."""
         self.mouse_pos_prev = self.mouse_pos
-        self.mouse_pos = event.mouse_region_x, event.mouse_region_y
+        self.mouse_pos = Vector((event.mouse_region_x, event.mouse_region_y))
         self.end_pos = self.mouse_pos
-        self.delta_vec_r2d = Vector(self.mouse_pos) - Vector(self.mouse_pos_prev)
+        self.delta_vec_r2d = self.mouse_pos - self.mouse_pos_prev
         pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
         cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
         self.delta_vec_v2d = cur_v2d - pre_v2d
@@ -167,31 +169,39 @@ class MouseState:
     def get_rotate_delta_angle(self, pivot_r2d: Vector) -> tuple[Literal[1, -1], float]:
         """Get the angle between the current mouse position and the previous mouse position.
         The angle is calculated based on the pivot point."""
-        vec_1 = Vector(self.mouse_pos) - pivot_r2d
-        vec_2 = Vector(self.mouse_pos_prev) - pivot_r2d
+        vec_1 = self.mouse_pos - pivot_r2d
+        vec_2 = self.mouse_pos_prev - pivot_r2d
         # clockwise or counterclockwise
         inverse: Literal[1, -1] = VecTool.rotation_direction(vec_1, vec_2)
         angle = inverse * vec_1.angle(vec_2)
         return inverse, angle
 
     def drag_area(self) -> list[Vector]:
-        if self.start_pos[0] > self.end_pos[0]:
+        if self.start_pos.x > self.end_pos.x:
             # right to left
-            left = self.end_pos[0]
-            right = self.start_pos[0]
+            left = self.end_pos.x
+            right = self.start_pos.x
         else:
-            left = self.start_pos[0]
-            right = self.end_pos[0]
-        if self.start_pos[1] > self.end_pos[1]:
+            left = self.start_pos.x
+            right = self.end_pos.x
+        if self.start_pos.y > self.end_pos.y:
             # bottom to top
-            bottom = self.end_pos[1]
-            top = self.start_pos[1]
+            bottom = self.end_pos.y
+            top = self.start_pos.y
         else:
-            bottom = self.start_pos[1]
-            top = self.end_pos[1]
+            bottom = self.start_pos.y
+            top = self.end_pos.y
 
         top_left = Vector((left, top))
         bottom_right = Vector((right, bottom))
         top_right = Vector((right, top))
         bottom_left = Vector((left, bottom))
         return [top_left, top_right, bottom_left, bottom_right]
+
+    def drag_area_line_order(self) -> list[Vector]:
+        points = self.drag_area()
+        points[2], points[3] = points[3], points[2]
+        return points
+
+    def is_move(self) -> bool:
+        return self.start_pos.x > 0 and self.start_pos.y > 0

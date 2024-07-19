@@ -39,8 +39,7 @@ class EST_OT_move_gp_modal(bpy.types.Operator):
         self.mouse_state = MouseState()
         self.move_handler.mouse_state = self.mouse_state
 
-        self.mouse_state.init()
-        self.mouse_state.update_mouse_position(event)
+        self.mouse_state.init(event)
 
         context.window_manager.modal_handler_add(self)
         context.window.cursor_set('MOVE_X')
@@ -206,7 +205,7 @@ class EST_OT_gp_view(bpy.types.Operator):
         self.stop = False
         self.__class__.drag_vm = None
         self.__class__.view_hover = None
-        tag_redraw()
+        bpy.context.area.tag_redraw()
         return {'FINISHED'}
 
 
@@ -261,12 +260,17 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
         self.drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
         self.view_drag = ViewDrag(self.drag_vm)
 
-        self.drag_vm.drag_scale_handler = ScaleHandler(
-            call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_scale', h.delta_scale))
-        self.drag_vm.drag_rotate_handler = RotateHandler(
-            call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_degree', h.delta_degree))
-        self.drag_vm.drag_move_handler = MoveHandler(
-            call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_move', h.delta_move))
+        self.drag_vm.drag_handle = {
+            'SCALE': ScaleHandler(
+                call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_scale', h.delta_scale)
+            ),
+            'ROTATE': RotateHandler(
+                call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_degree', h.delta_degree)
+            ),
+            'MOVE': MoveHandler(
+                call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_move', h.delta_move)
+            )
+        }
 
         self.draw_handle = ViewDrawHandle()
         self.draw_handle.add_to_node_editor(self.view_drag, (self, context))
@@ -280,7 +284,7 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
             EST_OT_gp_view.hide()
             self.drag_vm.update_mouse_pos(context, event)
             if not self.drag_init:
-                self.drag_vm.mouse_init()
+                self.drag_vm.mouse_init(event)
                 self.drag_vm.update_near_widgets()
                 self.drag_init = True
             self.drag_vm.handle_drag(context, event)
@@ -314,6 +318,7 @@ def register():
 
 def unregister():
     from bpy.utils import unregister_class
+    EST_OT_gp_view.stop = True
 
     unregister_class(EST_OT_move_gp_modal)
     unregister_class(EST_OT_add_gp_modal)
