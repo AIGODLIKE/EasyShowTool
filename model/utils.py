@@ -1,6 +1,7 @@
 from mathutils import Vector, Euler
 from typing import Sequence, Union, ClassVar, Literal
 import bpy
+import numpy as np
 from dataclasses import dataclass
 from math import radians, degrees
 from math import cos, sin, pow
@@ -14,6 +15,14 @@ class EulerTool:
     @staticmethod
     def to_deg(radian: Sequence, order: str = 'XYZ') -> Euler:
         return Euler((degrees(d) for d in radian), order)
+
+    @staticmethod
+    def rotate_points(points: list[Vector], angle: float, pivot: Vector) -> list[Vector]:
+        """Apply rotation to a list of points around a pivot."""
+        rotated_points = [
+            ((p - pivot) @ Euler((0, 0, angle), 'XYZ').to_matrix() + pivot).to_2d() for p in points
+        ]
+        return rotated_points
 
 
 class ColorTool:

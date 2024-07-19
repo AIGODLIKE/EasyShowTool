@@ -47,7 +47,7 @@ class ViewBasic:
             self.drag_vm.on_mouse_init.append(self.update)
 
     def __call__(self, *args, **kwargs):
-        if self.drag_vm.bbox_model.is_empty(): return  # empty data
+        if self.drag_vm.build_model.is_empty(): return  # empty data
         if not self._visible: return
         if not self.draw_preference.lazy_update:
             self.update()

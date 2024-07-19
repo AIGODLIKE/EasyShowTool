@@ -226,7 +226,7 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
             return {'FINISHED'}
 
         drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
-        drag_vm.bbox_model.active_layer_index = layer_index
+        drag_vm.build_model.active_layer_index = layer_index
         drag_vm.clear_selected_layers_points()
         drag_vm.bbox_model.calc_active_layer_bbox()
         drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
