@@ -14,14 +14,12 @@ from ..view_model.view_model_detect import MouseState
 from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, get_pos_layer_index, get_edit_tree_gp_data
 
 
-class EST_OT_move_gp_modal(bpy.types.Operator):
-    bl_idname = "est.move_gp_modal"
-    bl_label = "Move"
-
+class TransformModal(bpy.types.Operator):
     bl_options = {'UNDO', "GRAB_CURSOR", "BLOCKING"}
-
     build_model: BuildGreasePencilData = None
     move_handler: MoveHandler = None
+    rotate_handler: RotateHandler = None
+    scale_handler: ScaleHandler = None
 
     mouse_state: MouseState = None
 
@@ -29,21 +27,38 @@ class EST_OT_move_gp_modal(bpy.types.Operator):
     def poll(cls, context):
         return has_edit_tree(context) and get_edit_tree_gp_data(context) and is_valid_workspace_tool(context)
 
-    def invoke(self, context, event):
+    def _init(self, context, event):
         gp_data = get_edit_tree_gp_data(context)
         self.build_model = BuildGreasePencilData(gp_data)
         self.build_model.store_active()
-        self.move_handler = MoveHandler()
-        self.move_handler.build_model = self.build_model
-
         self.mouse_state = MouseState()
-        self.move_handler.mouse_state = self.mouse_state
-
         self.mouse_state.init(event)
 
+    def _start_modal(self, context):
         context.window_manager.modal_handler_add(self)
         context.window.cursor_set('MOVE_X')
         EST_OT_gp_view.hide()
+
+    def _finish(self, context) -> set:
+        EST_OT_gp_view.show()
+        context.area.tag_redraw()
+        return {'FINISHED'}
+
+
+class EST_OT_move_gp_modal(TransformModal):
+    bl_idname = "est.move_gp_modal"
+    bl_label = "Move"
+    bl_options = {'UNDO', "GRAB_CURSOR", "BLOCKING"}
+
+    def invoke(self, context, event):
+        self._init(context, event)
+
+        self.move_handler = MoveHandler()
+        self.move_handler.build_model = self.build_model
+        self.move_handler.mouse_state = self.mouse_state
+
+        self._start_modal(context)
+
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
@@ -51,7 +66,7 @@ class EST_OT_move_gp_modal(bpy.types.Operator):
             self.build_model.restore_active()
             self._finish(context)
             return {'CANCELLED'}
-        if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
+        if event.type == 'MOUSEMOVE':
             self.mouse_state.update_mouse_position(event)
             self.move_handler.selected_layers = SelectedGPLayersRuntime.selected_layers()
             self.move_handler.accept_event(event)
@@ -61,11 +76,6 @@ class EST_OT_move_gp_modal(bpy.types.Operator):
             return {'FINISHED'}
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
-
-    def _finish(self, context) -> set:
-        EST_OT_gp_view.show()
-        context.area.tag_redraw()
-        return {'FINISHED'}
 
 
 # noinspection PyPep8Naming
