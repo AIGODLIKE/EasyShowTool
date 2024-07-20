@@ -59,12 +59,12 @@ class DrawPreference:
         self.debug_color = self.color_alpha(theme.face_back, 0.8)
 
 
+# TODO replace all draw data with runtime class
 @dataclass(slots=True)
 class DrawData:
     """Draw data for grease pencil, collect all the draw data need here"""
     points: list[Vector, Vector, Vector, Vector]
     edge_points: list[Vector, Vector, Vector, Vector]
-    layer_points: list[Sequence[Vector]] = None  # for selected layers points
 
     mouse_state: Optional[MouseState] = None
     # from transform handles

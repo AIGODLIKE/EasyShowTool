@@ -21,8 +21,9 @@ class SelectedGPLayersRuntime:
     def clear(cls):
         cls.selected_layers_points_v2d.clear()
 
-    def get_selected_layers_points_r2d(self) -> list[list[Vector]]:
-        return [[VecTool.v2d_2_r2d(p) for p in points] for points in self.selected_layers_points_v2d.values()]
+    @classmethod
+    def get_selected_layers_points_r2d(cls) -> list[list[Vector]]:
+        return [[VecTool.v2d_2_r2d(p) for p in points] for points in cls.selected_layers_points_v2d.values()]
 
     @classmethod
     def selected_layers(cls) -> list[str]:
