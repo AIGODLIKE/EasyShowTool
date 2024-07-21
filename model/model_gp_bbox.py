@@ -1,7 +1,7 @@
 import bpy
 import numpy as np
 from mathutils import Vector, Euler
-from typing import Union, Literal, Sequence, Callable
+from typing import Union, Literal, Sequence, Callable, override
 from dataclasses import dataclass, field
 
 from .model_gp_property import GPencilStroke, GreasePencilProperty, GPencilBBoxProperty
@@ -114,6 +114,7 @@ class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
     def rotation_2d_inverse(self) -> float:
         return -self.layer.rotation[2] if self.layer else 0
 
+    @override
     @property
     def bbox_points_3d(self) -> Sequence[Vector]:
         """Return the bounding box points in 3d space.
@@ -128,6 +129,7 @@ class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
         else:
             return points
 
+    @override
     @property
     def edge_center_points_3d(self) -> Sequence[Vector]:
         """Return the edge center points of the bounding box in 3d space."""

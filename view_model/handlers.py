@@ -24,7 +24,7 @@ class ViewPan:
     pan_pos: tuple[int, int] = (0, 0)
     pan_post_prev: tuple[int, int] = (0, 0)
 
-    def is_on_region_edge(self, mouse_pos: tuple[int, int]) -> bool:
+    def is_on_region_edge(self, mouse_pos: Vector) -> bool:
         """Check if the mouse is on the edge of the region."""
         width, height = bpy.context.area.width, bpy.context.area.height
         for region in bpy.context.area.regions:
@@ -96,6 +96,7 @@ class TransformHandler:
         self.accept_event(event)
         if self.call_after is not None:
             self.call_after(self)
+        return True
 
 
 @dataclass
