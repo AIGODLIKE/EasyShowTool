@@ -6,7 +6,7 @@ from mathutils import Vector
 from typing import ClassVar
 
 from ..model.utils import Coord, EdgeCenter, VecTool
-from ..model.model_gp_bbox import GPencilLayerBBox
+from ..model.model_gp_bbox import GPencilLayerBBox, GPencilLayersBBox
 from ..model.model_gp import BuildGreasePencilData
 from .view_model_detect import MouseState
 
@@ -144,8 +144,14 @@ class RotateHandler(TransformHandler):
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the rotate event in the modal."""
         if not self.pivot:
-            self.pivot = self.bbox_model.center_v2d
-            self.pivot_r2d = self.bbox_model.center_r2d
+            if not self.selected_layers:
+                self.pivot = self.bbox_model.center_v2d
+                self.pivot_r2d = self.bbox_model.center_r2d
+            else:
+                layers_bbox = GPencilLayersBBox(self.bbox_model.gp_data)
+                layers_bbox.calc_multiple_layers_bbox(self.selected_layers)
+                self.pivot = layers_bbox.center_v2d
+                self.pivot_r2d = layers_bbox.center_r2d
 
         inverse, angle = self.mouse_state.get_rotate_delta_angle(self.pivot_r2d)
         degree = degrees(angle)
@@ -153,14 +159,22 @@ class RotateHandler(TransformHandler):
         # snap
         if not event.shift:
             self.delta_degree += degree
-            self.build_model.rotate_active(degree, self.pivot, space='v2d')
+            if self.selected_layers:
+                for layer in self.selected_layers:
+                    self.build_model.rotate(layer, degree, self.pivot, space='v2d')
+            else:
+                self.build_model.rotate_active(degree, self.pivot, space='v2d')
             self.total_degree += degree
         else:
             self.snap_degree_count += abs(degree)
             if self.snap_degree_count > self.snap_degree:
                 self.snap_degree_count = 0
                 self.delta_degree += self.snap_degree * inverse
-                self.build_model.rotate_active(self.snap_degree * inverse, self.pivot, space='v2d')
+                if self.selected_layers:
+                    for layer in self.selected_layers:
+                        self.build_model.rotate(layer, self.snap_degree * inverse, self.pivot, space='v2d')
+                else:
+                    self.build_model.rotate_active(self.snap_degree * inverse, self.pivot, space='v2d')
                 self.total_degree += self.snap_degree * inverse
         return True
 
