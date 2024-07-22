@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, Optional, Literal
 import bpy
 from math import degrees
 from mathutils import Vector
@@ -266,7 +266,7 @@ class ScaleHandler(TransformHandler):
 
         if self.bbox_model.is_local:
             # rotate the delta vector to the local space
-            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.rotation_2d())
+            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.layer_rotate_2d())
             delta_x, delta_y = correct_delta_vec.xy
         else:
             delta_x, delta_y = (self.delta_vec_v2d * 2).xy
@@ -280,7 +280,7 @@ class ScaleHandler(TransformHandler):
     def calc_one_side(self):
         if self.bbox_model.is_local:
             # rotate the delta vector to the local space
-            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.rotation_2d())
+            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.layer_rotate_2d())
             delta_x, delta_y = correct_delta_vec.xy
         else:
             delta_x, delta_y = self.delta_vec_v2d.xy

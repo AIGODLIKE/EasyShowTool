@@ -67,24 +67,13 @@ class MouseDetectModel:
         """
         top_left, top_right, bottom_left, bottom_right = points
         bbox_points = self.bbox_model.bbox_points_r2d
-        if not self.bbox_model.is_local:
-            for p in bbox_points:
-                if not (top_left[0] < p[0] < top_right[0] and bottom_left[1] < p[1] < top_left[1]):
-                    return False  # if not in the area
-                if all:
-                    return True
-            return True
-        else:
-            polygon = [top_left, top_right, bottom_right, bottom_left]
-            for i in range(4):
-                p1, p2 = polygon[i], polygon[(i + 1) % 4]
-                for p in bbox_points:
-                    if not ((p1[1] > p[1]) != (p2[1] > p[1]) and (
-                            p[0] < (p2[0] - p1[0]) * (p[1] - p1[1]) / (p2[1] - p1[1]) + p1[0])):
-                        return False  # if not in the area
-                    if all:
-                        return True
-            return True
+        for p in bbox_points:
+            if not (top_left[0] < p[0] < top_right[0] and bottom_left[1] < p[1] < top_left[1]):
+                return False  # if not in the area
+            if all:
+                return True
+        return True
+
 
     def _near_edge_center(self, pos: Sequence | Vector, radius: int = 20) -> \
             tuple[Vector, int] | None:

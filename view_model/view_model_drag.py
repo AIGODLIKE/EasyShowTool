@@ -94,7 +94,7 @@ class DragGreasePencilViewModal:
             self.debug_info['pos_corner_extrude'] = str(self.pos_corner_extrude)
             self.debug_info['in_drag_area'] = str(self.in_drag_area)
 
-    def mouse_init(self,event):
+    def mouse_init(self, event):
         self.mouse_state.init(event)
 
     def update_mouse_pos(self, context, event):
@@ -166,6 +166,7 @@ class DragGreasePencilViewModal:
         box_area_points = self.mouse_state.drag_area()
 
         bbox_model = GPencilLayerBBox(self.gp_data)
+        bbox_model.mode = self.bbox_model.mode
         detect_model = MouseDetectModel().bind_bbox(bbox_model)
         self.select_runtime.clear()
         for layer in self.gp_data.layers:

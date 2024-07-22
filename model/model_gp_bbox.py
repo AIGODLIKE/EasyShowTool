@@ -28,11 +28,11 @@ class CalcBBox():
             raise ValueError(f'Layer {layer_name_or_index} not found.')
         return layer
 
-    def calc_bbox(self, layer_name_or_index: str | int, angle=0) -> None:
+    def calc_bbox(self, layer_name_or_index: str | int, local: bool = True) -> None:
         """
         Calculate the bounding box of the grease pencil annotation.
         :param layer_name_or_index: The name or index of the layer.
-        :param angle: The rotation angle of the bounding box. which is the inverse of the layer rotation to get the correct bounding box.
+        :param local: Whether to calculate the bounding box in local or global coordinates.
         """
         layer = self._get_layer(layer_name_or_index)
         if not layer:
@@ -46,27 +46,26 @@ class CalcBBox():
             return
 
         points = self._getLayer_frame_points(frame)
+        # Ensure all points are 3D by padding 2D points with a zero z-coordinate
+        if points.shape[1] == 2:  # Check if points are 2D
+            points = np.hstack([points, np.zeros((points.shape[0], 1))])  # Convert to 3D
+
         pivot = np.mean(points, axis=0)
-        if angle:  # if 0, no need to rotate
-            points = ((points - pivot) @ np.array([[np.cos(angle), -np.sin(angle), 0],
-                                                   [np.sin(angle), np.cos(angle), 0],
-                                                   [0, 0, 1]]) + pivot)
+        if local and (angle := -layer.rotation[2]):
+            # Adjust the points array for rotation
+            rotation_matrix = np.array([[np.cos(angle), -np.sin(angle), 0],
+                                        [np.sin(angle), np.cos(angle), 0],
+                                        [0, 0, 1]])
+            points = ((points - pivot) @ rotation_matrix) + pivot
 
         max_xyz_id = np.argmax(points, axis=0)
         min_xyz_id = np.argmin(points, axis=0)
 
-        max_x = float(points[max_xyz_id[0], 0])
-        max_y = float(points[max_xyz_id[1], 1])
-        min_x = float(points[min_xyz_id[0], 0])
-        min_y = float(points[min_xyz_id[1], 1])
-
-        self.max_x = max_x
-        self.min_x = min_x
-        self.max_y = max_y
-        self.min_y = min_y
+        self.max_x = float(points[max_xyz_id[0], 0])
+        self.max_y = float(points[max_xyz_id[1], 1])
+        self.min_x = float(points[min_xyz_id[0], 0])
+        self.min_y = float(points[min_xyz_id[1], 1])
         self.center = Vector(pivot)
-        # self.center = Vector(((max_x + min_x) / 2, (max_y + min_y) / 2, 0))
-        self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
 
     def _getLayer_frame_points(self, frame: bpy.types.GPencilFrame) -> np.ndarray:
         """
@@ -104,14 +103,14 @@ class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
         self.calc_active_layer_bbox()
         return self
 
-    def rotation_2d(self) -> float:
+    def layer_rotate_2d(self) -> float:
         """Return the rotation of the layer.
         notice that the rotation is stored in the layer.rotation, but the value is the inverse of the actual rotation
         see EditGreasePencilLayer in model_gp_edit.py for storing the rotation
         """
         return self.layer.rotation[2] if self.layer else 0
 
-    def rotation_2d_inverse(self) -> float:
+    def layer_rotate_2d_inverse(self) -> float:
         return -self.layer.rotation[2] if self.layer else 0
 
     @property
@@ -121,7 +120,7 @@ class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
         so it will apply the rotation of the layer to the bounding box points."""
         points = super().bbox_points_3d
         if self.is_local:
-            angle = self.rotation_2d()
+            angle = self.layer_rotate_2d()
             pivot_3d = self.center.to_3d()
             points_3d = [p.to_3d() for p in points]
             return EulerTool.rotate_points(points_3d, angle, pivot_3d)
@@ -133,7 +132,7 @@ class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
         """Return the edge center points of the bounding box in 3d space."""
         points = super().edge_center_points_3d
         if self.is_local:
-            angle = self.rotation_2d()
+            angle = self.layer_rotate_2d()
             pivot_3d = self.center.to_3d()
             points_3d = [p.to_3d() for p in points]
             return EulerTool.rotate_points(points_3d, angle, pivot_3d)
@@ -145,7 +144,7 @@ class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
         if not layer:
             raise ValueError('Active layer not found.')
 
-        self.calc_bbox(layer.info, angle=self.rotation_2d_inverse() if self.is_local else 0)
+        self.calc_bbox(layer.info, local=self.is_local)
 
 
 @dataclass
@@ -160,6 +159,9 @@ class GPencilLayersBBox(CalcBBox, GPencilBBoxProperty):
             self.calc_bbox(layer)
             layer_points = self._getLayer_frame_points(self._get_layer(layer).frames[0])
             if layer_points.size > 0:
+                # Ensure all points are 3D by padding 2D points with a zero z-coordinate
+                if layer_points.shape[1] == 2:  # Check if points are 2D
+                    layer_points = np.hstack([layer_points, np.zeros((layer_points.shape[0], 1))])  # Convert to 3D
                 all_points.append(layer_points)
 
         if not all_points:
