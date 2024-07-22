@@ -30,8 +30,9 @@ class SelectedGPLayersRuntime:
         return list(cls.selected_layers_points_v2d.keys())
 
     @classmethod
-    def update_from_gp_data(cls, gp_data: bpy.types.GreasePencil):
+    def update_from_gp_data(cls, gp_data: bpy.types.GreasePencil, local: bool = True):
         bbox_model = GPencilLayerBBox(gp_data)
+        bbox_model.mode = 'LOCAL' if local else 'GLOBAL'
         for layer_name in cls.selected_layers_points_v2d.keys():
             bbox_model.calc_bbox(layer_name)
             points = list(bbox_model.bbox_points_v2d)

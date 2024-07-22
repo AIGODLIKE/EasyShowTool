@@ -47,11 +47,13 @@ def is_valid_workspace_tool(context) -> bool:
     return context.workspace.tools.from_space_node().idname in {'est.gp_edit_tool', 'est.gp_color_tool'}
 
 
-def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Sequence | Vector, feather=0) -> int | None:
+def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Sequence | Vector, feather=0,
+                        local: bool = True) -> int | None:
     """get the layer index by the mouse position."""
     # TODO select through if some layers are overlapped
     try:
         bbox = GPencilLayerBBox(gp_data)
+        bbox.mode = 'LOCAL' if local else 'GLOBAL'
         mouse_detect = MouseDetectModel()
         mouse_detect.bind_bbox(bbox)
 

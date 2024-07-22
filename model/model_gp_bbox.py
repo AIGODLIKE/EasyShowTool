@@ -11,6 +11,7 @@ from .utils import EulerTool
 @dataclass
 class CalcBBox():
     gp_data: bpy.types.GreasePencil
+    last_layer_index: int = 0
 
     def _get_layer(self, layer_name_or_index: int | str) -> bpy.types.GPencilLayer:
         """Handle the layer.
@@ -51,12 +52,14 @@ class CalcBBox():
             points = np.hstack([points, np.zeros((points.shape[0], 1))])  # Convert to 3D
 
         pivot = np.mean(points, axis=0)
-        if local and (angle := -layer.rotation[2]):
+        if local:
             # Adjust the points array for rotation
-            rotation_matrix = np.array([[np.cos(angle), -np.sin(angle), 0],
-                                        [np.sin(angle), np.cos(angle), 0],
-                                        [0, 0, 1]])
-            points = ((points - pivot) @ rotation_matrix) + pivot
+
+            if angle := -layer.rotation[2]:  # if angle is not 0
+                rotation_matrix = np.array([[np.cos(angle), -np.sin(angle), 0],
+                                            [np.sin(angle), np.cos(angle), 0],
+                                            [0, 0, 1]])
+                points = ((points - pivot) @ rotation_matrix) + pivot
 
         max_xyz_id = np.argmax(points, axis=0)
         min_xyz_id = np.argmin(points, axis=0)
@@ -66,6 +69,7 @@ class CalcBBox():
         self.min_x = float(points[min_xyz_id[0], 0])
         self.min_y = float(points[min_xyz_id[1], 1])
         self.center = Vector(pivot)
+        self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
 
     def _getLayer_frame_points(self, frame: bpy.types.GPencilFrame) -> np.ndarray:
         """

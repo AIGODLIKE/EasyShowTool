@@ -218,7 +218,8 @@ class EST_OT_gp_set_active_layer_color(bpy.types.Operator):
         if not (gp_data := get_edit_tree_gp_data(context)):
             return {'CANCELLED'}
 
-        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y))) is None:
+        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y),
+                                               local=context.scene.est_gp_transform_mode)) is None:
             return {'FINISHED'}
 
         with BuildGreasePencilData(gp_data) as gp_data_builder:

@@ -72,7 +72,8 @@ class EST_OT_move_gp_modal(TransformModal):
             self.move_handler.accept_event(event)
         if event.type == 'LEFTMOUSE':
             self._finish(context)
-            SelectedGPLayersRuntime.update_from_gp_data(self.build_model.gp_data)
+            SelectedGPLayersRuntime.update_from_gp_data(self.build_model.gp_data,
+                                                        local=context.scene.est_gp_transform_mode)
             return {'FINISHED'}
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
@@ -106,7 +107,8 @@ class EST_OT_rotate_gp_modal(TransformModal):
             self.rotate_handler.accept_event(event)
         if event.type == 'LEFTMOUSE':
             self._finish(context)
-            SelectedGPLayersRuntime.update_from_gp_data(self.build_model.gp_data)
+            SelectedGPLayersRuntime.update_from_gp_data(self.build_model.gp_data,
+                                                        local=context.scene.est_gp_transform_mode)
             return {'FINISHED'}
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
@@ -266,14 +268,16 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
     def invoke(self, context, event):
         gp_data = get_edit_tree_gp_data(context)
 
-        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y))) is None:
+        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y),
+                                               local=context.scene.est_gp_transform_mode)) is None:
             return {'FINISHED'}
 
         drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
         drag_vm.build_model.active_layer_index = layer_index
         drag_vm.clear_selected_layers_points()
-        drag_vm.bbox_model.calc_active_layer_bbox()
         drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
+        drag_vm.bbox_model.calc_active_layer_bbox()
+        context.area.tag_redraw()
         return {'FINISHED'}
 
 
