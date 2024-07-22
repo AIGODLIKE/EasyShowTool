@@ -1,9 +1,8 @@
 import bpy
 import numpy as np
 from contextlib import contextmanager
-from typing import ClassVar, Optional
+from typing import ClassVar
 from dataclasses import dataclass
-from typing import Union
 from mathutils import Vector
 from .utils import VecTool
 
@@ -91,7 +90,7 @@ class GreasePencilProperty:
     def layer_names(self) -> list[str]:
         return [layer.info for layer in self.gp_data.layers]
 
-    def _get_layer(self, layer_name_or_index: Union[int, str]) -> bpy.types.GPencilLayer:
+    def _get_layer(self, layer_name_or_index: int | str) -> bpy.types.GPencilLayer:
         """Handle the layer.
         :param layer_name_or_index: The name or index of the layer.
         :return: The layer object.
@@ -160,11 +159,11 @@ class GPencilBBoxProperty:
         return Vector(self.top_left), Vector(self.top_right), Vector(self.bottom_left), Vector(self.bottom_right)
 
     @property
-    def bbox_points_v2d(self) -> tuple[Vector, Vector, Vector, Vector]:
+    def bbox_points_v2d(self) -> tuple[Vector, ...]:
         return tuple(map(VecTool.loc3d_2_v2d, self.bbox_points_3d))
 
     @property
-    def bbox_points_r2d(self) -> tuple[Vector, Vector, Vector, Vector]:
+    def bbox_points_r2d(self) -> tuple[Vector, ...]:
         return tuple(map(VecTool.v2d_2_r2d, self.bbox_points_v2d))
 
     @property
@@ -177,16 +176,16 @@ class GPencilBBoxProperty:
         return Vector(top_center), Vector(bottom_center), Vector(left_center), Vector(right_center)
 
     @property
-    def edge_center_points_v2d(self) -> tuple[Vector, Vector, Vector, Vector]:
+    def edge_center_points_v2d(self) -> tuple[Vector, ...]:
         """Return the edge center points of the bounding box in node editor view."""
         return tuple(map(VecTool.loc3d_2_v2d, self.edge_center_points_3d))
 
     @property
-    def edge_center_points_r2d(self) -> tuple[Vector, Vector, Vector, Vector]:
+    def edge_center_points_r2d(self) -> tuple[Vector, ...]:
         """Return the edge center points of the bounding box in region 2d space."""
         return tuple(map(VecTool.v2d_2_r2d, self.edge_center_points_v2d))
 
-    def corner_extrude_points_r2d(self, extrude: int = 15) -> tuple[Vector, Vector, Vector, Vector]:
+    def corner_extrude_points_r2d(self, extrude: int = 15) -> list[Vector]:
         """Return the corner extrude points of the bounding box.
         :param extrude: the extrude distance
         this is not a property because it needs an extrude distance"""

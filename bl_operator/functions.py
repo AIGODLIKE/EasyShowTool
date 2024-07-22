@@ -34,7 +34,7 @@ def has_active_node(context: bpy.types.Context, bl_idname: Optional[str] = None)
     return True
 
 
-def get_edit_tree_gp_data(context: bpy.types.Context) -> Union[bpy.types.GreasePencil, None]:
+def get_edit_tree_gp_data(context: bpy.types.Context) -> bpy.types.GreasePencil | None:
     """Check if there is an active grease pencil data on the active node tree."""
     nt: bpy.types.NodeTree = context.space_data.edit_tree
     gp_data: bpy.types.GreasePencil = nt.grease_pencil
@@ -47,7 +47,7 @@ def is_valid_workspace_tool(context) -> bool:
     return context.workspace.tools.from_space_node().idname in {'est.gp_edit_tool', 'est.gp_color_tool'}
 
 
-def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather=0) -> Union[int, None]:
+def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Sequence | Vector, feather=0) -> int | None:
     """get the layer index by the mouse position."""
     # TODO select through if some layers are overlapped
     try:
@@ -97,7 +97,7 @@ def get_icons() -> list[str]:
     return icons
 
 
-def load_icon_svg(icon: str) -> Union[bpy.types.Object, None]:
+def load_icon_svg(icon: str) -> bpy.types.Object | None:
     SCALE = 2
 
     if (icon_svg := get_svg_icon(icon.lower())) is None:

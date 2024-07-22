@@ -12,7 +12,7 @@ from .utils import EulerTool
 class CalcBBox():
     gp_data: bpy.types.GreasePencil
 
-    def _get_layer(self, layer_name_or_index: Union[int, str]) -> bpy.types.GPencilLayer:
+    def _get_layer(self, layer_name_or_index: int | str) -> bpy.types.GPencilLayer:
         """Handle the layer.
         :param layer_name_or_index: The name or index of the layer.
         :return: The layer object.
@@ -28,7 +28,7 @@ class CalcBBox():
             raise ValueError(f'Layer {layer_name_or_index} not found.')
         return layer
 
-    def calc_bbox(self, layer_name_or_index: Union[str, int], angle=0) -> None:
+    def calc_bbox(self, layer_name_or_index: str | int, angle=0) -> None:
         """
         Calculate the bounding box of the grease pencil annotation.
         :param layer_name_or_index: The name or index of the layer.
@@ -150,7 +150,7 @@ class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
 
 @dataclass
 class GPencilLayersBBox(CalcBBox, GPencilBBoxProperty):
-    def calc_multiple_layers_bbox(self, layers: list[Union[str, int]]) -> None:
+    def calc_multiple_layers_bbox(self, layers: list[str | int]) -> None:
         """
         Calculate the bounding box that encompasses multiple layers.
         :param layers: A list of layer names or indices.

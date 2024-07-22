@@ -1,9 +1,8 @@
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Literal
+from typing import Callable, Optional
 import bpy
 from math import degrees
 from mathutils import Vector
-from typing import ClassVar
 
 from ..model.utils import Coord, EdgeCenter, VecTool
 from ..model.model_gp_bbox import GPencilLayerBBox, GPencilLayersBBox
@@ -66,8 +65,8 @@ class ViewPan:
 class TransformHandler:
     """Handle the complex transform operation in the modal.
     state attr can be pass in the callback function to update the view."""
-    bbox_model: GPencilLayerBBox = None  # init by drag modal
-    build_model: BuildGreasePencilData = None  # init by drag modal
+    bbox_model: GPencilLayerBBox | None = None  # init by drag modal
+    build_model: BuildGreasePencilData | None = None  # init by drag modal
     # callback
     call_before: Optional[Callable] = None
     call_after: Optional[Callable] = None

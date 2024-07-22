@@ -44,7 +44,7 @@ class EST_OT_launch_doc(bpy.types.Operator):
     bl_label = 'Documentation'
     bl_options = {'REGISTER', 'UNDO'}
 
-    thread: ClassVar[Union[ServerThread, None]] = None
+    thread: ClassVar[ServerThread |None] = None
 
     @classmethod
     def launch_doc_server(cls):

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Sequence, Union, ClassVar, Optional, Literal, Callable
+from typing import Sequence, Optional, Literal, Callable
 
 from mathutils import Vector
 
@@ -25,7 +25,7 @@ class MouseDetectModel:
         self.bbox_model = bbox_model
         return self
 
-    def detect_near(self, pos: Union[Sequence, Vector]) -> dict[str, Union[tuple[Vector, int], tuple[None, None]]]:
+    def detect_near(self, pos: Sequence | Vector) -> dict[str, tuple[Vector, int] | tuple[None, None]]:
         return {
             'corner': self._near_corners(pos, self.d_corner),
             'edge_center': self._near_edge_center(pos, self.d_edge),
@@ -33,7 +33,7 @@ class MouseDetectModel:
             'in_area': self.in_bbox_area(pos, self.d_edge)
         }
 
-    def in_bbox_area(self, pos: Union[Sequence, Vector], feather: int = 0) -> bool:
+    def in_bbox_area(self, pos: Sequence | Vector, feather: int = 0) -> bool:
         """check if the pos is in the area defined by the points
         :param pos: the position to check, in r2d space
         :param feather: the feather to expand the area, unit: pixel
@@ -86,8 +86,8 @@ class MouseDetectModel:
                         return True
             return True
 
-    def _near_edge_center(self, pos: Union[Sequence, Vector], radius: int = 20) -> \
-            Union[tuple[Vector, int], None]:
+    def _near_edge_center(self, pos: Sequence | Vector, radius: int = 20) -> \
+            tuple[Vector, int] | None:
         """check if the pos is near the edge center of the area defined by the points
         :param pos: the position to check
         :param radius: the radius of the edge center point
@@ -101,8 +101,8 @@ class MouseDetectModel:
                 return vec_point, i
         return None, None
 
-    def _near_corners(self, pos: Union[Sequence, Vector], radius: int = 20) -> \
-            Union[tuple[Vector, int], None]:
+    def _near_corners(self, pos: Sequence | Vector, radius: int = 20) -> \
+            tuple[Vector, int] | None:
         """check if the pos is near the corners of the area defined by the bounding box points
         :param pos: the position to check
         :param radius: the radius of the corner point
@@ -116,8 +116,8 @@ class MouseDetectModel:
                 return vec_point, i
         return None, None
 
-    def _near_corners_extrude(self, pos: Union[Sequence, Vector], extrude: int = 15, radius: int = 15) -> \
-            Union[tuple[Vector, int], None]:
+    def _near_corners_extrude(self, pos: Sequence | Vector, extrude: int = 15, radius: int = 15) -> \
+            tuple[Vector, int] | None:
 
         """check if the pos is near the corner point extrude outward by 45 deg, space is default to r2d
         :param pos: the position to check

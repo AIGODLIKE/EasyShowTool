@@ -91,31 +91,31 @@ class VecTool:
         return bpy.context.preferences.system.ui_scale
 
     @staticmethod
-    def r2d_2_v2d(location: Union[Vector, Sequence]) -> Vector:
+    def r2d_2_v2d(location: Vector | Sequence) -> Vector:
         """Convert region 2d space point to node editor 2d view."""
         ui_scale = bpy.context.preferences.system.ui_scale
         x, y = bpy.context.region.view2d.region_to_view(location[0], location[1])
         return Vector((x / ui_scale, y / ui_scale))
 
     @staticmethod
-    def v2d_2_r2d(location: Union[Vector, Sequence]) -> Vector:
+    def v2d_2_r2d(location: Vector | Sequence) -> Vector:
         """Convert node editor 2d view point to region 2d space."""
         ui_scale = bpy.context.preferences.system.ui_scale
         x, y = bpy.context.region.view2d.view_to_region(location[0] * ui_scale, location[1] * ui_scale, clip=False)
         return Vector((x, y))
 
     @staticmethod
-    def loc3d_2_v2d(location: Union[Vector, Sequence]) -> Vector:
+    def loc3d_2_v2d(location: Vector | Sequence) -> Vector:
         """Convert 3D space point to node editor 2d space."""
         return Vector((VecTool._size_2(location[0]), VecTool._size_2(location[1])))
 
     @staticmethod
-    def v2d_2_loc3d(location: Union[Vector, Sequence]) -> Vector:
+    def v2d_2_loc3d(location: Vector | Sequence) -> Vector:
         """Convert 2D space point to 3D space."""
         return Vector((VecTool._size_2(location[0], r=True), VecTool._size_2(location[1], r=True)))
 
     @staticmethod
-    def rotation_direction(v1: Union[Vector, Sequence], v2: Union[Vector, Sequence]) -> Literal[1, -1]:
+    def rotation_direction(v1: Vector | Sequence, v2: Vector | Sequence) -> Literal[1, -1]:
         """Return the rotation direction of two vectors.
         CounterClockwise: 1
         Clockwise: -1
@@ -124,7 +124,7 @@ class VecTool:
         return 1 if cross_z >= 0 else -1
 
     @staticmethod
-    def rotate_by_angle(v: Union[Vector, Sequence], angle: float) -> Vector:
+    def rotate_by_angle(v: Vector | Sequence, angle: float) -> Vector:
         """Rotate a vector by an angle."""
         c = cos(angle)
         s = sin(angle)
