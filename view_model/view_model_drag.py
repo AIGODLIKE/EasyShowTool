@@ -178,10 +178,6 @@ class DragGreasePencilViewModal:
 
         # print(self.select_runtime.selected_layers())
 
-    @property
-    def selected_layers_points_r2d(self) -> list[list[Vector]]:
-        return self.select_runtime.get_selected_layers_points_r2d()
-
     def clear_selected_layers_points(self):
         self.select_runtime.clear()
 

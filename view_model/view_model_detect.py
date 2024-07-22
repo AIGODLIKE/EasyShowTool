@@ -70,10 +70,9 @@ class MouseDetectModel:
         for p in bbox_points:
             if not (top_left[0] < p[0] < top_right[0] and bottom_left[1] < p[1] < top_left[1]):
                 return False  # if not in the area
-            if all:
+            if not all:
                 return True
         return True
-
 
     def _near_edge_center(self, pos: Sequence | Vector, radius: int = 20) -> \
             tuple[Vector, int] | None:

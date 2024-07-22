@@ -350,6 +350,7 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
     def _finish(self, context) -> set:
         self.draw_handle.remove_from_node_editor()
         EST_OT_gp_view.show()
+        SelectedGPLayersRuntime.update_from_gp_data(self.drag_vm.gp_data, mode=context.scene.est_gp_transform_mode)
         context.area.tag_redraw()
         return {'FINISHED'}
 
