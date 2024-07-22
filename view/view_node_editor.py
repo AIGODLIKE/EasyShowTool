@@ -128,7 +128,8 @@ class ViewDrag(ViewBasic):
             self.draw_vm.draw_bbox_edge()
             self.draw_vm.draw_bbox_points()
             self.draw_vm.draw_rotate_angle()
-            self.draw_vm.draw_select_box()
+            if SelectedGPLayersRuntime.draw_select_box:
+                self.draw_vm.draw_select_box()
         if self.draw_vm.debug:
             for points in SelectedGPLayersRuntime.get_selected_layers_points_r2d():
                 self.draw_vm.draw_box(points)

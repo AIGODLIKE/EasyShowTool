@@ -142,7 +142,7 @@ class DragGreasePencilViewModal:
         models = {'bbox_model': self.bbox_model, 'build_model': self.build_model}
 
         self.debug_info['drag_handle'] = 'None'
-
+        self.select_runtime.hide_select_box()
         if (self.pos_edge_center or self.pos_corner) and (drag_scale_handler := self.drag_handle.get('SCALE')):
             drag_scale_handler.handle(event=event, mouse_state=self.mouse_state, models=models, **pass_in_args)
             if self.debug:
@@ -157,6 +157,7 @@ class DragGreasePencilViewModal:
                 self.debug_info['drag_handle'] = 'Move'
 
         else:
+            self.select_runtime.show_select_box()
             if self.debug:
                 self.debug_info['drag_handle'] = 'Select'
             self._handle_select()

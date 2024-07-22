@@ -7,11 +7,20 @@ from ..model.model_gp_bbox import GPencilLayerBBox
 
 
 class SelectedGPLayersRuntime:
+    draw_select_box: ClassVar[bool] = True  # draw the select box, disable it when the user is dragging
     selected_layers_points_v2d: ClassVar[dict[str, list[Vector]]] = {}
 
     @classmethod
     def update(cls, layer: str, points: list[Vector]):
         cls.selected_layers_points_v2d[layer] = points
+
+    @classmethod
+    def show_select_box(cls):
+        cls.draw_select_box = True
+
+    @classmethod
+    def hide_select_box(cls):
+        cls.draw_select_box = False
 
     @classmethod
     def remove(cls, layer: str):
