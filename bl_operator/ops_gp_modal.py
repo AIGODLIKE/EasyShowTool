@@ -33,6 +33,8 @@ class TransformModal(bpy.types.Operator):
     def _init(self, context, event):
         gp_data = get_edit_tree_gp_data(context)
         self.build_model = BuildGreasePencilData(gp_data)
+        self.bbox_model = GPencilLayerBBox(gp_data=self.build_model.gp_data, mode=context.scene.est_gp_transform_mode)
+        self.bbox_model.calc_active_layer_bbox()
         self.mouse_state = MouseState()
         self.mouse_state.init(event)
 
@@ -43,6 +45,8 @@ class TransformModal(bpy.types.Operator):
 
     def _finish(self, context) -> set:
         EST_OT_gp_view.show()
+        SelectedGPLayersRuntime.update_from_gp_data(self.build_model.gp_data,
+                                                    mode=context.scene.est_gp_transform_mode)
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -72,8 +76,6 @@ class EST_OT_move_gp_modal(TransformModal):
             self.move_handler.accept_event(event)
         if event.type == 'LEFTMOUSE':
             self._finish(context)
-            SelectedGPLayersRuntime.update_from_gp_data(self.build_model.gp_data,
-                                                        local=context.scene.est_gp_transform_mode)
             return {'FINISHED'}
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
@@ -87,8 +89,7 @@ class EST_OT_rotate_gp_modal(TransformModal):
         self._init(context, event)
 
         self.rotate_handler = RotateHandler()
-        self.bbox_model = GPencilLayerBBox(gp_data=self.build_model.gp_data)
-        self.bbox_model.calc_active_layer_bbox()
+
         self.rotate_handler.build_model = self.build_model
         self.rotate_handler.mouse_state = self.mouse_state
         self.rotate_handler.bbox_model = self.bbox_model
@@ -107,8 +108,7 @@ class EST_OT_rotate_gp_modal(TransformModal):
             self.rotate_handler.accept_event(event)
         if event.type == 'LEFTMOUSE':
             self._finish(context)
-            SelectedGPLayersRuntime.update_from_gp_data(self.build_model.gp_data,
-                                                        local=context.scene.est_gp_transform_mode)
+
             return {'FINISHED'}
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
