@@ -85,9 +85,20 @@ class DrawViewModel:
         batch = batch_for_shader(self.shader, 'LINES', {"pos": [start_pos, end_pos]})
         batch.draw(self.shader)
 
-    def draw_box(self, points: Sequence[Vector]):
-        self.shader.uniform_float("color", self.color_hover)
+    def draw_box_outline(self, points: Sequence[Vector], color: Color | list = None):
+        if color:
+            self.shader.uniform_float("color", color)
+        else:
+            self.shader.uniform_float("color", self.color_hover)
         batch = batch_for_shader(self.shader, 'LINE_LOOP', {"pos": points})
+        batch.draw(self.shader)
+
+    def draw_box_area(self, points: Sequence[Vector], color: Color | list = None):
+        if color:
+            self.shader.uniform_float("color", color)
+        else:
+            self.shader.uniform_float("color", self.color_hover)
+        batch = batch_for_shader(self.shader, 'TRIS', {"pos": points}, indices=indices)
         batch.draw(self.shader)
 
     def _draw_text_left_bottom(self, text_lines: Sequence[str], size=24, space: int = 5):
@@ -118,20 +129,23 @@ class DrawViewModel:
             self.draw_text(f"{round(self.delta_degree, 1)}°", Vector((self.mouse_state.end_pos)) + Vector((0, 20)))
 
     def draw_select_box(self):
-        self.shader.uniform_float("color", self.color_highlight)
-
         if not self.mouse_state: return
         if not self.mouse_state.is_move: return
         # draw a selected box with the start and end pos
         if not self.mouse_state.start_pos.x > 0: return
-        points = self.mouse_state.drag_area_line_order()
-        self.draw_box(points)
 
+        gpu.state.blend_set('ALPHA')
+        select_color = list(self.color_highlight)
+        select_color[3] = 0.5
+        points = self.mouse_state.drag_area_line_order()
+        self.draw_box_outline(points, color=select_color)
+        # draw area
+        select_color[3] = 0.025
+        points = self.mouse_state.drag_area()
+        self.draw_box_area(points, color=select_color)
         # draw the line between start and end pos
         # self.draw_line(self.mouse_state.start_pos, self.mouse_state.end_pos)
         # draw the distance between start and end pos
-        dis = round((self.mouse_state.start_pos - self.mouse_state.end_pos).length, 2)
-        self.draw_text(f"{dis}px", self.mouse_state.end_pos + Vector((0, -20)))
 
     def draw_debug_info(self, dict_info: OrderedDict[str, str]):
         self.shader.uniform_float("color", self.debug_color)
@@ -147,4 +161,4 @@ class DrawViewModel:
         if not self.mouse_state: return
         if not self.mouse_state.is_move: return
         dis = round((self.mouse_state.start_pos - self.mouse_state.end_pos).length, 2)
-        self.draw_text(f"{dis}px", self.mouse_state.end_pos + Vector((0, -20)))
+        self.draw_text(f"{dis}px", self.mouse_state.end_pos + Vector((+20, -20)))

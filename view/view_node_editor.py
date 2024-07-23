@@ -99,7 +99,7 @@ class ViewHover(ViewBasic):
 
         if self.draw_vm.debug:
             for points in SelectedGPLayersRuntime.get_selected_layers_points_r2d():
-                self.draw_vm.draw_box(points)
+                self.draw_vm.draw_box_outline(points)
 
         if self.draw_vm.debug:
             self.draw_vm.draw_debug_info(self.drag_vm.debug_info)
@@ -132,5 +132,5 @@ class ViewDrag(ViewBasic):
                 self.draw_vm.draw_select_box()
         if self.draw_vm.debug:
             for points in SelectedGPLayersRuntime.get_selected_layers_points_r2d():
-                self.draw_vm.draw_box(points)
+                self.draw_vm.draw_box_outline(points)
             self.draw_vm.draw_debug_info(self.drag_vm.debug_info)
