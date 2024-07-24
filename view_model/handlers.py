@@ -1,13 +1,13 @@
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Literal
+from typing import Callable, Optional, Literal
 import bpy
 from math import degrees
 from mathutils import Vector
-from typing import ClassVar
 
 from ..model.utils import Coord, EdgeCenter, VecTool
-from ..model.model_gp_bbox import GPencilLayerBBox
+from ..model.model_gp_bbox import GPencilLayerBBox, GPencilLayersBBox
 from ..model.model_gp import BuildGreasePencilData
+from .view_model_mouse import MouseDragState
 
 
 @dataclass
@@ -23,7 +23,7 @@ class ViewPan:
     pan_pos: tuple[int, int] = (0, 0)
     pan_post_prev: tuple[int, int] = (0, 0)
 
-    def is_on_region_edge(self, mouse_pos: tuple[int, int]) -> bool:
+    def is_on_region_edge(self, mouse_pos: Vector) -> bool:
         """Check if the mouse is on the edge of the region."""
         width, height = bpy.context.area.width, bpy.context.area.height
         for region in bpy.context.area.regions:
@@ -65,17 +65,23 @@ class ViewPan:
 class TransformHandler:
     """Handle the complex transform operation in the modal.
     state attr can be pass in the callback function to update the view."""
-    bbox_model: GPencilLayerBBox = None  # init by drag modal
-    build_model: BuildGreasePencilData = None  # init by drag modal
+    bbox_model: GPencilLayerBBox | None = None  # init by drag modal
+    build_model: BuildGreasePencilData | None = None  # init by drag modal
     # callback
     call_before: Optional[Callable] = None
     call_after: Optional[Callable] = None
+    # use for multi-layer
+    selected_layers: list[str] = None
+    # mouse
+    mouse_state: MouseDragState = None
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         ...  # subclass should implement this method
 
-    def handle(self, event: bpy.types.Event, models: Optional[dict] = None, **kwargs) -> bool:
+    def handle(self, event: bpy.types.Event, mouse_state: MouseDragState, models: Optional[dict] = None, **kwargs) -> bool:
         # if key in self.__dict__: # set the attribute
+        if self.mouse_state is None:
+            self.mouse_state = mouse_state
         if self.bbox_model is None or self.build_model is None:
             if models:
                 self.bbox_model = models.get('bbox_model', None)
@@ -89,6 +95,7 @@ class TransformHandler:
         self.accept_event(event)
         if self.call_after is not None:
             self.call_after(self)
+        return True
 
 
 @dataclass
@@ -97,8 +104,6 @@ class MoveHandler(TransformHandler):
     total_move: Vector = Vector((0, 0))  # value between the last mouse move and the first mouse move
     delta_move: Vector = None  # compare to the last mouse move
     # in
-    delta_vec_v2d: Vector = None
-    end_pos: tuple[int, int] = (0, 0)
 
     view_pan: ViewPan = None
 
@@ -107,12 +112,18 @@ class MoveHandler(TransformHandler):
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the move event in the modal."""
-        if not self.delta_vec_v2d:
+        delta_vec_v2d = self.mouse_state.delta_vec_v2d
+        end_pos = self.mouse_state.end_pos
+        if not delta_vec_v2d:
             return False
-        self.build_model.move_active(self.delta_vec_v2d, space='v2d')
-        self.delta_move = self.delta_vec_v2d
-        self.total_move += self.delta_vec_v2d
-        if self.view_pan.is_on_region_edge(self.end_pos):
+        if not self.selected_layers:
+            self.build_model.move_active(delta_vec_v2d, space='v2d')
+        else:
+            for layer in self.selected_layers:
+                self.build_model.move(layer, delta_vec_v2d, space='v2d')
+        self.delta_move = delta_vec_v2d
+        self.total_move += delta_vec_v2d
+        if self.view_pan.is_on_region_edge(end_pos):
             pan_vec = self.view_pan.edge_pan(event)
             self.build_model.move_active(pan_vec, space='v2d')
             self.total_move += pan_vec
@@ -126,35 +137,43 @@ class RotateHandler(TransformHandler):
     delta_degree: float = 0
     # in
     pivot: Vector = None
-    mouse_pos: tuple[int, int] = (0, 0)
-    mouse_pos_prev: tuple[int, int] = (0, 0)
     snap_degree: int = 0
     snap_degree_count: int = 0
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the rotate event in the modal."""
         if not self.pivot:
-            self.pivot = self.bbox_model.center_v2d
-            self.pivot_r2d = self.bbox_model.center_r2d
+            if not self.selected_layers:
+                self.pivot = self.bbox_model.center_v2d
+                self.pivot_r2d = self.bbox_model.center_r2d
+            else:
+                layers_bbox = GPencilLayersBBox(self.bbox_model.gp_data)
+                layers_bbox.calc_multiple_layers_bbox(self.selected_layers)
+                self.pivot = layers_bbox.center_v2d
+                self.pivot_r2d = layers_bbox.center_r2d
 
-        vec_1 = Vector(self.mouse_pos) - self.pivot_r2d
-        vec_2 = Vector(self.mouse_pos_prev) - self.pivot_r2d
-        # clockwise or counterclockwise
-        inverse: Literal[1, -1] = VecTool.rotation_direction(vec_1, vec_2)
-        angle = inverse * vec_1.angle(vec_2)
+        inverse, angle = self.mouse_state.get_rotate_delta_angle(self.pivot_r2d)
         degree = degrees(angle)
 
         # snap
         if not event.shift:
             self.delta_degree += degree
-            self.build_model.rotate_active(degree, self.pivot , space='v2d')
+            if self.selected_layers:
+                for layer in self.selected_layers:
+                    self.build_model.rotate(layer, degree, self.pivot, space='v2d')
+            else:
+                self.build_model.rotate_active(degree, self.pivot, space='v2d')
             self.total_degree += degree
         else:
             self.snap_degree_count += abs(degree)
             if self.snap_degree_count > self.snap_degree:
                 self.snap_degree_count = 0
                 self.delta_degree += self.snap_degree * inverse
-                self.build_model.rotate_active(self.snap_degree * inverse, self.pivot , space='v2d')
+                if self.selected_layers:
+                    for layer in self.selected_layers:
+                        self.build_model.rotate(layer, self.snap_degree * inverse, self.pivot, space='v2d')
+                else:
+                    self.build_model.rotate_active(self.snap_degree * inverse, self.pivot, space='v2d')
                 self.total_degree += self.snap_degree * inverse
         return True
 
@@ -207,8 +226,6 @@ class ScaleHandler(TransformHandler):
     pivot_local: Vector = None
     degree_local: float = 0
     # pass in
-    delta_vec_v2d: Vector = None
-    mouse_pos: tuple[int, int] = (0, 0)
     pos_edge_center: Vector = None
     pos_corner: Vector = None
     pt_edge_center: int = 0
@@ -219,6 +236,9 @@ class ScaleHandler(TransformHandler):
         :return: True if the scale is handled, False otherwise. Event will be accepted if True."""
         unify_scale = event.shift
         center_scale = event.ctrl
+
+        self.delta_vec_v2d = self.mouse_state.delta_vec_v2d
+        self.mouse_pos = self.mouse_state.mouse_pos
 
         if self.pos_edge_center:
             if center_scale:
@@ -246,7 +266,7 @@ class ScaleHandler(TransformHandler):
 
         if self.bbox_model.is_local:
             # rotate the delta vector to the local space
-            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.rotation_2d())
+            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.layer_rotate_2d())
             delta_x, delta_y = correct_delta_vec.xy
         else:
             delta_x, delta_y = (self.delta_vec_v2d * 2).xy
@@ -260,7 +280,7 @@ class ScaleHandler(TransformHandler):
     def calc_one_side(self):
         if self.bbox_model.is_local:
             # rotate the delta vector to the local space
-            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.rotation_2d())
+            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.layer_rotate_2d())
             delta_x, delta_y = correct_delta_vec.xy
         else:
             delta_x, delta_y = self.delta_vec_v2d.xy

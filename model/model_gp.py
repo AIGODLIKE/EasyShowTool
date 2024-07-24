@@ -3,7 +3,8 @@ import numpy as np
 from mathutils import Vector, Euler, Color
 from typing import Literal, Optional, Union, ClassVar
 from dataclasses import dataclass, field
-from .utils import VecTool, ShootAngles
+from .utils import VecTool
+from .data_enums import ShootAngles
 from .model_gp_edit import EditGreasePencilLayer
 from .model_gp_property import GreasePencilProperty
 from .model_gp_bbox import GPencilLayerBBox
@@ -202,7 +203,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
             self.edit_layer.display_in_3d(layer)
         return self
 
-    def set_active_layer(self, layer_name_or_index: Union[str, int]) -> 'BuildGreasePencilData':
+    def set_active_layer(self, layer_name_or_index: str | int) -> 'BuildGreasePencilData':
         """Set the active grease pencil annotation layer."""
         self.active_layer_index = layer_name_or_index
         return self
@@ -211,7 +212,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """Delete the active grease pencil annotation layer."""
         return self.remove_layer(self.active_layer_index)
 
-    def remove_layer(self, layer_name_or_index: Union[str, int]) -> 'BuildGreasePencilData':
+    def remove_layer(self, layer_name_or_index: str | int) -> 'BuildGreasePencilData':
         """Remove the grease pencil annotation layer."""
         layer = self._get_layer(layer_name_or_index)
         if layer:
@@ -230,14 +231,14 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
     def thickness_active(self, thickness: int = 1) -> 'BuildGreasePencilData':
         return self.thickness(self.active_layer_index, thickness)
 
-    def opacity(self, layer_name_or_index: Union[str, int], opacity: float) -> 'BuildGreasePencilData':
+    def opacity(self, layer_name_or_index: str | int, opacity: float) -> 'BuildGreasePencilData':
         """Set the opacity of the grease pencil annotation layer."""
         layer = self._get_layer(layer_name_or_index)
         if layer:
             layer.annotation_opacity = opacity
         return self
 
-    def color(self, layer_name_or_index: Union[str, int], color: Color = None) -> 'BuildGreasePencilData':
+    def color(self, layer_name_or_index: str | int, color: Color = None) -> 'BuildGreasePencilData':
         """Set the color of the grease pencil annotation layer.
         :param layer_name_or_index: The name or index of the layer.
         :param hex_color: The color in hex format.
@@ -248,7 +249,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
         return self
 
-    def thickness(self, layer_name_or_index: Union[str, int], thickness: int) -> 'BuildGreasePencilData':
+    def thickness(self, layer_name_or_index: str | int, thickness: int) -> 'BuildGreasePencilData':
         """Set the thickness of the grease pencil annotation layer."""
         layer = self._get_layer(layer_name_or_index)
         if layer:
@@ -353,7 +354,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
         return self
 
-    def move(self, layer_name_or_index: Union[str, int], v: Vector,
+    def move(self, layer_name_or_index: str | int, v: Vector,
              space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Move the grease pencil data.
         :param layer_name_or_index: The name or index of the layer.
@@ -367,7 +368,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         self.edit_layer.move_layer(layer, vec)
         return self
 
-    def scale(self, layer_name_or_index: Union[str, int], scale: Vector, pivot: Vector,
+    def scale(self, layer_name_or_index: str | int, scale: Vector, pivot: Vector,
               space: Literal['v2d', '3d'] = '3d', local: bool = False) -> 'BuildGreasePencilData':
         """Scale the grease pencil data.
         The pivot point should be in 3D space.
@@ -382,7 +383,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         self.edit_layer.scale_layer(layer, scale, vec_pivot, local)
         return self
 
-    def rotate(self, layer_name_or_index: Union[str, int], degree: int, pivot: Vector,
+    def rotate(self, layer_name_or_index: str | int, degree: int, pivot: Vector,
                space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Rotate the grease pencil data.
         The pivot point should be in 3D space.

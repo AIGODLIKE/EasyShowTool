@@ -5,59 +5,74 @@ from mathutils import Vector
 
 from ..model.model_gp import BuildGreasePencilData
 from ..model.model_gp_bbox import GPencilLayerBBox
-from ..model.utils import VecTool, ShootAngles, ColorTool
-from ..model.model_color import ColorPaletteModel
+from ..model.utils import VecTool
 from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..view_model.view_model_drag import DragGreasePencilViewModal
+from ..view_model.view_model_select import SelectedGPLayersRuntime
 from ..view.view_node_editor import ViewHover, ViewDrawHandle, ViewDrag
+from ..view_model.view_model_mouse import MouseDragState
 
 from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, get_pos_layer_index, get_edit_tree_gp_data
 
 
-class EST_OT_move_gp_modal(bpy.types.Operator):
-    bl_idname = "est.move_gp_modal"
-    bl_label = "Move"
-
+class TransformModal(bpy.types.Operator):
     bl_options = {'UNDO', "GRAB_CURSOR", "BLOCKING"}
-
     build_model: BuildGreasePencilData = None
-    move_handler: MoveHandler = None
+    bbox_model: GPencilLayerBBox = None
 
-    mouse_pos: tuple[int, int] = [0, 0]
-    mouse_pos_prev: tuple[int, int] = [0, 0]
+    move_handler: MoveHandler = None
+    rotate_handler: RotateHandler = None
+    scale_handler: ScaleHandler = None
+
+    mouse_state: MouseDragState = None
 
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context) and get_edit_tree_gp_data(context) and is_valid_workspace_tool(context)
 
-    def invoke(self, context, event):
+    def _init(self, context, event):
         gp_data = get_edit_tree_gp_data(context)
         self.build_model = BuildGreasePencilData(gp_data)
-        self.build_model.store_active()
-        self.move_handler = MoveHandler()
-        self.move_handler.build_model = self.build_model
+        self.bbox_model = GPencilLayerBBox(gp_data=self.build_model.gp_data, mode=context.scene.est_gp_transform_mode)
+        self.bbox_model.calc_active_layer_bbox()
+        self.mouse_state = MouseDragState()
+        self.mouse_state.init(event)
 
-        self.mouse_pos = event.mouse_region_x, event.mouse_region_y
-        self.mouse_pos_prev = self.mouse_pos
-
+    def _start_modal(self, context):
         context.window_manager.modal_handler_add(self)
         context.window.cursor_set('MOVE_X')
         EST_OT_gp_view.hide()
+
+    def _finish(self, context) -> set:
+        EST_OT_gp_view.show()
+        SelectedGPLayersRuntime.update_from_gp_data(self.build_model.gp_data,
+                                                    mode=context.scene.est_gp_transform_mode)
+        context.area.tag_redraw()
+        return {'FINISHED'}
+
+
+class EST_OT_move_gp_modal(TransformModal):
+    bl_idname = "est.move_gp_modal"
+    bl_label = "Move"
+
+    def invoke(self, context, event):
+        self._init(context, event)
+
+        self.move_handler = MoveHandler()
+        self.move_handler.build_model = self.build_model
+        self.move_handler.mouse_state = self.mouse_state
+
+        self._start_modal(context)
+
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
         if event.type in {'ESC', 'RIGHTMOUSE'}:
-            self.build_model.restore_active()
             self._finish(context)
             return {'CANCELLED'}
-        if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
-            self.mouse_pos_prev = self.mouse_pos
-            self.mouse_pos = event.mouse_region_x, event.mouse_region_y
-
-            pre_v2d = VecTool.r2d_2_v2d(self.mouse_pos_prev)
-            cur_v2d = VecTool.r2d_2_v2d(self.mouse_pos)
-            self.move_handler.end_pos = self.mouse_pos
-            self.move_handler.delta_vec_v2d = cur_v2d - pre_v2d
+        if event.type == 'MOUSEMOVE':
+            self.mouse_state.update_mouse_position(event)
+            self.move_handler.selected_layers = SelectedGPLayersRuntime.selected_layers()
             self.move_handler.accept_event(event)
         if event.type == 'LEFTMOUSE':
             self._finish(context)
@@ -65,10 +80,38 @@ class EST_OT_move_gp_modal(bpy.types.Operator):
         context.area.tag_redraw()
         return {'RUNNING_MODAL'}
 
-    def _finish(self, context) -> set:
-        EST_OT_gp_view.show()
+
+class EST_OT_rotate_gp_modal(TransformModal):
+    bl_idname = "est.rotate_gp_modal"
+    bl_label = "Rotate"
+
+    def invoke(self, context, event):
+        self._init(context, event)
+
+        self.rotate_handler = RotateHandler()
+
+        self.rotate_handler.build_model = self.build_model
+        self.rotate_handler.mouse_state = self.mouse_state
+        self.rotate_handler.bbox_model = self.bbox_model
+
+        self._start_modal(context)
+
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context, event):
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            self._finish(context)
+            return {'CANCELLED'}
+        if event.type == 'MOUSEMOVE':
+            self.mouse_state.update_mouse_position(event)
+            self.rotate_handler.selected_layers = SelectedGPLayersRuntime.selected_layers()
+            self.rotate_handler.accept_event(event)
+        if event.type == 'LEFTMOUSE':
+            self._finish(context)
+
+            return {'FINISHED'}
         context.area.tag_redraw()
-        return {'FINISHED'}
+        return {'RUNNING_MODAL'}
 
 
 # noinspection PyPep8Naming
@@ -208,7 +251,7 @@ class EST_OT_gp_view(bpy.types.Operator):
         self.stop = False
         self.__class__.drag_vm = None
         self.__class__.view_hover = None
-        tag_redraw()
+        bpy.context.area.tag_redraw()
         return {'FINISHED'}
 
 
@@ -225,14 +268,16 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
     def invoke(self, context, event):
         gp_data = get_edit_tree_gp_data(context)
 
-        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y))) is None:
+        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y),
+                                               local=context.scene.est_gp_transform_mode)) is None:
             return {'FINISHED'}
 
         drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
-        drag_vm.bbox_model.active_layer_index = layer_index
+        drag_vm.build_model.active_layer_index = layer_index
         drag_vm.clear_selected_layers_points()
-        drag_vm.bbox_model.calc_active_layer_bbox()
         drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
+        drag_vm.bbox_model.calc_active_layer_bbox()
+        context.area.tag_redraw()
         return {'FINISHED'}
 
 
@@ -263,12 +308,17 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
         self.drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
         self.view_drag = ViewDrag(self.drag_vm)
 
-        self.drag_vm.drag_scale_handler = ScaleHandler(
-            call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_scale', h.delta_scale))
-        self.drag_vm.drag_rotate_handler = RotateHandler(
-            call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_degree', h.delta_degree))
-        self.drag_vm.drag_move_handler = MoveHandler(
-            call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_move', h.delta_move))
+        self.drag_vm.drag_handle = {
+            'SCALE': ScaleHandler(
+                call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_scale', h.delta_scale)
+            ),
+            'ROTATE': RotateHandler(
+                call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_degree', h.delta_degree)
+            ),
+            'MOVE': MoveHandler(
+                call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_move', h.delta_move)
+            )
+        }
 
         self.draw_handle = ViewDrawHandle()
         self.draw_handle.add_to_node_editor(self.view_drag, (self, context))
@@ -282,7 +332,7 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
             EST_OT_gp_view.hide()
             self.drag_vm.update_mouse_pos(context, event)
             if not self.drag_init:
-                self.drag_vm.mouse_init()
+                self.drag_vm.mouse_init(event)
                 self.drag_vm.update_near_widgets()
                 self.drag_init = True
             self.drag_vm.handle_drag(context, event)
@@ -300,6 +350,7 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
     def _finish(self, context) -> set:
         self.draw_handle.remove_from_node_editor()
         EST_OT_gp_view.show()
+        SelectedGPLayersRuntime.update_from_gp_data(self.drag_vm.gp_data, mode=context.scene.est_gp_transform_mode)
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -308,6 +359,7 @@ def register():
     from bpy.utils import register_class
 
     register_class(EST_OT_move_gp_modal)
+    register_class(EST_OT_rotate_gp_modal)
     register_class(EST_OT_add_gp_modal)
     register_class(EST_OT_gp_view)
     register_class(EST_OT_gp_set_active_layer)
@@ -316,8 +368,10 @@ def register():
 
 def unregister():
     from bpy.utils import unregister_class
+    EST_OT_gp_view.stop = True
 
     unregister_class(EST_OT_move_gp_modal)
+    unregister_class(EST_OT_rotate_gp_modal)
     unregister_class(EST_OT_add_gp_modal)
     unregister_class(EST_OT_gp_view)
     unregister_class(EST_OT_gp_set_active_layer)

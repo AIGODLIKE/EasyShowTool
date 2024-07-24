@@ -1,6 +1,7 @@
 import bpy
 from ..public_path import get_tool_icon
-from ..bl_operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_drag_modal, EST_OT_add_gp_modal,EST_OT_move_gp_modal,EST_OT_gp_view
+from ..bl_operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_drag_modal, EST_OT_add_gp_modal, \
+    EST_OT_move_gp_modal, EST_OT_rotate_gp_modal
 from ..bl_operator.ops_gp_basic import EST_OT_remove_gp, EST_OT_scale_gp, \
     EST_OT_gp_set_active_layer_color
 
@@ -34,6 +35,10 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
         (EST_OT_move_gp_modal.bl_idname,
          {"type": 'G', "value": 'PRESS', "shift": False, "ctrl": False},
          {"properties": []}),
+        (EST_OT_rotate_gp_modal.bl_idname,
+         {"type": 'R', "value": 'PRESS', "shift": False, "ctrl": False},
+         {"properties": []}),
+
         # add
         (EST_OT_gp_set_active_layer.bl_idname,
          {"type": "LEFTMOUSE", "value": "CLICK"},
@@ -93,9 +98,8 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
         row = col.row(align=True)
         row.prop(scene, 'est_palette_color', text='Color')
         row.popover(panel='EST_PT_palette_viewer', text='Preset', icon='COLOR')
-        col.prop(scene, "est_gp_opacity",slider=True)
-        col.prop(scene, "est_gp_thickness",slider=True)
-
+        col.prop(scene, "est_gp_opacity", slider=True)
+        col.prop(scene, "est_gp_thickness", slider=True)
 
         if scene.est_gp_add_type == 'TEXT':
             box.template_ID(scene, "est_gp_text_font", open="font.open", unlink="font.unlink")

@@ -1,46 +1,11 @@
-import enum
-
 import bpy
-from enum import Enum
-from typing import Final, Callable, ClassVar
+from typing import ClassVar
 from dataclasses import dataclass, field
+
+from .data_enums import SocketColor, custom_colors
 from .utils import ColorTool
-from mathutils import Color
 from pathlib import Path
-from ..public_path import get_color_palettes_directory, get_color_palettes
-
-
-class SocketColor(Enum):
-    GREY: Final[str] = '#A1A1A1'  # float color
-    ORANGE: Final[str] = '#ED9E5C'  # object color
-    GREEN_GEO: Final[str] = '#00D6A3'  # geometry color
-    GREEN_INT: Final[str] = '#598C5C'  # interface color
-    BLUE: Final[str] = '#598AC3'  # string color
-    PURPLE_VEC: Final[str] = '#6363C7'  # vector color
-    PURPLE_IMG: Final[str] = '#633863'  # image color
-    PINK_BOOL: Final[str] = '#CCA6D6'  # boolean color
-    PINK_MAT: Final[str] = '#EB7582'  # material color
-
-
-custom_colors = [
-    '#ffffff',
-    '#e5e5e5',
-    '#a6a6a6',
-    '#808080',
-    '#383838',
-    '#000000',
-    '#ff5733',
-    '#d4302f',
-    '#d4302f',
-    '#ffeb3c',
-    '#ffc300',
-    '#ff8d1a',
-    '#a5d63f',
-    '#44cf7c',
-    '#00baad',
-    '#2a82e4',
-    '#7848ea',
-]
+from ..public_path import get_color_palettes_directory
 
 
 @dataclass

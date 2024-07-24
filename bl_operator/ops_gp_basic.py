@@ -1,12 +1,12 @@
 import bpy
-from bpy.props import IntVectorProperty, FloatVectorProperty, StringProperty, BoolProperty, EnumProperty, IntProperty, \
-    PointerProperty
+from bpy.props import IntVectorProperty, FloatVectorProperty, StringProperty, BoolProperty, EnumProperty, IntProperty
 from mathutils import Vector
 
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
 from ..model.model_gp_bbox import GPencilLayerBBox
-from ..model.utils import VecTool, ShootAngles
-from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, get_pos_layer_index, load_icon_svg, \
+from ..model.utils import VecTool
+from ..model.data_enums import ShootAngles, GPAddTypes
+from .functions import has_edit_tree, get_pos_layer_index, load_icon_svg, \
     get_edit_tree_gp_data, ensure_builtin_font
 
 from ..public_path import get_pref
@@ -130,13 +130,13 @@ class EST_OT_add_gp(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     add_type: bpy.props.EnumProperty(name='Type',
-                                     items=lambda _, __: enum_add_type_items(), )
+                                     items=lambda _, __: GPAddTypes.enum_add_type_items(), )
     # add source
     text: StringProperty(name="Text", default="Hello World")
     size: IntProperty(name="Size", default=100)
     obj: StringProperty(name="Object", default="")
     obj_shot_angle: EnumProperty(name="Shot Orientation",
-                                 items=lambda _, __: enum_shot_orient_items(), )
+                                 items=lambda _, __: ShootAngles.enum_shot_orient_items(), )
     icon: StringProperty(name="Icon", default="BLENDER")
     # location
     location: FloatVectorProperty(size=2, default=(0, 0), options={'SKIP_SAVE', 'HIDDEN'})
@@ -218,7 +218,8 @@ class EST_OT_gp_set_active_layer_color(bpy.types.Operator):
         if not (gp_data := get_edit_tree_gp_data(context)):
             return {'CANCELLED'}
 
-        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y))) is None:
+        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y),
+                                               local=context.scene.est_gp_transform_mode)) is None:
             return {'FINISHED'}
 
         with BuildGreasePencilData(gp_data) as gp_data_builder:

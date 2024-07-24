@@ -1,33 +1,27 @@
 from mathutils import Vector, Euler
-from typing import Sequence, Union, Final, ClassVar
+from typing import Sequence, ClassVar, Literal
 import bpy
 from dataclasses import dataclass
-from enum import Enum
 from math import radians, degrees
 from math import cos, sin, pow
 
 
 class EulerTool:
     @staticmethod
-    def to_rad(degree: Sequence) -> Euler:
-        return Euler((radians(d) for d in degree), 'XYZ')
+    def to_rad(degree: Sequence, order: str = 'XYZ') -> Euler:
+        return Euler((radians(d) for d in degree), order)
 
     @staticmethod
-    def to_deg(radian: Sequence) -> Euler:
-        return Euler((degrees(d) for d in radian), 'XYZ')
+    def to_deg(radian: Sequence, order: str = 'XYZ') -> Euler:
+        return Euler((degrees(d) for d in radian), order)
 
-
-class ShootAngles(Enum):
-    """Euler angles for the shooting.
-    shoot will be on top(xy plane, z up), so the enum members are the angles to rotate the object to face the camera."""
-    TOP_LEFT_FRONT: Euler = Euler(EulerTool.to_rad((-67.8044, -32.8686, -13.4876)), 'XYZ')
-    TOP_LEFT_FRONT_45: Euler = Euler(EulerTool.to_rad((-35.2644, -30, -35.2644)), 'XYZ')
-
-    TOP: Euler = Euler(EulerTool.to_rad((0, 0, 0)), 'XYZ')
-    FRONT: Euler = Euler(EulerTool.to_rad((-90, 0, 0)), 'XYZ')
-    LEFT: Euler = Euler(EulerTool.to_rad((0, -90, -90)), 'XYZ')
-    RIGHT: Euler = Euler(EulerTool.to_rad((0, 90, 90)), 'XYZ')
-    BOTTOM: Euler = Euler(EulerTool.to_rad((0, 180, 0)), 'XYZ')
+    @staticmethod
+    def rotate_points(points: list[Vector], angle: float, pivot: Vector) -> list[Vector]:
+        """Apply rotation to a list of points around a pivot."""
+        rotated_points = [
+            ((p - pivot) @ Euler((0, 0, angle), 'XYZ').to_matrix() + pivot).to_2d() for p in points
+        ]
+        return rotated_points
 
 
 class ColorTool:
@@ -96,31 +90,31 @@ class VecTool:
         return bpy.context.preferences.system.ui_scale
 
     @staticmethod
-    def r2d_2_v2d(location: Union[Vector, Sequence]) -> Vector:
+    def r2d_2_v2d(location: Vector | Sequence) -> Vector:
         """Convert region 2d space point to node editor 2d view."""
         ui_scale = bpy.context.preferences.system.ui_scale
         x, y = bpy.context.region.view2d.region_to_view(location[0], location[1])
         return Vector((x / ui_scale, y / ui_scale))
 
     @staticmethod
-    def v2d_2_r2d(location: Union[Vector, Sequence]) -> Vector:
+    def v2d_2_r2d(location: Vector | Sequence) -> Vector:
         """Convert node editor 2d view point to region 2d space."""
         ui_scale = bpy.context.preferences.system.ui_scale
         x, y = bpy.context.region.view2d.view_to_region(location[0] * ui_scale, location[1] * ui_scale, clip=False)
         return Vector((x, y))
 
     @staticmethod
-    def loc3d_2_v2d(location: Union[Vector, Sequence]) -> Vector:
+    def loc3d_2_v2d(location: Vector | Sequence) -> Vector:
         """Convert 3D space point to node editor 2d space."""
         return Vector((VecTool._size_2(location[0]), VecTool._size_2(location[1])))
 
     @staticmethod
-    def v2d_2_loc3d(location: Union[Vector, Sequence]) -> Vector:
+    def v2d_2_loc3d(location: Vector | Sequence) -> Vector:
         """Convert 2D space point to 3D space."""
         return Vector((VecTool._size_2(location[0], r=True), VecTool._size_2(location[1], r=True)))
 
     @staticmethod
-    def rotation_direction(v1: Union[Vector, Sequence], v2: Union[Vector, Sequence]) -> int:
+    def rotation_direction(v1: Vector | Sequence, v2: Vector | Sequence) -> Literal[1, -1]:
         """Return the rotation direction of two vectors.
         CounterClockwise: 1
         Clockwise: -1
@@ -129,7 +123,7 @@ class VecTool:
         return 1 if cross_z >= 0 else -1
 
     @staticmethod
-    def rotate_by_angle(v: Union[Vector, Sequence], angle: float) -> Vector:
+    def rotate_by_angle(v: Vector | Sequence, angle: float) -> Vector:
         """Rotate a vector by an angle."""
         c = cos(angle)
         s = sin(angle)

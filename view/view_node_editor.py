@@ -8,6 +8,7 @@ from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.model_draw import DrawData, DrawPreference
 from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view_model.view_model_draw import DrawViewModel
+from ..view_model.view_model_select import SelectedGPLayersRuntime
 
 
 class ViewDrawHandle:
@@ -47,7 +48,7 @@ class ViewBasic:
             self.drag_vm.on_mouse_init.append(self.update)
 
     def __call__(self, *args, **kwargs):
-        if self.drag_vm.bbox_model.is_empty(): return  # empty data
+        if self.drag_vm.build_model.is_empty(): return  # empty data
         if not self._visible: return
         if not self.draw_preference.lazy_update:
             self.update()
@@ -82,8 +83,7 @@ class ViewHover(ViewBasic):
 
     def update(self):
         self.draw_vm.update_draw_data(points=self.drag_vm.bbox_model.bbox_points_r2d,
-                                      edge_points=self.drag_vm.bbox_model.edge_center_points_r2d,
-                                      layer_points=self.drag_vm.selected_layers_points_r2d)
+                                      edge_points=self.drag_vm.bbox_model.edge_center_points_r2d, )
 
     def draw(self) -> None:
         self.draw_vm.draw_bbox_edge()
@@ -97,9 +97,9 @@ class ViewHover(ViewBasic):
         if self.drag_vm.pos_corner_extrude:
             self.draw_vm.draw_rotate_widget(point=self.drag_vm.pos_corner_extrude)
 
-        if self.drag_vm.selected_layers_points_r2d and self.draw_vm.debug:
-            for points in self.drag_vm.selected_layers_points_r2d:
-                self.draw_vm.draw_box(points)
+        if self.draw_vm.debug:
+            for points in SelectedGPLayersRuntime.get_selected_layers_points_r2d():
+                self.draw_vm.draw_box_outline(points)
 
         if self.draw_vm.debug:
             self.draw_vm.draw_debug_info(self.drag_vm.debug_info)
@@ -109,21 +109,17 @@ class ViewHover(ViewBasic):
 class ViewDrag(ViewBasic):
     def __post_init__(self):
         gp_data_bbox: GPencilLayerBBox = self.drag_vm.bbox_model
-        start_pos = Vector(self.drag_vm.start_pos)
-        end_pos = Vector(self.drag_vm.end_pos)
 
         self.draw_data: DrawData = DrawData(gp_data_bbox.bbox_points_r2d,
                                             gp_data_bbox.edge_center_points_r2d,
-                                            start_pos,
-                                            end_pos)
+                                            mouse_state=self.drag_vm.mouse_state)
         self.draw_preference = DrawPreference()
         self.draw_vm = DrawViewModel(self.draw_data, self.draw_preference)
 
     def update(self):
         self.draw_vm.update_draw_data(points=self.drag_vm.bbox_model.bbox_points_r2d,
                                       edge_points=self.drag_vm.bbox_model.edge_center_points_r2d,
-                                      start_pos=Vector(self.drag_vm.start_pos),
-                                      end_pos=Vector(self.drag_vm.end_pos))
+                                      mouse_state=self.drag_vm.mouse_state)
 
     def draw(self) -> None:
         if self.draw_vm.drag_area:
@@ -132,6 +128,9 @@ class ViewDrag(ViewBasic):
             self.draw_vm.draw_bbox_edge()
             self.draw_vm.draw_bbox_points()
             self.draw_vm.draw_rotate_angle()
-
+            if SelectedGPLayersRuntime.draw_select_box:
+                self.draw_vm.draw_select_box()
         if self.draw_vm.debug:
+            for points in SelectedGPLayersRuntime.get_selected_layers_points_r2d():
+                self.draw_vm.draw_box_outline(points)
             self.draw_vm.draw_debug_info(self.drag_vm.debug_info)
