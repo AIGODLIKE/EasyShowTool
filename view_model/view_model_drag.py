@@ -164,7 +164,8 @@ class DragGreasePencilViewModal:
 
     def _handle_select(self):
         # drag box points to detect if a layer is selected
-        box_area_points = self.mouse_state.drag_area()
+        box_area = self.mouse_state.drag_area()
+        box_area_points = box_area.order_points
 
         bbox_model = GPencilLayerBBox(self.gp_data)
         bbox_model.mode = self.bbox_model.mode

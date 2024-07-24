@@ -9,6 +9,7 @@ import blf
 
 from ..model.model_draw import DrawData, DrawPreference
 from ..model.model_gp_bbox import GPencilLayerBBox
+from ..model.model_points import PointsArea
 
 indices = GPencilLayerBBox.indices
 
@@ -137,11 +138,12 @@ class DrawViewModel:
         gpu.state.blend_set('ALPHA')
         select_color = list(self.color_highlight)
         select_color[3] = 0.5
-        points = self.mouse_state.drag_area_line_order()
+        area: PointsArea = self.mouse_state.drag_area()
+        points = area.line_order_points
         self.draw_box_outline(points, color=select_color)
         # draw area
         select_color[3] = 0.025
-        points = self.mouse_state.drag_area()
+        points = area.order_points
         self.draw_box_area(points, color=select_color)
         # draw the line between start and end pos
         # self.draw_line(self.mouse_state.start_pos, self.mouse_state.end_pos)

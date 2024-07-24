@@ -4,6 +4,7 @@ from typing import Sequence, Optional, Literal, Callable
 from mathutils import Vector
 
 from ..model.model_gp_bbox import GPencilLayerBBox
+from ..model.model_points import PointsArea
 from ..model.utils import VecTool
 from ..public_path import get_pref
 
@@ -164,7 +165,7 @@ class MouseState:
         angle = inverse * vec_1.angle(vec_2)
         return inverse, angle
 
-    def drag_area(self) -> list[Vector]:
+    def drag_area(self) -> PointsArea:
         if self.start_pos.x > self.end_pos.x:
             # right to left
             left = self.end_pos.x
@@ -180,16 +181,8 @@ class MouseState:
             bottom = self.start_pos.y
             top = self.end_pos.y
 
-        top_left = Vector((left, top))
-        bottom_right = Vector((right, bottom))
-        top_right = Vector((right, top))
-        bottom_left = Vector((left, bottom))
-        return [top_left, top_right, bottom_left, bottom_right]
-
-    def drag_area_line_order(self) -> list[Vector]:
-        points = self.drag_area()
-        points[2], points[3] = points[3], points[2]
-        return points
+        area = PointsArea(top=top, bottom=bottom, left=left, right=right)
+        return area
 
     def is_move(self) -> bool:
         return self.start_pos.x > 0 and self.start_pos.y > 0

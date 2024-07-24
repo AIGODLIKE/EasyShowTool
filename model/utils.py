@@ -1,7 +1,6 @@
 from mathutils import Vector, Euler
-from typing import Sequence, Union, ClassVar, Literal
+from typing import Sequence, ClassVar, Literal
 import bpy
-import numpy as np
 from dataclasses import dataclass
 from math import radians, degrees
 from math import cos, sin, pow
@@ -129,57 +128,6 @@ class VecTool:
         c = cos(angle)
         s = sin(angle)
         return Vector((v[0] * c - v[1] * s, v[0] * s + v[1] * c))
-
-
-@dataclass(slots=True)
-class PointArea:
-    """4 points to define an area."""
-    top: int | float
-    bottom: int | float
-    left: int | float
-    right: int | float
-
-    indices: ClassVar = ((0, 1, 2), (2, 1, 3))  # for gpu batch drawing fan
-
-    @property
-    def top_left(self) -> Vector:
-        return Vector((self.left, self.top))
-
-    @property
-    def top_right(self) -> Vector:
-        return Vector((self.right, self.top))
-
-    @property
-    def bottom_left(self) -> Vector:
-        return Vector((self.left, self.bottom))
-
-    @property
-    def bottom_right(self) -> Vector:
-        return Vector((self.right, self.bottom))
-
-    @property
-    def top_center(self) -> Vector:
-        return (self.top_left + self.top_right) / 2
-
-    @property
-    def bottom_center(self) -> Vector:
-        return (self.bottom_left + self.bottom_right) / 2
-
-    @property
-    def left_center(self) -> Vector:
-        return (self.top_left + self.bottom_left) / 2
-
-    @property
-    def right_center(self) -> Vector:
-        return (self.top_right + self.bottom_right) / 2
-
-    @property
-    def order_points(self) -> list[Vector]:
-        return [self.top_left, self.top_right, self.bottom_left, self.bottom_right]
-
-    @property
-    def line_order_points(self) -> list[Vector]:
-        return [self.top_left, self.top_right, self.bottom_right, self.bottom_left]
 
 
 class PointBase:
