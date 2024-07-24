@@ -123,7 +123,7 @@ class MouseDetectModel:
 
 
 @dataclass
-class MouseState:
+class MouseDragState:
     mouse_pos: Vector = Vector((0, 0))
     mouse_pos_prev: Vector = Vector((0, 0))
     start_pos: Vector = Vector((0, 0))

@@ -6,7 +6,7 @@ from pathlib import Path
 import bmesh
 import numpy as np
 
-from ..view_model.view_model_detect import MouseState
+from ..view_model.view_model_mouse import MouseDragState
 from ..public_path import get_pref
 
 
@@ -66,7 +66,7 @@ class DrawData:
     points: list[Vector, Vector, Vector, Vector]
     edge_points: list[Vector, Vector, Vector, Vector]
 
-    mouse_state: Optional[MouseState] = None
+    mouse_state: Optional[MouseDragState] = None
     # from transform handles
     delta_degree: Optional[float] = None
     delta_scale: Optional[Vector] = None

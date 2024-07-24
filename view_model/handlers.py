@@ -7,7 +7,7 @@ from mathutils import Vector
 from ..model.utils import Coord, EdgeCenter, VecTool
 from ..model.model_gp_bbox import GPencilLayerBBox, GPencilLayersBBox
 from ..model.model_gp import BuildGreasePencilData
-from .view_model_detect import MouseState
+from .view_model_mouse import MouseDragState
 
 
 @dataclass
@@ -73,12 +73,12 @@ class TransformHandler:
     # use for multi-layer
     selected_layers: list[str] = None
     # mouse
-    mouse_state: MouseState = None
+    mouse_state: MouseDragState = None
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         ...  # subclass should implement this method
 
-    def handle(self, event: bpy.types.Event, mouse_state: MouseState, models: Optional[dict] = None, **kwargs) -> bool:
+    def handle(self, event: bpy.types.Event, mouse_state: MouseDragState, models: Optional[dict] = None, **kwargs) -> bool:
         # if key in self.__dict__: # set the attribute
         if self.mouse_state is None:
             self.mouse_state = mouse_state

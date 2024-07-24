@@ -10,7 +10,7 @@ from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
 from ..view_model.view_model_drag import DragGreasePencilViewModal
 from ..view_model.view_model_select import SelectedGPLayersRuntime
 from ..view.view_node_editor import ViewHover, ViewDrawHandle, ViewDrag
-from ..view_model.view_model_detect import MouseState
+from ..view_model.view_model_mouse import MouseDragState
 
 from .functions import has_edit_tree, tag_redraw, is_valid_workspace_tool, get_pos_layer_index, get_edit_tree_gp_data
 
@@ -24,7 +24,7 @@ class TransformModal(bpy.types.Operator):
     rotate_handler: RotateHandler = None
     scale_handler: ScaleHandler = None
 
-    mouse_state: MouseState = None
+    mouse_state: MouseDragState = None
 
     @classmethod
     def poll(cls, context):
@@ -35,7 +35,7 @@ class TransformModal(bpy.types.Operator):
         self.build_model = BuildGreasePencilData(gp_data)
         self.bbox_model = GPencilLayerBBox(gp_data=self.build_model.gp_data, mode=context.scene.est_gp_transform_mode)
         self.bbox_model.calc_active_layer_bbox()
-        self.mouse_state = MouseState()
+        self.mouse_state = MouseDragState()
         self.mouse_state.init(event)
 
     def _start_modal(self, context):

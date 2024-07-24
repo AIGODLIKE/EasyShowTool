@@ -7,7 +7,7 @@ from contextlib import contextmanager
 
 from ..model.data_enums import ShootAngles
 from ..model.model_gp_bbox import GPencilLayerBBox
-from ..view_model.view_model_detect import MouseDetectModel
+from ..view_model.view_model_mouse import MouseDetectModel
 from ..public_path import get_svg_icon
 
 

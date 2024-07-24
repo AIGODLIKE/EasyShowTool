@@ -5,11 +5,11 @@ from typing import Literal, Optional, Any, ClassVar
 import bpy
 from collections import OrderedDict
 
-from .view_model_detect import MouseState
+from .view_model_mouse import MouseDragState
 from ..public_path import get_pref
 from ..model.model_gp import BuildGreasePencilData
 from ..model.model_gp_bbox import GPencilLayerBBox
-from ..view_model.view_model_detect import MouseDetectModel
+from ..view_model.view_model_mouse import MouseDetectModel
 from .view_model_select import SelectedGPLayersRuntime
 from .handlers import TransformHandler
 
@@ -38,7 +38,7 @@ class DragGreasePencilViewModal:
     pt_edge_center: int = 0
     pt_corner_extrude: int = 0
     # mouse
-    mouse_state: MouseState = field(default_factory=MouseState)
+    mouse_state: MouseDragState = field(default_factory=MouseDragState)
     # state
     in_drag_area: bool = False
     # snap
