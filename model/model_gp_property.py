@@ -129,28 +129,28 @@ class GPencilBBoxProperty:
         return VecTool.v2d_2_r2d(self.center_v2d)
 
     @property
-    def size(self) -> tuple[float, float]:
-        return self.max_x - self.min_x, self.max_y - self.min_y
+    def size(self) -> Vector:
+        return Vector((self.max_x - self.min_x, self.max_y - self.min_y))
 
     @property
     def size_v2d(self) -> Vector:
         return VecTool.loc3d_2_v2d(self.size)
 
     @property
-    def top_left(self) -> tuple[float, float]:
-        return self.min_x, self.max_y
+    def top_left(self) -> Vector:
+        return Vector((self.min_x, self.max_y))
 
     @property
-    def top_right(self) -> tuple[float, float]:
-        return self.max_x, self.max_y
+    def top_right(self) -> Vector:
+        return Vector((self.max_x, self.max_y))
 
     @property
-    def bottom_left(self) -> tuple[float, float]:
-        return self.min_x, self.min_y
+    def bottom_left(self) -> Vector:
+        return Vector((self.min_x, self.min_y))
 
     @property
-    def bottom_right(self) -> tuple[float, float]:
-        return self.max_x, self.min_y
+    def bottom_right(self) -> Vector:
+        return Vector((self.max_x, self.min_y))
 
     @property
     def bbox_points_3d(self) -> tuple[Vector, Vector, Vector, Vector]:

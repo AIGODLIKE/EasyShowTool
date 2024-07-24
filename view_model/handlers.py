@@ -78,7 +78,8 @@ class TransformHandler:
     def accept_event(self, event: bpy.types.Event) -> bool:
         ...  # subclass should implement this method
 
-    def handle(self, event: bpy.types.Event, mouse_state: MouseDragState, models: Optional[dict] = None, **kwargs) -> bool:
+    def handle(self, event: bpy.types.Event, mouse_state: MouseDragState, models: Optional[dict] = None,
+               **kwargs) -> bool:
         # if key in self.__dict__: # set the attribute
         if self.mouse_state is None:
             self.mouse_state = mouse_state
@@ -259,7 +260,7 @@ class ScaleHandler(TransformHandler):
 
         return True
 
-    def calc_both_side(self):
+    def calc_both_side(self) -> tuple[Vector, Vector, float, float, float, float]:
         pivot = self.bbox_model.center
         pivot_r2d = self.bbox_model.center_r2d
         size_x_v2d, size_y_v2d = self.bbox_model.size_v2d
@@ -277,7 +278,7 @@ class ScaleHandler(TransformHandler):
 
         return pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y
 
-    def calc_one_side(self):
+    def calc_one_side(self) -> tuple[float, float, float, float]:
         if self.bbox_model.is_local:
             # rotate the delta vector to the local space
             correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.layer_rotate_2d())
@@ -299,7 +300,7 @@ class ScaleHandler(TransformHandler):
         else:
             vec_scale.x = vec_scale.y
 
-    def both_sides_edge_center(self, unify_scale: bool):
+    def both_sides_edge_center(self, unify_scale: bool) -> None:
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
 
@@ -314,7 +315,7 @@ class ScaleHandler(TransformHandler):
         self.pivot = pivot
         self.delta_scale = vec_scale
 
-    def both_sides_corner(self, unify_scale: bool):
+    def both_sides_corner(self, unify_scale: bool) -> None:
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
         if self.pos_corner[0] == self.bbox_model.min_x:
             delta_x = -delta_x
@@ -329,7 +330,7 @@ class ScaleHandler(TransformHandler):
         self.pivot = pivot
         self.delta_scale = vec_scale
 
-    def one_side_edge_center(self, unify_scale: bool):
+    def one_side_edge_center(self, unify_scale: bool) -> None:
         delta_x, delta_y, size_x_v2d, size_y_v2d = self.calc_one_side()
         points = self.bbox_model.edge_center_points_3d
         pivot_index = EdgeCenter.opposite(self.pt_edge_center)
@@ -353,7 +354,7 @@ class ScaleHandler(TransformHandler):
         self.pivot = pivot
         self.delta_scale = vec_scale
 
-    def one_side_corner(self, unify_scale: bool):
+    def one_side_corner(self, unify_scale: bool) -> None:
         delta_x, delta_y, size_x_v2d, size_y_v2d = self.calc_one_side()
         points = self.bbox_model.bbox_points_3d
         pivot_index = Coord.opposite(self.pt_corner)
