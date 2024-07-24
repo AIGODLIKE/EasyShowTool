@@ -97,9 +97,8 @@ class ViewHover(ViewBasic):
         if self.drag_vm.pos_corner_extrude:
             self.draw_vm.draw_rotate_widget(point=self.drag_vm.pos_corner_extrude)
 
-        if self.draw_vm.debug:
-            for points in SelectedGPLayersRuntime.get_selected_layers_points_r2d():
-                self.draw_vm.draw_box_outline(points)
+        for points in SelectedGPLayersRuntime.get_selected_layers_points_r2d():
+            self.draw_vm.draw_box_outline(points)
 
         if self.draw_vm.debug:
             self.draw_vm.draw_debug_info(self.drag_vm.debug_info)
@@ -130,7 +129,8 @@ class ViewDrag(ViewBasic):
             self.draw_vm.draw_rotate_angle()
             if SelectedGPLayersRuntime.draw_select_box:
                 self.draw_vm.draw_select_box()
-        if self.draw_vm.debug:
             for points in SelectedGPLayersRuntime.get_selected_layers_points_r2d():
                 self.draw_vm.draw_box_outline(points)
+
+        if self.draw_vm.debug:
             self.draw_vm.draw_debug_info(self.drag_vm.debug_info)
