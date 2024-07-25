@@ -370,7 +370,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """
 
         layer = self._get_layer(layer_name_or_index)
-        vec = VecTool.v2d_2_loc3d(v) if space == 'v2d' else v
+        vec = VecTool.v2d_2_loc3d(Vector(v)) if space == 'v2d' else Vector(v)
         self.edit_layer.move_layer(layer, vec)
         return self
 

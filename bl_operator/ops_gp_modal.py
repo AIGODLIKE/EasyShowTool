@@ -146,6 +146,7 @@ class EST_OT_add_gp_modal(bpy.types.Operator):
 
     def _add(self, context, location):
         if self.add_type == 'TEXT':
+            SelectedGPLayersRuntime.clear() # clear the selected layers
             if context.scene.est_gp_text == '':
                 self.report({'ERROR'}, "Empty")
                 return
