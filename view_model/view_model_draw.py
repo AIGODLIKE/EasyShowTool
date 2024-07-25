@@ -11,7 +11,7 @@ from ..model.model_draw import DrawData, DrawPreference
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.model_points import PointsArea
 
-indices = GPencilLayerBBox.indices
+indices = PointsArea.indices
 
 
 @dataclass
@@ -139,11 +139,11 @@ class DrawViewModel:
         select_color = list(self.color_highlight)
         select_color[3] = 0.5
         area: PointsArea = self.mouse_state.drag_area()
-        points = area.line_order_points
+        points = area.corner_points_line_order
         self.draw_box_outline(points, color=select_color)
         # draw area
         select_color[3] = 0.025
-        points = area.order_points
+        points = area.corner_points
         self.draw_box_area(points, color=select_color)
         # draw the line between start and end pos
         # self.draw_line(self.mouse_state.start_pos, self.mouse_state.end_pos)

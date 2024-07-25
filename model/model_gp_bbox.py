@@ -4,30 +4,81 @@ from mathutils import Vector, Euler
 from typing import Union, Literal, Sequence, Callable
 from dataclasses import dataclass, field
 
-from .model_gp_property import GPencilStroke, GreasePencilProperty, GPencilBBoxProperty
-from .utils import EulerTool
+from .model_gp_property import GPencilStroke
+from .model_points import PointsArea
+from .utils import EulerTool, VecTool
 
 
 @dataclass
-class CalcBBox():
+class CalcBBox:
+    """Properties for the bounding box to use
+    v2d: view 2d space e.g. in node editor, `node.location` is in v2d space
+    r2d: region 2d space e.g. in the region, event.mouse_region_x is in r2d space
+    """
+
     gp_data: bpy.types.GreasePencil
+    area: PointsArea = field(default_factory=PointsArea)
     last_layer_index: int = 0
 
-    def _get_layer(self, layer_name_or_index: int | str) -> bpy.types.GPencilLayer:
-        """Handle the layer.
-        :param layer_name_or_index: The name or index of the layer.
-        :return: The layer object.
-        """
-        if isinstance(layer_name_or_index, int):
-            try:
-                layer = self.gp_data.layers[layer_name_or_index]
-            except ValueError:
-                raise ValueError(f'Layer index {layer_name_or_index} not found.')
-        else:
-            layer = self.gp_data.layers.get(layer_name_or_index, None)
-        if not layer:
-            raise ValueError(f'Layer {layer_name_or_index} not found.')
-        return layer
+    def __getattr__(self, item: str):
+        """Get the attribute from the area if it exists, otherwise from self."""
+        if 'area' in self.__dict__ and hasattr(self.area, item):
+            return getattr(self.area, item)
+        return object.__getattribute__(self, item)
+
+    @property
+    def center_v2d(self) -> Vector:
+        return VecTool.loc3d_2_v2d(self.area.center)
+
+    @property
+    def center_r2d(self) -> Vector:
+        return VecTool.v2d_2_r2d(self.center_v2d)
+
+    @property
+    def size_v2d(self) -> Vector:
+        return VecTool.loc3d_2_v2d(self.area.size)
+
+    @property
+    def bbox_points_3d(self) -> tuple[Vector, Vector, Vector, Vector]:
+        """Return the bounding box points.
+        top_left, top_right, bottom_left, bottom_right"""
+        return self.area.corner_points
+
+    @property
+    def bbox_points_v2d(self) -> tuple[Vector, ...]:
+        return tuple(map(VecTool.loc3d_2_v2d, self.bbox_points_3d))
+
+    @property
+    def bbox_points_r2d(self) -> tuple[Vector, ...]:
+        return tuple(map(VecTool.v2d_2_r2d, self.bbox_points_v2d))
+
+    @property
+    def edge_center_points_3d(self) -> tuple[Vector, Vector, Vector, Vector]:
+        """Return the edge center points of the bounding box."""
+        return self.area.edge_center_points
+
+    @property
+    def edge_center_points_v2d(self) -> tuple[Vector, ...]:
+        """Return the edge center points of the bounding box in node editor view."""
+        return tuple(map(VecTool.loc3d_2_v2d, self.edge_center_points_3d))
+
+    @property
+    def edge_center_points_r2d(self) -> tuple[Vector, ...]:
+        """Return the edge center points of the bounding box in region 2d space."""
+        return tuple(map(VecTool.v2d_2_r2d, self.edge_center_points_v2d))
+
+    def corner_extrude_points_r2d(self, extrude: int = 15) -> list[Vector]:
+        """Return the corner extrude points of the bounding box.
+        :param extrude: the extrude distance
+        this is not a property because it needs an extrude distance"""
+        points = self.bbox_points_r2d
+        # point to center vector
+        vecs = [point - self.center_r2d for point in points]
+        # normalize and scale
+        extrude_vecs = [vec.normalized() * extrude for vec in vecs]
+        new_points = [Vector(point) + vec for point, vec in zip(points, extrude_vecs)]
+
+        return new_points
 
     def calc_bbox(self, layer_name_or_index: str | int, local: bool = True) -> None:
         """
@@ -68,8 +119,26 @@ class CalcBBox():
         self.max_y = float(points[max_xyz_id[1], 1])
         self.min_x = float(points[min_xyz_id[0], 0])
         self.min_y = float(points[min_xyz_id[1], 1])
-        self.center = Vector(pivot)
+        self.area.center = Vector(pivot)
+
         self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
+        self.area.setup(top=self.max_y, bottom=self.min_y, left=self.min_x, right=self.max_x)
+
+    def _get_layer(self, layer_name_or_index: int | str) -> bpy.types.GPencilLayer:
+        """Handle the layer.
+        :param layer_name_or_index: The name or index of the layer.
+        :return: The layer object.
+        """
+        if isinstance(layer_name_or_index, int):
+            try:
+                layer = self.gp_data.layers[layer_name_or_index]
+            except ValueError:
+                raise ValueError(f'Layer index {layer_name_or_index} not found.')
+        else:
+            layer = self.gp_data.layers.get(layer_name_or_index, None)
+        if not layer:
+            raise ValueError(f'Layer {layer_name_or_index} not found.')
+        return layer
 
     def _getLayer_frame_points(self, frame: bpy.types.GPencilFrame) -> np.ndarray:
         """
@@ -87,7 +156,7 @@ class CalcBBox():
 
 
 @dataclass
-class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
+class GPencilLayerBBox(CalcBBox):
     """Bounding Box local to the grease pencil data.
 """
     layer: bpy.types.GPencilLayer = None
@@ -152,7 +221,7 @@ class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
 
 
 @dataclass
-class GPencilLayersBBox(CalcBBox, GPencilBBoxProperty):
+class GPencilLayersBBox(CalcBBox):
     def calc_multiple_layers_bbox(self, layers: list[str | int]) -> None:
         """
         Calculate the bounding box that encompasses multiple layers.

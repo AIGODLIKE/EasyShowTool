@@ -181,41 +181,41 @@ class RotateHandler(TransformHandler):
 
 # TODO need to use ScalePivot class to refactor the scale handler
 
-# @dataclass
-# class ScalePivot():
-#     # in
-#     bbox_model: GPencilLayerBBox
-#     pivot_type: Literal['edge_center', 'corner', 'center']
-#     pt_edge_center: int = 0
-#     pt_corner: int = 0
-#     # out
-#     position: Vector = None
-#
-#     def __post_init__(self):
-#         self.set_pivot()
-#
-#     def set_pivot(self):
-#         if self.pivot_type == 'edge_center':
-#             self.position = self.edge_center()
-#         elif self.pivot_type == 'corner':
-#             self.position = self.corner()
-#         elif self.pivot_type == 'center':
-#             self.position = self.center()
-#
-#     def edge_center(self) -> tuple[Vector, Vector]:
-#         points = self.bbox_model.edge_center_points_3d
-#         pivot_index = EdgeCenter.opposite(self.pt_edge_center)
-#         pivot: Vector = points[pivot_index]
-#         return pivot
-#
-#     def corner(self) -> tuple[Vector, Vector]:
-#         points = self.bbox_model.bbox_points_3d
-#         pivot_index = Coord.opposite(self.pt_corner)
-#         pivot = points[pivot_index]
-#         return pivot
-#
-#     def center(self) -> Vector:
-#         return self.bbox_model.center
+@dataclass
+class ScalePivot():
+    # in
+    bbox_model: GPencilLayerBBox
+    pivot_type: Literal['edge_center', 'corner', 'center']
+    pt_edge_center: int = 0
+    pt_corner: int = 0
+    # out
+    position: Vector = None
+
+    def __post_init__(self):
+        self.set_pivot()
+
+    def set_pivot(self):
+        if self.pivot_type == 'edge_center':
+            self.position = self.edge_center()
+        elif self.pivot_type == 'corner':
+            self.position = self.corner()
+        elif self.pivot_type == 'center':
+            self.position = self.center()
+
+    def edge_center(self) -> tuple[Vector, Vector]:
+        points = self.bbox_model.edge_center_points_3d
+        pivot_index = EdgeCenter.opposite(self.pt_edge_center)
+        pivot: Vector = points[pivot_index]
+        return pivot
+
+    def corner(self) -> tuple[Vector, Vector]:
+        points = self.bbox_model.bbox_points_3d
+        pivot_index = Coord.opposite(self.pt_corner)
+        pivot = points[pivot_index]
+        return pivot
+
+    def center(self) -> Vector:
+        return self.bbox_model.center
 
 
 @dataclass
@@ -226,6 +226,7 @@ class ScaleHandler(TransformHandler):
     pivot: Vector = None
     pivot_local: Vector = None
     degree_local: float = 0
+
     # pass in
     pos_edge_center: Vector = None
     pos_corner: Vector = None
