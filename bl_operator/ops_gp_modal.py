@@ -140,37 +140,43 @@ class EST_OT_add_gp_modal(bpy.types.Operator):
             return {'CANCELLED'}
         if event.type == 'LEFTMOUSE':
             v2d_loc = VecTool.r2d_2_v2d((event.mouse_region_x, event.mouse_region_y))
-            self._add(context, v2d_loc)
+            res = self._add(context, v2d_loc)
+            if res:
+                SelectedGPLayersRuntime.clear()  # clear the selected layers
+                SelectedGPLayersRuntime.set_active(get_edit_tree_gp_data(context).layers.active.info)
             return {'FINISHED'}
         return {'RUNNING_MODAL'}
 
-    def _add(self, context, location):
+    def _add(self, context, location) -> bool:
         if self.add_type == 'TEXT':
-            SelectedGPLayersRuntime.clear() # clear the selected layers
             if context.scene.est_gp_text == '':
                 self.report({'ERROR'}, "Empty")
-                return
+                return False
             bpy.ops.est.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
                                text=context.scene.est_gp_text,
                                size=context.scene.est_gp_size,
                                location=location)
+            return True
         elif self.add_type == 'OBJECT':
             if not context.scene.est_gp_obj:
                 self.report({'ERROR'}, "No object selected")
-                return
+                return False
             bpy.ops.est.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
                                size=context.scene.est_gp_size,
                                obj=context.scene.est_gp_obj.name,
                                obj_shot_angle=context.scene.est_gp_obj_shot_angle,
                                location=location)
+            return True
         elif self.add_type == 'BL_ICON':
             bpy.ops.est.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
                                size=context.scene.est_gp_size,
                                icon=context.scene.est_gp_icon,
                                location=location)
+            return True
+        return False
 
 
 class EST_OT_gp_view(bpy.types.Operator):
