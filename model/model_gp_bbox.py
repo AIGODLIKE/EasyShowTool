@@ -17,8 +17,11 @@ class CalcBBox:
     """
 
     gp_data: bpy.types.GreasePencil
-    area: PointsArea = field(default_factory=PointsArea)
+    area: PointsArea = field(init=False)
     last_layer_index: int = 0
+
+    def __post_init__(self):
+        self.area = PointsArea()
 
     def __getattr__(self, item: str):
         """Get the attribute from the area if it exists, otherwise from self."""
