@@ -177,8 +177,9 @@ class DragGreasePencilViewModal:
                 points = list(bbox_model.bbox_points_v2d)
                 points[2], points[3] = points[3], points[2]
                 self.select_runtime.update(layer.info, points)
-
-        # print(self.select_runtime.selected_layers())
+        # if only one layer is selected, set it to active
+        if len(self.select_runtime.selected_layers()) == 1:
+            self.build_model.set_active_layer(self.select_runtime.selected_layers()[0])
 
     def clear_selected_layers_points(self):
         self.select_runtime.clear()

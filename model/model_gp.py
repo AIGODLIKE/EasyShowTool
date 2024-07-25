@@ -205,7 +205,13 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
     def set_active_layer(self, layer_name_or_index: str | int) -> 'BuildGreasePencilData':
         """Set the active grease pencil annotation layer."""
-        self.active_layer_index = layer_name_or_index
+        if isinstance(layer_name_or_index, int):
+            self.active_layer_index = layer_name_or_index
+        elif isinstance(layer_name_or_index, str):
+            for i, layer in enumerate(self.gp_data.layers):
+                if layer.info == layer_name_or_index:
+                    self.active_layer_index = i
+                    break
         return self
 
     def remove_active_layer(self) -> 'BuildGreasePencilData':
