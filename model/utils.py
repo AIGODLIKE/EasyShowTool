@@ -70,7 +70,7 @@ class VecTool:
     @staticmethod
     def r2d_2_v2d(location: Vector | Sequence) -> Vector:
         """Convert region 2d space point to node editor 2d view."""
-        return Vector(bpy.context.region.view2d.region_to_view(*location)) / VecTool.ui_scale()
+        return Vector(bpy.context.region.view2d.region_to_view(*location.xy)) / VecTool.ui_scale()
 
     @staticmethod
     def v2d_2_r2d(location: Vector) -> Vector:
@@ -86,6 +86,16 @@ class VecTool:
     def v2d_2_loc3d(location: Vector) -> Vector:
         """Convert 2D space point to 3D space."""
         return location * VecTool.ui_scale()
+
+    @staticmethod
+    def loc3d_2_r2d(location: Vector) -> Vector:
+        """Convert 3D space point to region 2d space."""
+        return VecTool.v2d_2_r2d(VecTool.loc3d_2_v2d(location))
+
+    @staticmethod
+    def r2d_2_loc3d(location: Vector) -> Vector:
+        """Convert region 2d space point to 3D space."""
+        return VecTool.v2d_2_loc3d(VecTool.r2d_2_v2d(location))
 
     @staticmethod
     def rotation_direction(v1: Vector, v2: Vector) -> Literal[1, -1]:
