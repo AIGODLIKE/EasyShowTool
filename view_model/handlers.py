@@ -190,6 +190,7 @@ class ScaleHandler(TransformHandler):
     degree_local: float = 0
 
     # pass in
+    force_center_scale: bool = False
     pos_edge_center: AreaPoint | None = None
     pos_corner: AreaPoint | None = None
 
@@ -202,36 +203,54 @@ class ScaleHandler(TransformHandler):
         self.delta_vec_v2d = self.mouse_state.delta_vec_v2d
         self.mouse_pos = self.mouse_state.mouse_pos
 
-        if self.pos_edge_center:
-            if center_scale:
-                self.both_sides_edge_center(unify_scale)
-            else:
-                self.one_side_edge_center(unify_scale)
-        elif self.pos_corner:
-            if center_scale:
-                self.both_sides_corner(unify_scale)
-            else:
-                self.one_side_corner(unify_scale)
+        if self.force_center_scale and self.selected_layers:
+            self.both_sides_corner(not unify_scale) # invert the unify_scale to fit
+        else:
+            if self.pos_edge_center:
+                if center_scale:
+                    self.both_sides_edge_center(unify_scale)
+                else:
+                    self.one_side_edge_center(unify_scale)
+            elif self.pos_corner:
+                if center_scale:
+                    self.both_sides_corner(unify_scale)
+                else:
+                    self.one_side_corner(unify_scale)
 
         if not self.delta_scale: return False
         if not self.pivot: return False
 
-        self.build_model.scale_active(self.delta_scale, self.pivot, space='v2d', local=self.bbox_model.is_local)
+        if not self.selected_layers:
+            self.build_model.scale_active(self.delta_scale, self.pivot, space='v2d', local=self.bbox_model.is_local)
+        else:
+            # print(self.pivot, self.delta_scale)
+            for layer in self.selected_layers:
+                self.build_model.scale(layer, self.delta_scale, self.pivot, space='v2d', local=self.bbox_model.is_local)
+
         self.total_scale *= self.delta_scale
 
         return True
 
-    def calc_both_side(self) -> tuple[Vector, Vector, float, float, float, float]:
-        pivot = self.bbox_model.center
-        pivot_r2d = self.bbox_model.center_r2d
-        size_x_v2d, size_y_v2d = self.bbox_model.size_v2d
 
-        if self.bbox_model.is_local:
+    def calc_both_side(self) -> tuple[Vector, Vector, float, float, float, float]:
+        if not self.selected_layers:
+            pivot = self.bbox_model.center
+            pivot_r2d = self.bbox_model.center_r2d
+            size_x_v2d, size_y_v2d = self.bbox_model.size_v2d
+        else:
+            layers_bbox = GPencilLayersBBox(self.bbox_model.gp_data)
+            layers_bbox.calc_multiple_layers_bbox(self.selected_layers)
+            pivot = layers_bbox.center_v2d
+            pivot_r2d = layers_bbox.center_r2d
+            size_x_v2d, size_y_v2d = layers_bbox.size_v2d
+
+        if self.bbox_model.is_local and not self.selected_layers:
             # rotate the delta vector to the local space
             correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.layer_rotate_2d())
             delta_x, delta_y = correct_delta_vec.xy
         else:
             delta_x, delta_y = (self.delta_vec_v2d * 2).xy
+
         if self.mouse_pos[0] < pivot_r2d[0]:  # if on the left side
             delta_x = -delta_x
         if self.mouse_pos[1] < pivot_r2d[1]:  # if on the bottom side
@@ -278,17 +297,20 @@ class ScaleHandler(TransformHandler):
 
     def both_sides_corner(self, unify_scale: bool) -> None:
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
-        if self.pos_corner.x == self.bbox_model.min_x:
-            delta_x = -delta_x
-        if self.pos_corner.y == self.bbox_model.min_y:
-            delta_y = -delta_y
+
+        if not self.selected_layers:
+            if self.pos_corner.x == self.bbox_model.min_x:
+                delta_x = -delta_x
+            if self.pos_corner.y == self.bbox_model.min_y:
+                delta_y = -delta_y
 
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
         vec_scale = Vector((scale_x, scale_y, 0))
         if unify_scale:
             self.unify_scale(delta_x, delta_y, vec_scale)
 
-        self.pivot = pivot
+        if self.pivot is None:
+            self.pivot = pivot
         self.delta_scale = vec_scale
 
     def one_side_edge_center(self, unify_scale: bool) -> None:

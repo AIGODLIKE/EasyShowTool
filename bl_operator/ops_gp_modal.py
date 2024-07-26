@@ -114,6 +114,40 @@ class EST_OT_rotate_gp_modal(TransformModal):
         return {'RUNNING_MODAL'}
 
 
+class EST_OT_scale_gp_modal(TransformModal):
+    bl_idname = "est.scale_gp_modal"
+    bl_label = "Scale"
+
+    def invoke(self, context, event):
+        self._init(context, event)
+
+        self.scale_handler = ScaleHandler()
+
+        self.scale_handler.build_model = self.build_model
+        self.scale_handler.mouse_state = self.mouse_state
+        self.scale_handler.bbox_model = self.bbox_model
+        self.scale_handler.force_center_scale = True
+
+        self._start_modal(context)
+
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context, event):
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            self._finish(context)
+            return {'CANCELLED'}
+        if event.type == 'MOUSEMOVE':
+            self.mouse_state.update_mouse_position(event)
+            self.scale_handler.selected_layers = SelectedGPLayersRuntime.selected_layers()
+            self.scale_handler.accept_event(event)
+        if event.type == 'LEFTMOUSE':
+            self._finish(context)
+
+            return {'FINISHED'}
+        context.area.tag_redraw()
+        return {'RUNNING_MODAL'}
+
+
 # noinspection PyPep8Naming
 class EST_OT_add_gp_modal(bpy.types.Operator):
     bl_idname = "est.add_gp_modal"
@@ -192,7 +226,7 @@ class EST_OT_gp_view(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context) and is_valid_workspace_tool(context) and get_edit_tree_gp_data(
-            context) and (cls.draw_handle.is_empty() or cls.draw_handle is None)
+            context) and (cls.draw_handle is None or cls.draw_handle.is_empty())
 
     @classmethod
     def hide(cls):
@@ -364,6 +398,7 @@ def register():
 
     register_class(EST_OT_move_gp_modal)
     register_class(EST_OT_rotate_gp_modal)
+    register_class(EST_OT_scale_gp_modal)
     register_class(EST_OT_add_gp_modal)
     register_class(EST_OT_gp_view)
     register_class(EST_OT_gp_set_active_layer)
@@ -376,6 +411,7 @@ def unregister():
 
     unregister_class(EST_OT_move_gp_modal)
     unregister_class(EST_OT_rotate_gp_modal)
+    unregister_class(EST_OT_scale_gp_modal)
     unregister_class(EST_OT_add_gp_modal)
     unregister_class(EST_OT_gp_view)
     unregister_class(EST_OT_gp_set_active_layer)

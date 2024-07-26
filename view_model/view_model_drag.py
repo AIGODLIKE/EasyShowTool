@@ -29,7 +29,6 @@ class DragGreasePencilViewModal:
     bbox_model: GPencilLayerBBox = field(init=False)
     build_model: BuildGreasePencilData = field(init=False)
     detect_model: MouseDetectModel = field(init=False)
-    # callback
 
     # state / on points
     pos_edge_center: AreaPoint = None

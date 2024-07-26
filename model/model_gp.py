@@ -344,7 +344,8 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """Scale the active grease pencil layer."""
         return self.scale(self.active_layer_name, scale, pivot, space, local)
 
-    def rotate_active(self, degree: int, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+    def rotate_active(self, degree: int | float, pivot: Vector,
+                      space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Rotate the active grease pencil layer."""
         return self.rotate(self.active_layer_name, degree, pivot, space)
 
@@ -389,7 +390,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         self.edit_layer.scale_layer(layer, scale, vec_pivot, local)
         return self
 
-    def rotate(self, layer_name_or_index: str | int, degree: int, pivot: Vector,
+    def rotate(self, layer_name_or_index: str | int, degree: int | float, pivot: Vector,
                space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Rotate the grease pencil data.
         The pivot point should be in 3D space.
