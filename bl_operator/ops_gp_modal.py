@@ -139,7 +139,7 @@ class EST_OT_add_gp_modal(bpy.types.Operator):
         if event.type in {'ESC', 'RIGHTMOUSE'}:
             return {'CANCELLED'}
         if event.type == 'LEFTMOUSE':
-            v2d_loc = VecTool.r2d_2_v2d((event.mouse_region_x, event.mouse_region_y))
+            v2d_loc = VecTool.r2d_2_v2d(Vector((event.mouse_region_x, event.mouse_region_y)))
             res = self._add(context, v2d_loc)
             if res:
                 SelectedGPLayersRuntime.clear()  # clear the selected layers
