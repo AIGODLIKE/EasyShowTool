@@ -56,9 +56,9 @@ class ViewPan:
 
     def edge_pan(self, event) -> Vector:
         """pan view return: the pan vector."""
-        self.pan_post_prev: Vector = VecTool.r2d_2_v2d((event.mouse_region_x, event.mouse_region_y))
+        self.pan_post_prev: Vector = VecTool.r2d_2_v2d(Vector((event.mouse_region_x, event.mouse_region_y)))
         bpy.ops.view2d.pan(deltax=self.deltax, deltay=self.deltay)
-        self.pan_pos: Vector = VecTool.r2d_2_v2d((event.mouse_region_x, event.mouse_region_y))
+        self.pan_pos: Vector = VecTool.r2d_2_v2d(Vector((event.mouse_region_x, event.mouse_region_y)))
         return self.pan_pos - self.pan_post_prev
 
 
@@ -204,7 +204,7 @@ class ScaleHandler(TransformHandler):
         self.mouse_pos = self.mouse_state.mouse_pos
 
         if self.force_center_scale and self.selected_layers:
-            self.both_sides_corner(not unify_scale) # invert the unify_scale to fit
+            self.both_sides_corner(not unify_scale)  # invert the unify_scale to fit
         else:
             if self.pos_edge_center:
                 if center_scale:
@@ -230,7 +230,6 @@ class ScaleHandler(TransformHandler):
         self.total_scale *= self.delta_scale
 
         return True
-
 
     def calc_both_side(self) -> tuple[Vector, Vector, float, float, float, float]:
         if not self.selected_layers:
