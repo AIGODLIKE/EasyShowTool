@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from typing import ClassVar, Literal
+from typing import ClassVar, Literal, Sequence
 
 from mathutils import Vector
+import bpy
 
 PositionType = Literal[
     'top_left', 'top_right', 'bottom_left', 'bottom_right',
@@ -13,9 +14,29 @@ class AreaPoint(Vector):
     """A point with a position and a type."""
     position_type: PositionType
 
+    @classmethod
+    def ui_scale(cls) -> float:
+        return bpy.context.preferences.system.ui_scale
+
     def set_position_type(self, position_type: PositionType) -> 'AreaPoint':
         self.position_type = position_type
         return self
+
+    def r2d_2_v2d(self) -> 'AreaPoint':
+        """Convert the region 2d space to view 2d space."""
+        return AreaPoint(bpy.context.region.view2d.region_to_view(*self.xy)) / self.ui_scale()
+
+    def v2d_2_r2d(self) -> 'AreaPoint':
+        """Convert the view 2d space to region 2d space."""
+        return AreaPoint(bpy.context.region.view2d.view_to_region(*self.xy * self.ui_scale(), clip=False))
+
+    def loc3d_2_v2d(self) -> 'AreaPoint':
+        """Convert 3D space point to node editor 2d space."""
+        return self / self.ui_scale()
+
+    def v2d_2_loc3d(self) -> 'AreaPoint':
+        """Convert 2D space point to 3D space."""
+        return self * self.ui_scale()
 
 
 @dataclass(slots=True)
@@ -61,6 +82,24 @@ class PointsArea:
                 return self.left_center
             case _:
                 raise ValueError(f"Invalid position type: {point.position_type}")
+
+    def get_oppo_area_point_from_points(self, point: AreaPoint, points: Sequence[AreaPoint]) -> AreaPoint:
+        """Get the opposite point of the point from the points list,e.g. top_left -> bottom_right
+        :param point: the point to get the opposite point
+        :param points: the points list, should be the corner points/ edge center points"""
+        p_type: str = point.position_type
+        if 'top' in p_type:
+            p_type = p_type.replace('top', 'bottom')
+        elif 'bottom' in p_type:
+            p_type = p_type.replace('bottom', 'top')
+        if 'left' in p_type:
+            p_type = p_type.replace('left', 'right')
+        elif 'right' in p_type:
+            p_type = p_type.replace('right', 'left')
+
+        for p in points:
+            if p.position_type == p_type:
+                return p
 
     @property
     def size(self) -> Vector:

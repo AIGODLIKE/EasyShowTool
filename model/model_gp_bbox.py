@@ -5,7 +5,7 @@ from typing import Union, Literal, Sequence, Callable
 from dataclasses import dataclass, field
 
 from .model_gp_property import GPencilStroke
-from .model_points import PointsArea
+from .model_points import PointsArea, AreaPoint
 from .utils import EulerTool, VecTool
 
 
@@ -42,35 +42,35 @@ class CalcBBox:
         return VecTool.loc3d_2_v2d(self.area.size)
 
     @property
-    def bbox_points_3d(self) -> tuple[Vector, Vector, Vector, Vector]:
+    def bbox_points_3d(self) -> tuple[AreaPoint, AreaPoint, AreaPoint, AreaPoint]:
         """Return the bounding box points.
         top_left, top_right, bottom_left, bottom_right"""
         return self.area.corner_points
 
     @property
-    def bbox_points_v2d(self) -> tuple[Vector, ...]:
-        return tuple(map(VecTool.loc3d_2_v2d, self.bbox_points_3d))
+    def bbox_points_v2d(self) -> list[AreaPoint]:
+        return [point.loc3d_2_v2d() for point in self.bbox_points_3d]
 
     @property
-    def bbox_points_r2d(self) -> tuple[Vector, ...]:
-        return tuple(map(VecTool.v2d_2_r2d, self.bbox_points_v2d))
+    def bbox_points_r2d(self) -> list[AreaPoint]:
+        return [point.v2d_2_r2d() for point in self.bbox_points_v2d]
 
     @property
-    def edge_center_points_3d(self) -> tuple[Vector, Vector, Vector, Vector]:
+    def edge_center_points_3d(self) -> tuple[AreaPoint, AreaPoint, AreaPoint, AreaPoint]:
         """Return the edge center points of the bounding box."""
         return self.area.edge_center_points
 
     @property
-    def edge_center_points_v2d(self) -> tuple[Vector, ...]:
+    def edge_center_points_v2d(self) -> list[AreaPoint]:
         """Return the edge center points of the bounding box in node editor view."""
-        return tuple(map(VecTool.loc3d_2_v2d, self.edge_center_points_3d))
+        return [point.loc3d_2_v2d() for point in self.edge_center_points_3d]
 
     @property
-    def edge_center_points_r2d(self) -> tuple[Vector, ...]:
+    def edge_center_points_r2d(self) -> list[AreaPoint]:
         """Return the edge center points of the bounding box in region 2d space."""
-        return tuple(map(VecTool.v2d_2_r2d, self.edge_center_points_v2d))
+        return [point.v2d_2_r2d() for point in self.edge_center_points_v2d]
 
-    def corner_extrude_points_r2d(self, extrude: int = 15) -> list[Vector]:
+    def corner_extrude_points_r2d(self, extrude: int = 15) -> list[AreaPoint]:
         """Return the corner extrude points of the bounding box.
         :param extrude: the extrude distance
         this is not a property because it needs an extrude distance"""
@@ -79,7 +79,7 @@ class CalcBBox:
         vecs = [point - self.center_r2d for point in points]
         # normalize and scale
         extrude_vecs = [vec.normalized() * extrude for vec in vecs]
-        new_points = [Vector(point) + vec for point, vec in zip(points, extrude_vecs)]
+        new_points = [point + vec for point, vec in zip(points, extrude_vecs)]
 
         return new_points
 
