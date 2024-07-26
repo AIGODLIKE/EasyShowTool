@@ -190,7 +190,7 @@ class GPencilLayerBBox(CalcBBox):
         return -self.layer.rotation[2] if self.layer else 0
 
     @property
-    def bbox_points_3d(self) -> Sequence[Vector]:
+    def bbox_points_3d(self) -> list[AreaPoint]:
         """Return the bounding box points in 3d space.
         if the mode is local, the origin  bounding box points is correct by the inverse rotation of the layer.
         so it will apply the rotation of the layer to the bounding box points."""
@@ -198,22 +198,20 @@ class GPencilLayerBBox(CalcBBox):
         if self.is_local:
             angle = self.layer_rotate_2d()
             pivot_3d = self.center.to_3d()
-            points_3d = [p.to_3d() for p in points]
-            return EulerTool.rotate_points(points_3d, angle, pivot_3d)
+            return [p.rotate_by_angle(angle,pivot_3d) for p in points]
         else:
-            return points
+            return list(points)
 
     @property
-    def edge_center_points_3d(self) -> Sequence[Vector]:
+    def edge_center_points_3d(self) -> list[AreaPoint]:
         """Return the edge center points of the bounding box in 3d space."""
         points = super().edge_center_points_3d
         if self.is_local:
             angle = self.layer_rotate_2d()
             pivot_3d = self.center.to_3d()
-            points_3d = [p.to_3d() for p in points]
-            return EulerTool.rotate_points(points_3d, angle, pivot_3d)
+            return [p.rotate_by_angle(angle,pivot_3d) for p in points]
         else:
-            return points
+            return list(points)
 
     def calc_active_layer_bbox(self) -> None:
         layer = self.gp_data.layers.active

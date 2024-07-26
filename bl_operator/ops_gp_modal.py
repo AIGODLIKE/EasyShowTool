@@ -192,7 +192,7 @@ class EST_OT_gp_view(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context) and is_valid_workspace_tool(context) and get_edit_tree_gp_data(
-            context) and cls.draw_handle.is_empty()
+            context) and (cls.draw_handle.is_empty() or cls.draw_handle is None)
 
     @classmethod
     def hide(cls):
@@ -237,11 +237,8 @@ class EST_OT_gp_view(bpy.types.Operator):
             self.update_drag_vm(context, event)
             if context.scene.est_gp_transform_mode != self.drag_vm.bbox_model.mode:
                 self.drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
+            context.area.tag_redraw()
 
-        if event.type in {'ESC', 'RIGHTMOUSE'}:
-            return self._finish()
-
-        context.area.tag_redraw()
         return {'PASS_THROUGH'}
 
     def update_drag_vm(self, context, event):

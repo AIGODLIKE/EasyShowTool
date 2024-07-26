@@ -26,7 +26,7 @@ class MouseDetectModel:
         self.bbox_model = bbox_model
         return self
 
-    def detect_near(self, pos: Sequence | Vector) -> dict[str, tuple[Vector, int] | tuple[None, None]]:
+    def detect_near(self, pos: Sequence | Vector) -> dict[str, AreaPoint | bool | None]:
         return {
             'corner': self._near_corners(pos, self.d_corner),
             'edge_center': self._near_edge_center(pos, self.d_edge),
@@ -61,7 +61,7 @@ class MouseDetectModel:
                     inside = not inside
             return inside
 
-    def bbox_in_area(self, points: list[Vector], all=True) -> bool:
+    def bbox_in_area(self, points: Sequence[Vector | AreaPoint], all=True) -> bool:
         """check if the bbox is in the area defined by the points
         :param points: define the area, order: top_left, top_right, bottom_left, bottom_right
         :param all: if True, all the points need to be in the area, otherwise, any point in the area is ok
@@ -75,51 +75,36 @@ class MouseDetectModel:
                 return True
         return True
 
-    def _near_edge_center(self, pos: Sequence | Vector, radius: int = 20) -> \
-            tuple[Vector, int] | None:
-        """check if the pos is near the edge center of the area defined by the points
-        :param pos: the position to check
-        :param radius: the radius of the edge center point
-        :return: True if the pos is near the edge center, False otherwise
+    def _near_edge_center(self, pos: Vector, radius: int = 20) -> AreaPoint | None:
+        """Detect the edge center points.
+        :param pos: the position to detect
+        :param radius: the radius to detect the point
+        :return:  if detected, otherwise None"""
+        for point in self.bbox_model.edge_center_points_r2d:
+            if (pos - point).length < radius:
+                return point
+        return None
+
+    def _near_corners(self, pos: Sequence | Vector, radius: int = 20) -> AreaPoint | None:
+        """Detect the corner points.
+        :param pos: the position to detect
+        :param radius: the radius to detect the point
+        :return:  if detected, otherwise None
         """
-        vec_pos = Vector((pos[0], pos[1]))
-        points = self.bbox_model.edge_center_points_r2d
-        for i, point in enumerate(points):
-            vec_point = Vector(point)
-            if (vec_pos - vec_point).length < radius:
-                return vec_point, i
-        return None, None
+        for point in self.bbox_model.bbox_points_r2d:
+            if (pos - point).length < radius:
+                return point
+        return None
 
-    def _near_corners(self, pos: Sequence | Vector, radius: int = 20) -> \
-            tuple[Vector, int] | None:
-        """check if the pos is near the corners of the area defined by the bounding box points
-        :param pos: the position to check
-        :param radius: the radius of the corner point
-        :return: True if the pos is near the corners, False otherwise
-        """
-        vec_pos = Vector((pos[0], pos[1]))
-        points = self.bbox_model.bbox_points_r2d
-        for i, point in enumerate(points):
-            vec_point = Vector(point)
-            if (vec_pos - vec_point).length < radius:
-                return vec_point, i
-        return None, None
-
-    def _near_corners_extrude(self, pos: Sequence | Vector, extrude: int = 15, radius: int = 15) -> \
-            tuple[Vector, int] | None:
-
-        """check if the pos is near the corner point extrude outward by 45 deg, space is default to r2d
-        :param pos: the position to check
+    def _near_corners_extrude(self, pos: Sequence | Vector, extrude: int = 15, radius: int = 15) -> AreaPoint | None:
+        """Detect the corner extrude points.
+        :param pos: the position to detect
         :param extrude: the extrude distance
-        :param radius: the radius of the extrude point
-        :return: True if the pos is near the corners, False otherwise
-        """
-        vec = Vector(pos)
-        points = self.bbox_model.corner_extrude_points_r2d(extrude)
-        for i, point in enumerate(points):
-            if (vec - point).length < radius:
-                return point, i
-        return None, None
+        :param radius: the radius to detect the point"""
+        for point in self.bbox_model.corner_extrude_points_r2d(extrude):
+            if (pos - point).length < radius:
+                return point
+        return None
 
 
 @dataclass

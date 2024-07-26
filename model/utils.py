@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from math import radians, degrees
 from math import cos, sin, pow
 
+from .model_points import AreaPoint
+
 
 class EulerTool:
     @staticmethod
@@ -16,11 +18,12 @@ class EulerTool:
         return Euler((degrees(d) for d in radian), order)
 
     @staticmethod
-    def rotate_points(points: list[Vector], angle: float, pivot: Vector) -> list[Vector]:
+    def rotate_points(points: list[Vector | AreaPoint], angle: float, pivot: Vector) -> list[Vector | AreaPoint]:
         """Apply rotation to a list of points around a pivot."""
         rotated_points = [
             ((p - pivot) @ Euler((0, 0, angle), 'XYZ').to_matrix() + pivot).to_2d() for p in points
         ]
+
         return rotated_points
 
 

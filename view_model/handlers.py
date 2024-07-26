@@ -7,6 +7,7 @@ from mathutils import Vector
 from ..model.utils import Coord, EdgeCenter, VecTool
 from ..model.model_gp_bbox import GPencilLayerBBox, GPencilLayersBBox
 from ..model.model_gp import BuildGreasePencilData
+from ..model.model_points import AreaPoint
 from .view_model_mouse import MouseDragState
 
 
@@ -179,45 +180,6 @@ class RotateHandler(TransformHandler):
         return True
 
 
-# TODO need to use ScalePivot class to refactor the scale handler
-
-@dataclass
-class ScalePivot():
-    # in
-    bbox_model: GPencilLayerBBox
-    pivot_type: Literal['edge_center', 'corner', 'center']
-    pt_edge_center: int = 0
-    pt_corner: int = 0
-    # out
-    position: Vector = None
-
-    def __post_init__(self):
-        self.set_pivot()
-
-    def set_pivot(self):
-        if self.pivot_type == 'edge_center':
-            self.position = self.edge_center()
-        elif self.pivot_type == 'corner':
-            self.position = self.corner()
-        elif self.pivot_type == 'center':
-            self.position = self.center()
-
-    def edge_center(self) -> tuple[Vector, Vector]:
-        points = self.bbox_model.edge_center_points_3d
-        pivot_index = EdgeCenter.opposite(self.pt_edge_center)
-        pivot: Vector = points[pivot_index]
-        return pivot
-
-    def corner(self) -> tuple[Vector, Vector]:
-        points = self.bbox_model.bbox_points_3d
-        pivot_index = Coord.opposite(self.pt_corner)
-        pivot = points[pivot_index]
-        return pivot
-
-    def center(self) -> Vector:
-        return self.bbox_model.center
-
-
 @dataclass
 class ScaleHandler(TransformHandler):
     # state
@@ -228,10 +190,8 @@ class ScaleHandler(TransformHandler):
     degree_local: float = 0
 
     # pass in
-    pos_edge_center: Vector = None
-    pos_corner: Vector = None
-    pt_edge_center: int = 0
-    pt_corner: int = 0
+    pos_edge_center: AreaPoint | None = None
+    pos_corner: AreaPoint | None = None
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the scale event in the modal.
@@ -305,7 +265,7 @@ class ScaleHandler(TransformHandler):
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
 
-        if EdgeCenter.point_on_bottom(self.pt_edge_center) or EdgeCenter.point_on_top(self.pt_edge_center):
+        if 'top' in self.pos_edge_center.position_type or 'bottom' in self.pos_edge_center.position_type:
             vec_scale = Vector((1, scale_y, 0))
         else:
             vec_scale = Vector((scale_x, 1, 0))
@@ -318,9 +278,9 @@ class ScaleHandler(TransformHandler):
 
     def both_sides_corner(self, unify_scale: bool) -> None:
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
-        if self.pos_corner[0] == self.bbox_model.min_x:
+        if self.pos_corner.x == self.bbox_model.min_x:
             delta_x = -delta_x
-        if self.pos_corner[1] == self.bbox_model.min_y:
+        if self.pos_corner.y == self.bbox_model.min_y:
             delta_y = -delta_y
 
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
@@ -333,18 +293,27 @@ class ScaleHandler(TransformHandler):
 
     def one_side_edge_center(self, unify_scale: bool) -> None:
         delta_x, delta_y, size_x_v2d, size_y_v2d = self.calc_one_side()
-        points = self.bbox_model.edge_center_points_3d
-        pivot_index = EdgeCenter.opposite(self.pt_edge_center)
-        pivot: Vector = points[pivot_index]
+        points = self.bbox_model.edge_center_points_3d  # top_center, right_center, bottom_center, left_center
+        match self.pos_edge_center.position_type:
+            case 'top_center':
+                pivot = points[2]
+            case 'right_center':
+                pivot = points[3]
+            case 'bottom_center':
+                pivot = points[0]
+            case 'left_center':
+                pivot = points[1]
+            case _:
+                raise ValueError(f"Invalid position type: {self.pos_edge_center.position_type}")
 
-        if EdgeCenter.point_on_left(self.pt_edge_center):
+        if 'left' in self.pos_edge_center.position_type:
             delta_x = -delta_x
-        if EdgeCenter.point_on_bottom(self.pt_edge_center):
+        if 'bottom' in self.pos_edge_center.position_type:
             delta_y = -delta_y
 
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
 
-        if EdgeCenter.point_on_left(self.pt_edge_center) or EdgeCenter.point_on_right(self.pt_edge_center):
+        if 'left' in self.pos_edge_center.position_type or 'right' in self.pos_edge_center.position_type:
             vec_scale = Vector((scale_x, 1, 0))
         else:
             vec_scale = Vector((1, scale_y, 0))
@@ -357,13 +326,22 @@ class ScaleHandler(TransformHandler):
 
     def one_side_corner(self, unify_scale: bool) -> None:
         delta_x, delta_y, size_x_v2d, size_y_v2d = self.calc_one_side()
-        points = self.bbox_model.bbox_points_3d
-        pivot_index = Coord.opposite(self.pt_corner)
-        pivot = points[pivot_index]
+        points = self.bbox_model.bbox_points_3d  # top_left, top_right, bottom_left, bottom_right
+        match self.pos_corner.position_type:
+            case 'top_left':
+                pivot = points[3]
+            case 'top_right':
+                pivot = points[2]
+            case 'bottom_left':
+                pivot = points[1]
+            case 'bottom_right':
+                pivot = points[0]
+            case _:
+                raise ValueError(f"Invalid position type: {self.pos_corner.position_type}")
 
-        if Coord.point_on_left(self.pt_corner):
+        if 'left' in self.pos_corner.position_type:
             delta_x = -delta_x
-        if Coord.point_on_bottom(self.pt_corner):
+        if 'bottom' in self.pos_corner.position_type:
             delta_y = -delta_y
 
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)

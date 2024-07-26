@@ -8,6 +8,7 @@ from collections import OrderedDict
 from .view_model_mouse import MouseDragState
 from ..public_path import get_pref
 from ..model.model_gp import BuildGreasePencilData
+from ..model.model_points import AreaPoint
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..view_model.view_model_mouse import MouseDetectModel
 from .view_model_select import SelectedGPLayersRuntime
@@ -31,12 +32,9 @@ class DragGreasePencilViewModal:
     # callback
 
     # state / on points
-    pos_edge_center: Vector = None
-    pos_corner: Vector = None
-    pos_corner_extrude: Vector = None
-    pt_corner: int = 0
-    pt_edge_center: int = 0
-    pt_corner_extrude: int = 0
+    pos_edge_center: AreaPoint = None
+    pos_corner: AreaPoint = None
+    pos_corner_extrude: AreaPoint = None
     # mouse
     mouse_state: MouseDragState = field(default_factory=MouseDragState)
     # state
@@ -83,9 +81,9 @@ class DragGreasePencilViewModal:
         # TODO this event will not show at a same time , so make it to if  branch
 
         res = self.detect_model.detect_near(self.mouse_state.mouse_pos)
-        self.pos_edge_center, self.pt_edge_center = res.get('edge_center')
-        self.pos_corner, self.pt_corner = res.get('corner')
-        self.pos_corner_extrude, self.pt_corner_extrude = res.get('corner_extrude')
+        self.pos_edge_center = res.get('edge_center')
+        self.pos_corner = res.get('corner')
+        self.pos_corner_extrude = res.get('corner_extrude')
         self.in_drag_area = res.get('in_area')
 
         if self.debug:
