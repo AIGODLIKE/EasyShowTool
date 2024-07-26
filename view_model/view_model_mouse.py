@@ -4,7 +4,7 @@ from typing import Sequence, Optional, Literal, Callable
 from mathutils import Vector
 
 from ..model.model_gp_bbox import GPencilLayerBBox
-from ..model.model_points import PointsArea
+from ..model.model_points import PointsArea, AreaPoint
 from ..model.utils import VecTool
 from ..public_path import get_pref
 
@@ -16,7 +16,7 @@ class MouseDetectModel:
     """
 
     bbox_model: 'GPencilLayerBBox' = Optional[None]
-
+    # preference
     d_edge: int = field(default_factory=lambda: get_pref().gp_performance.detect_edge_px)
     d_corner: int = field(default_factory=lambda: get_pref().gp_performance.detect_corner_px)
     d_rotate: int = field(default_factory=lambda: get_pref().gp_performance.detect_rotate_px)
@@ -63,7 +63,7 @@ class MouseDetectModel:
 
     def bbox_in_area(self, points: list[Vector], all=True) -> bool:
         """check if the bbox is in the area defined by the points
-        :param points: points that define the area, order: top_left, top_right, bottom_left, bottom_right
+        :param points: define the area, order: top_left, top_right, bottom_left, bottom_right
         :param all: if True, all the points need to be in the area, otherwise, any point in the area is ok
         """
         top_left, top_right, bottom_left, bottom_right = points
