@@ -250,7 +250,7 @@ class GPencilLayersBBox(CalcBBox):
         self.area.center = Vector(((self.max_x + self.min_x) / 2, (self.max_y + self.min_y) / 2, 0))
         self.area.setup(top=self.max_y, bottom=self.min_y, left=self.min_x, right=self.max_x)
 
-    def calc_layers_edge_difference(self, layers: list[str], mode: str) -> dict[str, Vector]:
+    def calc_layers_edge_difference(self, layers: list[str], mode: AlignMode) -> dict[str, Vector]:
         """Calculate the every layer's edge to the whole layers' edge difference.
         :param layers: A list of layer names or indices.
         :param mode: The align mode from AlignMode
@@ -265,17 +265,17 @@ class GPencilLayersBBox(CalcBBox):
 
             bbox.calc_bbox(layer.info)
             match mode:
-                case AlignMode.TOP.name:
+                case AlignMode.TOP:
                     res[layer.info] = Vector((0, bbox.area.top - self.area.top, 0))
-                case AlignMode.BOTTOM.name:
+                case AlignMode.BOTTOM:
                     res[layer.info] = Vector((0, bbox.area.bottom - self.area.bottom, 0))
-                case AlignMode.LEFT.name:
+                case AlignMode.LEFT:
                     res[layer.info] = Vector((bbox.area.left - self.area.left, 0, 0))
-                case AlignMode.RIGHT.name:
+                case AlignMode.RIGHT:
                     res[layer.info] = Vector((bbox.area.right - self.area.right, 0, 0))
-                case AlignMode.H_CENTER.name:
+                case AlignMode.H_CENTER:
                     res[layer.info] = Vector((0, bbox.area.center.y - self.area.center.y, 0))
-                case AlignMode.V_CENTER.name:
+                case AlignMode.V_CENTER:
                     res[layer.info] = Vector((bbox.area.center.x - self.area.center.x, 0, 0))
 
         return res

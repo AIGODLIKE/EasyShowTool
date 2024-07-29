@@ -6,7 +6,14 @@ from mathutils import Euler
 from .utils import EulerTool
 
 
-class ShootAngles(Enum):
+class BL_Enum(Enum):
+
+    @classmethod
+    def enum_items(cls) -> list[tuple[str, str, str]]:
+        return [(t.name, t.value, "") for t in cls]
+
+
+class ShootAngles(BL_Enum):
     """Euler angles for the shooting.
     shoot will be on top(xy plane, z up), so the enum members are the angles to rotate the object to face the camera."""
     TOP_LEFT_FRONT: Euler = EulerTool.to_rad((-67.8044, -32.8686, -13.4876))
@@ -19,21 +26,17 @@ class ShootAngles(Enum):
     BOTTOM: Euler = EulerTool.to_rad((0, 180, 0))
 
     @classmethod
-    def enum_shot_orient_items(cls) -> list[tuple[str, str, str]]:
+    def enum_items(cls) -> list[tuple[str, str, str]]:
         return [(euler.name, euler.name.replace('_', ' ').title(), '') for euler in cls]
 
 
-class GPAddTypes(Enum):
+class GPAddTypes(BL_Enum):
     TEXT: str = "Text"
     OBJECT: str = "Object"
     BL_ICON: str = "Icon"
 
-    @classmethod
-    def enum_add_type_items(cls) -> list[tuple[str, str, str]]:
-        return [(t.name, t.value, "") for t in cls]
 
-
-class AlignMode(Enum):
+class AlignMode(BL_Enum):
     TOP: str = 'Top'
     BOTTOM: str = 'Bottom'
     LEFT: str = 'Left'
@@ -42,9 +45,9 @@ class AlignMode(Enum):
     V_CENTER: str = 'Vertical Center'
 
 
-    @classmethod
-    def enum_items(cls) -> list[tuple[str, str, str]]:
-        return [(t.name, t.value, "") for t in cls]
+class Distribution(BL_Enum):
+    HORIZONTAL: str = 'Horizontal'
+    VERTICAL: str = 'Vertical'
 
 
 class SocketColor(Enum):

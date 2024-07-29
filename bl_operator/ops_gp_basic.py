@@ -130,13 +130,13 @@ class EST_OT_add_gp(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     add_type: bpy.props.EnumProperty(name='Type',
-                                     items=lambda _, __: GPAddTypes.enum_add_type_items(), )
+                                     items=lambda _, __: GPAddTypes.enum_items(), )
     # add source
     text: StringProperty(name="Text", default="Hello World")
     size: IntProperty(name="Size", default=100)
     obj: StringProperty(name="Object", default="")
     obj_shot_angle: EnumProperty(name="Shot Orientation",
-                                 items=lambda _, __: ShootAngles.enum_shot_orient_items(), )
+                                 items=lambda _, __: ShootAngles.enum_items(), )
     icon: StringProperty(name="Icon", default="BLENDER")
     # location
     location: FloatVectorProperty(size=2, default=(0, 0), options={'SKIP_SAVE', 'HIDDEN'})

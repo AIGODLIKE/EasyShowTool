@@ -25,7 +25,8 @@ class EST_OT_align_gp(bpy.types.Operator):
     def execute(self, context):
         gp_data = get_edit_tree_gp_data(context)
         bboxs = GPencilLayersBBox(gp_data)
-        diff = bboxs.calc_layers_edge_difference(SelectedGPLayersRuntime.selected_layers(), mode=self.align_mode)
+        diff = bboxs.calc_layers_edge_difference(SelectedGPLayersRuntime.selected_layers(),
+                                                 mode=getattr(AlignMode, self.align_mode))
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             for layer_name, diff_vector in diff.items():
                 gp_data_builder.move(layer_name, -diff_vector)
