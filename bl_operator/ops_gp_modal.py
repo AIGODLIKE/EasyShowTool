@@ -315,6 +315,7 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
         drag_vm.clear_selected_layers_points()
         drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
         drag_vm.bbox_model.calc_active_layer_bbox()
+        SelectedGPLayersRuntime.set_active(gp_data.layers.active.info)
         context.area.tag_redraw()
         return {'FINISHED'}
 
