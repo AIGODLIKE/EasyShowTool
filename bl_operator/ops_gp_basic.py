@@ -147,17 +147,6 @@ class EST_OT_add_gp(bpy.types.Operator):
     def poll(cls, context):
         return has_edit_tree(context)
 
-    # def draw(self, context):
-    #     layout = self.layout
-    #     row = layout.row()
-    #     row.prop(self, 'add_type', expand=True)
-    #     layout.prop(self, 'size')
-    #     if self.add_type == 'TEXT':
-    #         layout.prop(self, 'text')
-    #     elif self.add_type == 'OBJECT':
-    #         layout.prop(context.window_manager, 'est_gp_obj')
-    #         layout.prop(self, 'obj_shot_angle')
-
     def invoke(self, context, event):
         self.mouse_pos = (event.mouse_region_x, event.mouse_region_y)
         return self.execute(context)

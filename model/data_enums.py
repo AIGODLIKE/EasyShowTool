@@ -33,6 +33,20 @@ class GPAddTypes(Enum):
         return [(t.name, t.value, "") for t in cls]
 
 
+class AlignMode(Enum):
+    TOP: str = 'Top'
+    BOTTOM: str = 'Bottom'
+    LEFT: str = 'Left'
+    RIGHT: str = 'Right'
+    H_CENTER: str = 'Horizontal Center'
+    V_CENTER: str = 'Vertical Center'
+
+
+    @classmethod
+    def enum_items(cls) -> list[tuple[str, str, str]]:
+        return [(t.name, t.value, "") for t in cls]
+
+
 class SocketColor(Enum):
     GREY: Final[str] = '#A1A1A1'  # float color
     ORANGE: Final[str] = '#ED9E5C'  # object color

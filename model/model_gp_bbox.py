@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from .model_gp_property import GPencilStroke
 from .model_points import PointsArea, AreaPoint
 from .utils import EulerTool, VecTool
+from .data_enums import AlignMode
 
 
 @dataclass
@@ -154,7 +155,7 @@ class CalcBBox:
                 all_points.append(points)
         # if empty
         if not all_points:
-            return np.array([[0, 0]])
+            return np.array([[0, 0, 0]])
         return np.concatenate(all_points, axis=0)
 
 
@@ -248,3 +249,33 @@ class GPencilLayersBBox(CalcBBox):
         self.min_y = float(points[min_xyz_id[1], 1])
         self.area.center = Vector(((self.max_x + self.min_x) / 2, (self.max_y + self.min_y) / 2, 0))
         self.area.setup(top=self.max_y, bottom=self.min_y, left=self.min_x, right=self.max_x)
+
+    def calc_layers_edge_difference(self, layers: list[str], mode: str) -> dict[str, Vector]:
+        """Calculate the every layer's edge to the whole layers' edge difference.
+        :param layers: A list of layer names or indices.
+        :param mode: The align mode from AlignMode
+        :return: A dictionary of the layer name and the difference."""
+
+        self.calc_multiple_layers_bbox(layers)
+
+        bbox = GPencilLayerBBox(self.gp_data)
+        res: dict[str, Vector] = {}
+        for layer in self.gp_data.layers:
+            if layer.info not in layers: continue
+
+            bbox.calc_bbox(layer.info)
+            match mode:
+                case AlignMode.TOP.name:
+                    res[layer.info] = Vector((0, bbox.area.top - self.area.top, 0))
+                case AlignMode.BOTTOM.name:
+                    res[layer.info] = Vector((0, bbox.area.bottom - self.area.bottom, 0))
+                case AlignMode.LEFT.name:
+                    res[layer.info] = Vector((bbox.area.left - self.area.left, 0, 0))
+                case AlignMode.RIGHT.name:
+                    res[layer.info] = Vector((bbox.area.right - self.area.right, 0, 0))
+                case AlignMode.H_CENTER.name:
+                    res[layer.info] = Vector((bbox.area.center.x - self.area.center.x, 0, 0))
+                case AlignMode.V_CENTER.name:
+                    res[layer.info] = Vector((0, bbox.area.center.y - self.area.center.y, 0))
+
+        return res
