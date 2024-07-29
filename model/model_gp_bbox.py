@@ -198,7 +198,7 @@ class GPencilLayerBBox(CalcBBox):
         if self.is_local:
             angle = self.layer_rotate_2d()
             pivot_3d = self.center.to_3d()
-            return [p.rotate_by_angle(angle,pivot_3d) for p in points]
+            return [p.rotate_by_angle(angle, pivot_3d) for p in points]
         else:
             return list(points)
 
@@ -209,7 +209,7 @@ class GPencilLayerBBox(CalcBBox):
         if self.is_local:
             angle = self.layer_rotate_2d()
             pivot_3d = self.center.to_3d()
-            return [p.rotate_by_angle(angle,pivot_3d) for p in points]
+            return [p.rotate_by_angle(angle, pivot_3d) for p in points]
         else:
             return list(points)
 
@@ -230,26 +230,21 @@ class GPencilLayersBBox(CalcBBox):
         """
         all_points = []
         for layer in layers:
-            self.calc_bbox(layer)
-            layer_points = self._getLayer_frame_points(self._get_layer(layer).frames[0])
-            if layer_points.size > 0:
-                # Ensure all points are 3D by padding 2D points with a zero z-coordinate
-                if layer_points.shape[1] == 2:  # Check if points are 2D
-                    layer_points = np.hstack([layer_points, np.zeros((layer_points.shape[0], 1))])  # Convert to 3D
-                all_points.append(layer_points)
+            _layer = self._get_layer(layer)
+            if not _layer: continue
+            points = self._getLayer_frame_points(_layer.frames[0])
+            all_points.append(points)
 
         if not all_points:
             self.max_x = self.min_x = self.max_y = self.min_y = 0
             return
 
-        all_points = np.concatenate(all_points, axis=0)
-        pivot = np.mean(all_points, axis=0)
-
-        max_xyz_id = np.argmax(all_points, axis=0)
-        min_xyz_id = np.argmin(all_points, axis=0)
-
-        self.max_x = float(all_points[max_xyz_id[0], 0])
-        self.max_y = float(all_points[max_xyz_id[1], 1])
-        self.min_x = float(all_points[min_xyz_id[0], 0])
-        self.min_y = float(all_points[min_xyz_id[1], 1])
-        self.center = Vector(pivot)
+        points = np.concatenate(all_points, axis=0)
+        max_xyz_id = np.argmax(points, axis=0)
+        min_xyz_id = np.argmin(points, axis=0)
+        self.max_x = float(points[max_xyz_id[0], 0])
+        self.max_y = float(points[max_xyz_id[1], 1])
+        self.min_x = float(points[min_xyz_id[0], 0])
+        self.min_y = float(points[min_xyz_id[1], 1])
+        self.area.center = Vector(((self.max_x + self.min_x) / 2, (self.max_y + self.min_y) / 2, 0))
+        self.area.setup(top=self.max_y, bottom=self.min_y, left=self.min_x, right=self.max_x)
