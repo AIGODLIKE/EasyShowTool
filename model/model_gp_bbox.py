@@ -317,7 +317,7 @@ class GPencilLayersBBox(CalcBBox):
             right_pos = bboxs[most_right_layer].area.left_center
             # space is left to right minus the size of the remaining layers
             remain_layers = [layer for layer in layers if layer not in [most_left_layer, most_right_layer]]
-            sorted_layers = sorted([layer for layer in remain_layers], key=lambda x: edges[x][2])
+            sorted_layers = sorted([layer for layer in remain_layers], key=lambda x: center[x].x)
             space = (right_pos.x - left_pos.x) - sum([size[layer].x for layer in remain_layers])
             space /= len(layers) - 1
             # horizontal sort the center of the remaining layers
@@ -336,7 +336,7 @@ class GPencilLayersBBox(CalcBBox):
             bottom_pos = bboxs[most_bottom_layer].area.top_center
             # space is top to bottom minus the size of the remaining layers
             remain_layers = [layer for layer in layers if layer not in [most_top_layer, most_bottom_layer]]
-            sorted_layers = sorted([layer for layer in remain_layers], key=lambda x: edges[x][0])
+            sorted_layers = sorted([layer for layer in remain_layers], key=lambda x: center[x].y)
             space = (top_pos.y - bottom_pos.y) - sum([size[layer].y for layer in remain_layers])
             space /= len(layers) - 1
             # vertical sort the center of the remaining layers
