@@ -130,13 +130,13 @@ class EST_OT_add_gp(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     add_type: bpy.props.EnumProperty(name='Type',
-                                     items=lambda _, __: GPAddTypes.enum_add_type_items(), )
+                                     items=lambda _, __: GPAddTypes.enum_items(), )
     # add source
     text: StringProperty(name="Text", default="Hello World")
     size: IntProperty(name="Size", default=100)
     obj: StringProperty(name="Object", default="")
     obj_shot_angle: EnumProperty(name="Shot Orientation",
-                                 items=lambda _, __: ShootAngles.enum_shot_orient_items(), )
+                                 items=lambda _, __: ShootAngles.enum_items(), )
     icon: StringProperty(name="Icon", default="BLENDER")
     # location
     location: FloatVectorProperty(size=2, default=(0, 0), options={'SKIP_SAVE', 'HIDDEN'})
@@ -146,17 +146,6 @@ class EST_OT_add_gp(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context)
-
-    # def draw(self, context):
-    #     layout = self.layout
-    #     row = layout.row()
-    #     row.prop(self, 'add_type', expand=True)
-    #     layout.prop(self, 'size')
-    #     if self.add_type == 'TEXT':
-    #         layout.prop(self, 'text')
-    #     elif self.add_type == 'OBJECT':
-    #         layout.prop(context.window_manager, 'est_gp_obj')
-    #         layout.prop(self, 'obj_shot_angle')
 
     def invoke(self, context, event):
         self.mouse_pos = (event.mouse_region_x, event.mouse_region_y)

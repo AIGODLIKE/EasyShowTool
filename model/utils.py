@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from math import radians, degrees
 from math import cos, sin, pow
 
+from .model_points import AreaPoint
+
 
 class EulerTool:
     @staticmethod
@@ -16,11 +18,12 @@ class EulerTool:
         return Euler((degrees(d) for d in radian), order)
 
     @staticmethod
-    def rotate_points(points: list[Vector], angle: float, pivot: Vector) -> list[Vector]:
+    def rotate_points(points: list[Vector | AreaPoint], angle: float, pivot: Vector) -> list[Vector | AreaPoint]:
         """Apply rotation to a list of points around a pivot."""
         rotated_points = [
             ((p - pivot) @ Euler((0, 0, angle), 'XYZ').to_matrix() + pivot).to_2d() for p in points
         ]
+
         return rotated_points
 
 
@@ -64,57 +67,41 @@ class VecTool:
     """Vec utility class. use to convert between view 2d , region 2d and 3d space."""
 
     @staticmethod
-    def _size_2(v: float, r: bool = False) -> float:
-        """
-        convert grease pencil annotation location between 2d space to 3d space
-        :param v: value
-        :param r: reverse False: 3d -> 2d, True: 2d -> 3d
-        :return: value
-        """
-        scale = bpy.context.preferences.system.ui_scale
-        return v / scale if not r else v * scale
-
-    @staticmethod
-    def _vec_2(v: Vector, r: bool = False) -> Vector:
-        """
-        convert grease pencil annotation location between 2d space to 3d space
-        :param v: value
-        :param r: reverse False: 3d -> 2d, True: 2d -> 3d
-        :return: value
-        """
-        scale = bpy.context.preferences.system.ui_scale
-        return Vector((v[0] / scale, v[1] / scale, 1)) if not r else Vector((v[0] * scale, v[1] * scale, 1))
-
-    @property
-    def ui_scale(self) -> float:
+    def ui_scale() -> float:
         return bpy.context.preferences.system.ui_scale
 
     @staticmethod
     def r2d_2_v2d(location: Vector | Sequence) -> Vector:
         """Convert region 2d space point to node editor 2d view."""
-        ui_scale = bpy.context.preferences.system.ui_scale
-        x, y = bpy.context.region.view2d.region_to_view(location[0], location[1])
-        return Vector((x / ui_scale, y / ui_scale))
+        return Vector(bpy.context.region.view2d.region_to_view(*location.xy)) / VecTool.ui_scale()
 
     @staticmethod
-    def v2d_2_r2d(location: Vector | Sequence) -> Vector:
+    def v2d_2_r2d(location: Vector) -> Vector:
         """Convert node editor 2d view point to region 2d space."""
-        ui_scale = bpy.context.preferences.system.ui_scale
-        x, y = bpy.context.region.view2d.view_to_region(location[0] * ui_scale, location[1] * ui_scale, clip=False)
-        return Vector((x, y))
+        return Vector((bpy.context.region.view2d.view_to_region(*location.xy * VecTool.ui_scale(), clip=False)))
 
     @staticmethod
-    def loc3d_2_v2d(location: Vector | Sequence) -> Vector:
+    def loc3d_2_v2d(location: Vector) -> Vector:
         """Convert 3D space point to node editor 2d space."""
-        return Vector((VecTool._size_2(location[0]), VecTool._size_2(location[1])))
+        return location / VecTool.ui_scale()
 
     @staticmethod
-    def v2d_2_loc3d(location: Vector | Sequence) -> Vector:
+    def v2d_2_loc3d(location: Vector) -> Vector:
         """Convert 2D space point to 3D space."""
-        return Vector((VecTool._size_2(location[0], r=True), VecTool._size_2(location[1], r=True)))
+        return location * VecTool.ui_scale()
 
     @staticmethod
-    def rotation_direction(v1: Vector | Sequence, v2: Vector | Sequence) -> Literal[1, -1]:
+    def loc3d_2_r2d(location: Vector) -> Vector:
+        """Convert 3D space point to region 2d space."""
+        return VecTool.v2d_2_r2d(VecTool.loc3d_2_v2d(location))
+
+    @staticmethod
+    def r2d_2_loc3d(location: Vector) -> Vector:
+        """Convert region 2d space point to 3D space."""
+        return VecTool.v2d_2_loc3d(VecTool.r2d_2_v2d(location))
+
+    @staticmethod
+    def rotation_direction(v1: Vector, v2: Vector) -> Literal[1, -1]:
         """Return the rotation direction of two vectors.
         CounterClockwise: 1
         Clockwise: -1
@@ -123,7 +110,7 @@ class VecTool:
         return 1 if cross_z >= 0 else -1
 
     @staticmethod
-    def rotate_by_angle(v: Vector | Sequence, angle: float) -> Vector:
+    def rotate_by_angle(v: Vector, angle: float) -> Vector:
         """Rotate a vector by an angle."""
         c = cos(angle)
         s = sin(angle)

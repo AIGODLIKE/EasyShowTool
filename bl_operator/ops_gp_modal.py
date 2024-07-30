@@ -114,6 +114,40 @@ class EST_OT_rotate_gp_modal(TransformModal):
         return {'RUNNING_MODAL'}
 
 
+class EST_OT_scale_gp_modal(TransformModal):
+    bl_idname = "est.scale_gp_modal"
+    bl_label = "Scale"
+
+    def invoke(self, context, event):
+        self._init(context, event)
+
+        self.scale_handler = ScaleHandler()
+
+        self.scale_handler.build_model = self.build_model
+        self.scale_handler.mouse_state = self.mouse_state
+        self.scale_handler.bbox_model = self.bbox_model
+        self.scale_handler.force_center_scale = True
+
+        self._start_modal(context)
+
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context, event):
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            self._finish(context)
+            return {'CANCELLED'}
+        if event.type == 'MOUSEMOVE':
+            self.mouse_state.update_mouse_position(event)
+            self.scale_handler.selected_layers = SelectedGPLayersRuntime.selected_layers()
+            self.scale_handler.accept_event(event)
+        if event.type == 'LEFTMOUSE':
+            self._finish(context)
+
+            return {'FINISHED'}
+        context.area.tag_redraw()
+        return {'RUNNING_MODAL'}
+
+
 # noinspection PyPep8Naming
 class EST_OT_add_gp_modal(bpy.types.Operator):
     bl_idname = "est.add_gp_modal"
@@ -139,37 +173,44 @@ class EST_OT_add_gp_modal(bpy.types.Operator):
         if event.type in {'ESC', 'RIGHTMOUSE'}:
             return {'CANCELLED'}
         if event.type == 'LEFTMOUSE':
-            v2d_loc = VecTool.r2d_2_v2d((event.mouse_region_x, event.mouse_region_y))
-            self._add(context, v2d_loc)
+            v2d_loc = VecTool.r2d_2_v2d(Vector((event.mouse_region_x, event.mouse_region_y)))
+            res = self._add(context, v2d_loc)
+            if res:
+                SelectedGPLayersRuntime.clear()  # clear the selected layers
+                SelectedGPLayersRuntime.set_active(get_edit_tree_gp_data(context).layers.active.info)
             return {'FINISHED'}
         return {'RUNNING_MODAL'}
 
-    def _add(self, context, location):
+    def _add(self, context, location) -> bool:
         if self.add_type == 'TEXT':
             if context.scene.est_gp_text == '':
                 self.report({'ERROR'}, "Empty")
-                return
+                return False
             bpy.ops.est.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
                                text=context.scene.est_gp_text,
                                size=context.scene.est_gp_size,
                                location=location)
+            return True
         elif self.add_type == 'OBJECT':
             if not context.scene.est_gp_obj:
                 self.report({'ERROR'}, "No object selected")
-                return
+                return False
             bpy.ops.est.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
                                size=context.scene.est_gp_size,
                                obj=context.scene.est_gp_obj.name,
                                obj_shot_angle=context.scene.est_gp_obj_shot_angle,
                                location=location)
+            return True
         elif self.add_type == 'BL_ICON':
             bpy.ops.est.add_gp('EXEC_DEFAULT',
                                add_type=self.add_type,
                                size=context.scene.est_gp_size,
                                icon=context.scene.est_gp_icon,
                                location=location)
+            return True
+        return False
 
 
 class EST_OT_gp_view(bpy.types.Operator):
@@ -185,7 +226,7 @@ class EST_OT_gp_view(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context) and is_valid_workspace_tool(context) and get_edit_tree_gp_data(
-            context) and cls.draw_handle.is_empty()
+            context) and (cls.draw_handle is None or cls.draw_handle.is_empty())
 
     @classmethod
     def hide(cls):
@@ -230,11 +271,8 @@ class EST_OT_gp_view(bpy.types.Operator):
             self.update_drag_vm(context, event)
             if context.scene.est_gp_transform_mode != self.drag_vm.bbox_model.mode:
                 self.drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
+            context.area.tag_redraw()
 
-        if event.type in {'ESC', 'RIGHTMOUSE'}:
-            return self._finish()
-
-        context.area.tag_redraw()
         return {'PASS_THROUGH'}
 
     def update_drag_vm(self, context, event):
@@ -251,7 +289,6 @@ class EST_OT_gp_view(bpy.types.Operator):
         self.stop = False
         self.__class__.drag_vm = None
         self.__class__.view_hover = None
-        bpy.context.area.tag_redraw()
         return {'FINISHED'}
 
 
@@ -277,6 +314,7 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
         drag_vm.clear_selected_layers_points()
         drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
         drag_vm.bbox_model.calc_active_layer_bbox()
+        SelectedGPLayersRuntime.set_active(gp_data.layers.active.info)
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -308,7 +346,7 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
         self.drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
         self.view_drag = ViewDrag(self.drag_vm)
 
-        self.drag_vm.drag_handle = {
+        self.drag_vm.drag_handles = {
             'SCALE': ScaleHandler(
                 call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_scale', h.delta_scale)
             ),
@@ -360,6 +398,7 @@ def register():
 
     register_class(EST_OT_move_gp_modal)
     register_class(EST_OT_rotate_gp_modal)
+    register_class(EST_OT_scale_gp_modal)
     register_class(EST_OT_add_gp_modal)
     register_class(EST_OT_gp_view)
     register_class(EST_OT_gp_set_active_layer)
@@ -372,6 +411,7 @@ def unregister():
 
     unregister_class(EST_OT_move_gp_modal)
     unregister_class(EST_OT_rotate_gp_modal)
+    unregister_class(EST_OT_scale_gp_modal)
     unregister_class(EST_OT_add_gp_modal)
     unregister_class(EST_OT_gp_view)
     unregister_class(EST_OT_gp_set_active_layer)

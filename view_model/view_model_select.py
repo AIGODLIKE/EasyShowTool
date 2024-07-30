@@ -46,3 +46,8 @@ class SelectedGPLayersRuntime:
             points = list(bbox_model.bbox_points_v2d)
             points[2], points[3] = points[3], points[2]  # swap the bottom left and bottom right
             cls.update(layer_name, points)
+
+    @classmethod
+    def set_active(cls, layer: str):
+        cls.clear()
+        cls.update(layer, [])  # update the active layer, but no need to update the points

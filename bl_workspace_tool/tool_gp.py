@@ -1,9 +1,10 @@
 import bpy
 from ..public_path import get_tool_icon
 from ..bl_operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_drag_modal, EST_OT_add_gp_modal, \
-    EST_OT_move_gp_modal, EST_OT_rotate_gp_modal
+    EST_OT_move_gp_modal, EST_OT_rotate_gp_modal, EST_OT_scale_gp_modal
 from ..bl_operator.ops_gp_basic import EST_OT_remove_gp, EST_OT_scale_gp, \
     EST_OT_gp_set_active_layer_color
+from ..bl_operator.ops_gp_align import EST_OT_align_menu
 
 
 class EST_TL_gp_add(bpy.types.WorkSpaceTool):
@@ -22,6 +23,31 @@ class EST_TL_gp_add(bpy.types.WorkSpaceTool):
     )
 
 
+class EST_TL_gp_color(bpy.types.WorkSpaceTool):
+    bl_idname = "est.gp_color_tool"
+    bL_idname_fallback = "node.select_box"
+    bl_space_type = 'NODE_EDITOR'
+    bl_context_mode = None
+    bl_label = "Color"
+    bl_icon = get_tool_icon('gp_color_tool')
+    # bl_widget = "PH_GZG_place_tool"
+    bl_keymap = (
+        (EST_OT_gp_set_active_layer_color.bl_idname,
+         {"type": "LEFTMOUSE", "value": "CLICK"},
+         {"properties": []},  # [("deselect_all", True)]
+         ),
+    )
+
+
+class EST_OT_tool_context_menu(bpy.types.Menu):
+    bl_idname = "EST_OT_tool_context_menu"
+    bl_label = "Context Menu"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.menu(EST_OT_align_menu.bl_idname)
+
+
 # noinspection PyPep8Naming
 class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
     bl_idname = "est.gp_edit_tool"
@@ -38,7 +64,14 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
         (EST_OT_rotate_gp_modal.bl_idname,
          {"type": 'R', "value": 'PRESS', "shift": False, "ctrl": False},
          {"properties": []}),
-
+        (EST_OT_scale_gp_modal.bl_idname,
+         {"type": 'S', "value": 'PRESS', "shift": False, "ctrl": False},
+         {"properties": []}),
+        # context menu with right click
+        ('wm.call_menu',
+         {"type": 'RIGHTMOUSE', "value": 'PRESS'},
+         {"properties": [("name", EST_OT_tool_context_menu.bl_idname)]},
+         ),
         # add
         (EST_OT_gp_set_active_layer.bl_idname,
          {"type": "LEFTMOUSE", "value": "CLICK"},
@@ -113,33 +146,19 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
             row.label(text=bpy.context.scene.est_gp_icon, icon=bpy.context.scene.est_gp_icon)
 
 
-class EST_TL_gp_color(bpy.types.WorkSpaceTool):
-    bl_idname = "est.gp_color_tool"
-    bL_idname_fallback = "node.select_box"
-    bl_space_type = 'NODE_EDITOR'
-    bl_context_mode = None
-    bl_label = "Color"
-    bl_icon = get_tool_icon('gp_color_tool')
-    # bl_widget = "PH_GZG_place_tool"
-    bl_keymap = (
-        (EST_OT_gp_set_active_layer_color.bl_idname,
-         {"type": "LEFTMOUSE", "value": "CLICK"},
-         {"properties": []},  # [("deselect_all", True)]
-         ),
-    )
-
-
 def reigster():
-    from bpy.utils import register_tool
+    from bpy.utils import register_tool, register_class
 
+    register_class(EST_OT_tool_context_menu)
     # register_tool(EST_TL_gp_add, separator=True)
     register_tool(EST_TL_gp_edit, separator=True)
     # register_tool(EST_TL_gp_color, separator=False)
 
 
 def unregister():
-    from bpy.utils import unregister_tool
+    from bpy.utils import unregister_tool, unregister_class
 
+    unregister_class(EST_OT_tool_context_menu)
     # unregister_tool(EST_TL_gp_add)
     unregister_tool(EST_TL_gp_edit)
     # unregister_tool(EST_TL_gp_color)

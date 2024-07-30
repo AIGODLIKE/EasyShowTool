@@ -4,30 +4,85 @@ from mathutils import Vector, Euler
 from typing import Union, Literal, Sequence, Callable
 from dataclasses import dataclass, field
 
-from .model_gp_property import GPencilStroke, GreasePencilProperty, GPencilBBoxProperty
-from .utils import EulerTool
+from .model_gp_property import GPencilStroke
+from .model_points import PointsArea, AreaPoint
+from .utils import EulerTool, VecTool
+from .data_enums import AlignMode
 
 
 @dataclass
-class CalcBBox():
+class CalcBBox:
+    """Properties for the bounding box to use
+    v2d: view 2d space e.g. in node editor, `node.location` is in v2d space
+    r2d: region 2d space e.g. in the region, event.mouse_region_x is in r2d space
+    """
+
     gp_data: bpy.types.GreasePencil
+    area: PointsArea = field(init=False)
     last_layer_index: int = 0
 
-    def _get_layer(self, layer_name_or_index: int | str) -> bpy.types.GPencilLayer:
-        """Handle the layer.
-        :param layer_name_or_index: The name or index of the layer.
-        :return: The layer object.
-        """
-        if isinstance(layer_name_or_index, int):
-            try:
-                layer = self.gp_data.layers[layer_name_or_index]
-            except ValueError:
-                raise ValueError(f'Layer index {layer_name_or_index} not found.')
-        else:
-            layer = self.gp_data.layers.get(layer_name_or_index, None)
-        if not layer:
-            raise ValueError(f'Layer {layer_name_or_index} not found.')
-        return layer
+    def __post_init__(self):
+        self.area = PointsArea()
+
+    def __getattr__(self, item: str):
+        """Get the attribute from the area if it exists, otherwise from self."""
+        if 'area' in self.__dict__ and hasattr(self.area, item):
+            return getattr(self.area, item)
+        return object.__getattribute__(self, item)
+
+    @property
+    def center_v2d(self) -> Vector:
+        return VecTool.loc3d_2_v2d(self.area.center)
+
+    @property
+    def center_r2d(self) -> Vector:
+        return VecTool.v2d_2_r2d(self.center_v2d)
+
+    @property
+    def size_v2d(self) -> Vector:
+        return VecTool.loc3d_2_v2d(self.area.size)
+
+    @property
+    def bbox_points_3d(self) -> tuple[AreaPoint, AreaPoint, AreaPoint, AreaPoint]:
+        """Return the bounding box points.
+        top_left, top_right, bottom_left, bottom_right"""
+        return self.area.corner_points
+
+    @property
+    def bbox_points_v2d(self) -> list[AreaPoint]:
+        return [point.loc3d_2_v2d() for point in self.bbox_points_3d]
+
+    @property
+    def bbox_points_r2d(self) -> list[AreaPoint]:
+        return [point.v2d_2_r2d() for point in self.bbox_points_v2d]
+
+    @property
+    def edge_center_points_3d(self) -> tuple[AreaPoint, AreaPoint, AreaPoint, AreaPoint]:
+        """Return the edge center points of the bounding box."""
+        return self.area.edge_center_points
+
+    @property
+    def edge_center_points_v2d(self) -> list[AreaPoint]:
+        """Return the edge center points of the bounding box in node editor view."""
+        return [point.loc3d_2_v2d() for point in self.edge_center_points_3d]
+
+    @property
+    def edge_center_points_r2d(self) -> list[AreaPoint]:
+        """Return the edge center points of the bounding box in region 2d space."""
+        return [point.v2d_2_r2d() for point in self.edge_center_points_v2d]
+
+    def corner_extrude_points_r2d(self, extrude: int = 15) -> list[AreaPoint]:
+        """Return the corner extrude points of the bounding box.
+        :param extrude: the extrude distance
+        this is not a property because it needs an extrude distance"""
+        points = self.bbox_points_r2d
+        # point to center vector
+        vecs = [point - self.center_r2d for point in points]
+        # normalize and scale
+        extrude_vecs = [vec.normalized() * extrude for vec in vecs]
+        new_points = [point + vec for point, vec in zip(points, extrude_vecs)]
+
+        return new_points
 
     def calc_bbox(self, layer_name_or_index: str | int, local: bool = True) -> None:
         """
@@ -68,8 +123,26 @@ class CalcBBox():
         self.max_y = float(points[max_xyz_id[1], 1])
         self.min_x = float(points[min_xyz_id[0], 0])
         self.min_y = float(points[min_xyz_id[1], 1])
-        self.center = Vector(pivot)
+        self.area.center = Vector(pivot)
+
         self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
+        self.area.setup(top=self.max_y, bottom=self.min_y, left=self.min_x, right=self.max_x)
+
+    def _get_layer(self, layer_name_or_index: int | str) -> bpy.types.GPencilLayer:
+        """Handle the layer.
+        :param layer_name_or_index: The name or index of the layer.
+        :return: The layer object.
+        """
+        if isinstance(layer_name_or_index, int):
+            try:
+                layer = self.gp_data.layers[layer_name_or_index]
+            except ValueError:
+                raise ValueError(f'Layer index {layer_name_or_index} not found.')
+        else:
+            layer = self.gp_data.layers.get(layer_name_or_index, None)
+        if not layer:
+            raise ValueError(f'Layer {layer_name_or_index} not found.')
+        return layer
 
     def _getLayer_frame_points(self, frame: bpy.types.GPencilFrame) -> np.ndarray:
         """
@@ -82,12 +155,12 @@ class CalcBBox():
                 all_points.append(points)
         # if empty
         if not all_points:
-            return np.array([[0, 0]])
+            return np.array([[0, 0, 0]])
         return np.concatenate(all_points, axis=0)
 
 
 @dataclass
-class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
+class GPencilLayerBBox(CalcBBox):
     """Bounding Box local to the grease pencil data.
 """
     layer: bpy.types.GPencilLayer = None
@@ -118,7 +191,7 @@ class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
         return -self.layer.rotation[2] if self.layer else 0
 
     @property
-    def bbox_points_3d(self) -> Sequence[Vector]:
+    def bbox_points_3d(self) -> list[AreaPoint]:
         """Return the bounding box points in 3d space.
         if the mode is local, the origin  bounding box points is correct by the inverse rotation of the layer.
         so it will apply the rotation of the layer to the bounding box points."""
@@ -126,22 +199,20 @@ class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
         if self.is_local:
             angle = self.layer_rotate_2d()
             pivot_3d = self.center.to_3d()
-            points_3d = [p.to_3d() for p in points]
-            return EulerTool.rotate_points(points_3d, angle, pivot_3d)
+            return [p.rotate_by_angle(angle, pivot_3d) for p in points]
         else:
-            return points
+            return list(points)
 
     @property
-    def edge_center_points_3d(self) -> Sequence[Vector]:
+    def edge_center_points_3d(self) -> list[AreaPoint]:
         """Return the edge center points of the bounding box in 3d space."""
         points = super().edge_center_points_3d
         if self.is_local:
             angle = self.layer_rotate_2d()
             pivot_3d = self.center.to_3d()
-            points_3d = [p.to_3d() for p in points]
-            return EulerTool.rotate_points(points_3d, angle, pivot_3d)
+            return [p.rotate_by_angle(angle, pivot_3d) for p in points]
         else:
-            return points
+            return list(points)
 
     def calc_active_layer_bbox(self) -> None:
         layer = self.gp_data.layers.active
@@ -152,7 +223,7 @@ class GPencilLayerBBox(CalcBBox, GPencilBBoxProperty):
 
 
 @dataclass
-class GPencilLayersBBox(CalcBBox, GPencilBBoxProperty):
+class GPencilLayersBBox(CalcBBox):
     def calc_multiple_layers_bbox(self, layers: list[str | int]) -> None:
         """
         Calculate the bounding box that encompasses multiple layers.
@@ -160,26 +231,51 @@ class GPencilLayersBBox(CalcBBox, GPencilBBoxProperty):
         """
         all_points = []
         for layer in layers:
-            self.calc_bbox(layer)
-            layer_points = self._getLayer_frame_points(self._get_layer(layer).frames[0])
-            if layer_points.size > 0:
-                # Ensure all points are 3D by padding 2D points with a zero z-coordinate
-                if layer_points.shape[1] == 2:  # Check if points are 2D
-                    layer_points = np.hstack([layer_points, np.zeros((layer_points.shape[0], 1))])  # Convert to 3D
-                all_points.append(layer_points)
+            _layer = self._get_layer(layer)
+            if not _layer: continue
+            points = self._getLayer_frame_points(_layer.frames[0])
+            all_points.append(points)
 
         if not all_points:
             self.max_x = self.min_x = self.max_y = self.min_y = 0
             return
 
-        all_points = np.concatenate(all_points, axis=0)
-        pivot = np.mean(all_points, axis=0)
+        points = np.concatenate(all_points, axis=0)
+        max_xyz_id = np.argmax(points, axis=0)
+        min_xyz_id = np.argmin(points, axis=0)
+        self.max_x = float(points[max_xyz_id[0], 0])
+        self.max_y = float(points[max_xyz_id[1], 1])
+        self.min_x = float(points[min_xyz_id[0], 0])
+        self.min_y = float(points[min_xyz_id[1], 1])
+        self.area.center = Vector(((self.max_x + self.min_x) / 2, (self.max_y + self.min_y) / 2, 0))
+        self.area.setup(top=self.max_y, bottom=self.min_y, left=self.min_x, right=self.max_x)
 
-        max_xyz_id = np.argmax(all_points, axis=0)
-        min_xyz_id = np.argmin(all_points, axis=0)
+    def calc_layers_edge_difference(self, layers: list[str], mode: AlignMode) -> dict[str, Vector]:
+        """Calculate the every layer's edge to the whole layers' edge difference.
+        :param layers: A list of layer names or indices.
+        :param mode: The align mode from AlignMode
+        :return: A dictionary of the layer name and the difference."""
 
-        self.max_x = float(all_points[max_xyz_id[0], 0])
-        self.max_y = float(all_points[max_xyz_id[1], 1])
-        self.min_x = float(all_points[min_xyz_id[0], 0])
-        self.min_y = float(all_points[min_xyz_id[1], 1])
-        self.center = Vector(pivot)
+        self.calc_multiple_layers_bbox(layers)
+
+        bbox = GPencilLayerBBox(self.gp_data)
+        res: dict[str, Vector] = {}
+        for layer in self.gp_data.layers:
+            if layer.info not in layers: continue
+
+            bbox.calc_bbox(layer.info)
+            match mode:
+                case AlignMode.TOP:
+                    res[layer.info] = Vector((0, bbox.area.top - self.area.top, 0))
+                case AlignMode.BOTTOM:
+                    res[layer.info] = Vector((0, bbox.area.bottom - self.area.bottom, 0))
+                case AlignMode.LEFT:
+                    res[layer.info] = Vector((bbox.area.left - self.area.left, 0, 0))
+                case AlignMode.RIGHT:
+                    res[layer.info] = Vector((bbox.area.right - self.area.right, 0, 0))
+                case AlignMode.H_CENTER:
+                    res[layer.info] = Vector((0, bbox.area.left_center.y - self.area.left_center.y, 0))
+                case AlignMode.V_CENTER:
+                    res[layer.info] = Vector((bbox.area.top_center.x - self.area.top_center.x, 0, 0))
+
+        return res
