@@ -4,7 +4,7 @@ from ..bl_operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_dra
     EST_OT_move_gp_modal, EST_OT_rotate_gp_modal, EST_OT_scale_gp_modal
 from ..bl_operator.ops_gp_basic import EST_OT_remove_gp, EST_OT_scale_gp, \
     EST_OT_gp_set_active_layer_color
-from ..bl_operator.ops_gp_align import EST_OT_align_menu
+from ..bl_operator.ops_gp_align import EST_OT_align_menu, EST_OT_distribution_menu
 
 
 class EST_TL_gp_add(bpy.types.WorkSpaceTool):
@@ -46,6 +46,7 @@ class EST_OT_tool_context_menu(bpy.types.Menu):
     def draw(self, context):
         layout = self.layout
         layout.menu(EST_OT_align_menu.bl_idname)
+        layout.menu(EST_OT_distribution_menu.bl_idname)
 
 
 # noinspection PyPep8Naming
