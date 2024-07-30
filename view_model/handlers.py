@@ -203,8 +203,17 @@ class ScaleHandler(TransformHandler):
         self.delta_vec_v2d = self.mouse_state.delta_vec_v2d
         self.mouse_pos = self.mouse_state.mouse_pos
 
-        if self.force_center_scale and self.selected_layers:
+        if self.force_center_scale:
+            bboxs = GPencilLayersBBox(self.bbox_model.gp_data)
+            if self.build_model.active_layer.info not in self.selected_layers:
+                self.selected_layers.append(self.build_model.active_layer.info)
+                self.pos_corner = bboxs.area.top_right
+
+            bboxs.calc_multiple_layers_bbox(self.selected_layers)
             self.both_sides_corner(not unify_scale)  # invert the unify_scale to fit
+
+            self.pivot = bboxs.area.center
+
         else:
             if self.pos_edge_center:
                 if center_scale:
