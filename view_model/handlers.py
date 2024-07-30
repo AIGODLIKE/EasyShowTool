@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Optional, Literal
 import bpy
 from math import degrees
@@ -9,6 +9,7 @@ from ..model.model_gp_bbox import GPencilLayerBBox, GPencilLayersBBox
 from ..model.model_gp import BuildGreasePencilData
 from ..model.model_points import AreaPoint
 from .view_model_mouse import MouseDragState
+from ..public_path import get_pref
 
 
 @dataclass
@@ -85,9 +86,8 @@ class TransformHandler:
         if self.mouse_state is None:
             self.mouse_state = mouse_state
         if self.bbox_model is None or self.build_model is None:
-            if models:
-                self.bbox_model = models.get('bbox_model', None)
-                self.build_model = models.get('build_model', None)
+            self.bbox_model = models.get('bbox_model', None)
+            self.build_model = models.get('build_model', None)
 
         for key, value in kwargs.items():
             if key in self.__annotations__:
@@ -106,7 +106,6 @@ class MoveHandler(TransformHandler):
     total_move: Vector = Vector((0, 0))  # value between the last mouse move and the first mouse move
     delta_move: Vector = None  # compare to the last mouse move
     # in
-
     view_pan: ViewPan = None
 
     def __post_init__(self):
@@ -139,7 +138,7 @@ class RotateHandler(TransformHandler):
     delta_degree: float = 0
     # in
     pivot: Vector = None
-    snap_degree: int = 0
+    snap_degree: int = field(default_factory=lambda: get_pref().gp_performance.snap_degree)
     snap_degree_count: int = 0
 
     def accept_event(self, event: bpy.types.Event) -> bool:

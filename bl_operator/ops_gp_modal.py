@@ -347,7 +347,7 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
         self.drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
         self.view_drag = ViewDrag(self.drag_vm)
 
-        self.drag_vm.drag_handle = {
+        self.drag_vm.drag_handles = {
             'SCALE': ScaleHandler(
                 call_after=lambda h: setattr(self.view_drag.draw_data, 'delta_scale', h.delta_scale)
             ),

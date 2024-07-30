@@ -23,7 +23,7 @@ class DragGreasePencilViewModal:
     #
     select_runtime: SelectedGPLayersRuntime = SelectedGPLayersRuntime()
     # drag_handle
-    drag_handle: dict[Literal['MOVE', 'SCALE', 'ROTATE'], TransformHandler] = field(default_factory=dict)
+    drag_handles: dict[Literal['MOVE', 'SCALE', 'ROTATE'], TransformHandler] = field(default_factory=dict)
 
     # model from gp_data will be created
     bbox_model: GPencilLayerBBox = field(init=False)
@@ -38,8 +38,6 @@ class DragGreasePencilViewModal:
     mouse_state: MouseDragState = field(default_factory=MouseDragState)
     # state
     in_drag_area: bool = False
-    # snap
-    snap_degree: int = field(default_factory=lambda: get_pref().gp_performance.snap_degree)
     # copy
     already_copied: bool = False
     # debug
@@ -123,41 +121,35 @@ class DragGreasePencilViewModal:
             bpy.context.view_layer.objects.active = ori_obj
             ori_obj.select_set(True)
 
-    def _collect_kwargs(self) -> dict[str, Any]:
-        return {
-            k: getattr(self, k) for k in self.__dict__ if
-            k not in {'drag_scale_handler', 'drag_move_handler', 'drag_rotate_handler', 'gp_data', 'bbox_model',
-                      'build_model', 'detect_model', 'mouse_state'}
-        }
-
     def _update_drag_handles(self, event):
         """Update the change handlers.
         use if elif to handle scale/rotate/move because the order matters.
         """
         self._handle_copy(event)
-        pass_in_args = self._collect_kwargs()
+        pass_in_args: dict[str, Any] = {
+            'pos_edge_center': self.pos_edge_center,
+            'pos_corner': self.pos_corner,
+            'pos_corner_extrude': self.pos_corner_extrude,
+            'in_drag_area': self.in_drag_area,
+        }
         models = {'bbox_model': self.bbox_model, 'build_model': self.build_model}
 
         self.debug_info['drag_handle'] = 'None'
         self.select_runtime.hide_select_box()
-        if (self.pos_edge_center or self.pos_corner) and (drag_scale_handler := self.drag_handle.get('SCALE')):
+        if (self.pos_edge_center or self.pos_corner) and (drag_scale_handler := self.drag_handles.get('SCALE')):
             drag_scale_handler.handle(event=event, mouse_state=self.mouse_state, models=models, **pass_in_args)
-            if self.debug:
-                self.debug_info['drag_handle'] = 'Scale'
-        elif self.pos_corner_extrude and (drag_rotate_handler := self.drag_handle.get('ROTATE')):
+            self.debug_info['drag_handle'] = 'Scale'
+        elif self.pos_corner_extrude and (drag_rotate_handler := self.drag_handles.get('ROTATE')):
             drag_rotate_handler.handle(event=event, mouse_state=self.mouse_state, models=models, **pass_in_args)
-            if self.debug:
-                self.debug_info['drag_handle'] = 'Rotate'
-        elif self.in_drag_area and (drag_move_handler := self.drag_handle.get('MOVE')):
+            self.debug_info['drag_handle'] = 'Rotate'
+        elif self.in_drag_area and (drag_move_handler := self.drag_handles.get('MOVE')):
             drag_move_handler.handle(event=event, mouse_state=self.mouse_state, models=models, **pass_in_args)
-            if self.debug:
-                self.debug_info['drag_handle'] = 'Move'
+            self.debug_info['drag_handle'] = 'Move'
 
         else:
             self.select_runtime.show_select_box()
-            if self.debug:
-                self.debug_info['drag_handle'] = 'Select'
             self._handle_select()
+            self.debug_info['drag_handle'] = 'Select'
 
     def _handle_select(self):
         # drag box points to detect if a layer is selected
@@ -190,4 +182,4 @@ class DragGreasePencilViewModal:
             return
 
         self.bbox_model.calc_active_layer_bbox()
-        _ = self.bbox_model.bbox_points_3d
+        _ = self.bbox_model.bbox_points_3d  # update the bbox points
