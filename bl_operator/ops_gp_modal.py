@@ -289,7 +289,6 @@ class EST_OT_gp_view(bpy.types.Operator):
         self.stop = False
         self.__class__.drag_vm = None
         self.__class__.view_hover = None
-        bpy.context.area.tag_redraw()
         return {'FINISHED'}
 
 
