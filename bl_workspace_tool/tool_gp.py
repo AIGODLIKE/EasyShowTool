@@ -45,8 +45,10 @@ class EST_OT_tool_context_menu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        layout.menu(EST_OT_align_menu.bl_idname)
-        layout.menu(EST_OT_distribution_menu.bl_idname)
+        layout.separator()
+        EST_OT_align_menu.draw_layout(self, context, layout)
+        layout.separator()
+        EST_OT_distribution_menu.draw_layout(self, context, layout)
 
 
 # noinspection PyPep8Naming

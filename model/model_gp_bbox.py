@@ -274,9 +274,9 @@ class GPencilLayersBBox(CalcBBox):
                     res[layer.info] = Vector((bbox.area.left - self.area.left, 0, 0))
                 case AlignMode.RIGHT:
                     res[layer.info] = Vector((bbox.area.right - self.area.right, 0, 0))
-                case AlignMode.H_CENTER:
+                case AlignMode.HORIZONTAL:
                     res[layer.info] = Vector((0, bbox.area.left_center.y - self.area.left_center.y, 0))
-                case AlignMode.V_CENTER:
+                case AlignMode.VERTICAL:
                     res[layer.info] = Vector((bbox.area.top_center.x - self.area.top_center.x, 0, 0))
 
         return res

@@ -50,3 +50,7 @@ def get_color_palettes() -> dict[str, list[str]]:
         if p.is_dir():
             res[p.name] = [f.stem for f in p.iterdir() if f.name.endswith('.jpg')]
     return res
+
+
+def get_png_icons_directory() -> Path:
+    return get_asset_directory().joinpath('bl_ui_icon', 'icons_align')
