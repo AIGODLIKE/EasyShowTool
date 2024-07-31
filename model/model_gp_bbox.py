@@ -261,22 +261,21 @@ class GPencilLayersBBox(CalcBBox):
         bbox = GPencilLayerBBox(self.gp_data)
 
         res: dict[str, Vector] = {}
-        for layer in self.gp_data.layers:
-            if layer.info not in layers: continue
-            bbox.calc_bbox(layer.info, local=False)
+        for layer in layers:
+            bbox.calc_bbox(layer, local=False)
             match mode:
                 case AlignMode.TOP:
-                    res[layer.info] = Vector((0, bbox.area.top - self.area.top, 0))
+                    res[layer] = Vector((0, bbox.area.top - self.area.top, 0))
                 case AlignMode.BOTTOM:
-                    res[layer.info] = Vector((0, bbox.area.bottom - self.area.bottom, 0))
+                    res[layer] = Vector((0, bbox.area.bottom - self.area.bottom, 0))
                 case AlignMode.LEFT:
-                    res[layer.info] = Vector((bbox.area.left - self.area.left, 0, 0))
+                    res[layer] = Vector((bbox.area.left - self.area.left, 0, 0))
                 case AlignMode.RIGHT:
-                    res[layer.info] = Vector((bbox.area.right - self.area.right, 0, 0))
+                    res[layer] = Vector((bbox.area.right - self.area.right, 0, 0))
                 case AlignMode.MIDDLE:
-                    res[layer.info] = Vector((0, bbox.area.left_center.y - self.area.left_center.y, 0))
+                    res[layer] = Vector((0, bbox.area.left_center.y - self.area.left_center.y, 0))
                 case AlignMode.CENTER:
-                    res[layer.info] = Vector((bbox.area.top_center.x - self.area.top_center.x, 0, 0))
+                    res[layer] = Vector((bbox.area.top_center.x - self.area.top_center.x, 0, 0))
 
         return res
 
@@ -293,14 +292,11 @@ class GPencilLayersBBox(CalcBBox):
         size: dict[str, Vector] = {}
         center: dict[str, Vector] = {}
         edges: dict[str, list[float]] = {}
-        bboxs: dict[str, GPencilLayerBBox] = {}
-        for layer in self.gp_data.layers:
-            if layer.info not in layers: continue
-            bbox.calc_bbox(layer.info, local=False)
-            bboxs[layer.info] = bbox
-            size[layer.info] = bbox.area.size
-            edges[layer.info] = [bbox.area.top, bbox.area.bottom, bbox.area.left, bbox.area.right]
-            center[layer.info] = Vector((bbox.area.right - bbox.area.left, bbox.area.top - bbox.area.bottom, 0)) / 2
+        for layer in layers:
+            bbox.calc_bbox(layer, local=False)
+            size[layer] = bbox.area.size
+            edges[layer] = [bbox.area.top, bbox.area.bottom, bbox.area.left, bbox.area.right]
+            center[layer] = Vector((bbox.area.right - bbox.area.left, bbox.area.top - bbox.area.bottom, 0)) / 2
 
         # second, get the most left, right, top, bottom layers based on their bounding box edge center points
 
@@ -313,42 +309,44 @@ class GPencilLayersBBox(CalcBBox):
         res: dict[str, Vector] = {}
 
         if mode == DistributionMode.HORIZONTAL:
-            left_pos = bboxs[most_left_layer].area.right_center
-            right_pos = bboxs[most_right_layer].area.left_center
+            start_x: float = edges[most_left_layer][3]
+            end_x: float = edges[most_right_layer][2]
             # space is left to right minus the size of the remaining layers
             remain_layers = [layer for layer in layers if layer not in [most_left_layer, most_right_layer]]
             sorted_layers = sorted([layer for layer in remain_layers], key=lambda x: center[x].x)
-            space = (right_pos.x - left_pos.x) - sum([size[layer].x for layer in remain_layers])
+            space = abs(end_x - start_x) - sum([size[layer].x for layer in remain_layers])
             space /= len(layers) - 1
             # horizontal sort the center of the remaining layers
             last_layer_size_x: list[float] = []
             for i, layer in enumerate(sorted_layers):
-                tg_left_x: float = left_pos.x + (i + 1) * space
+                tg_left_x: float = start_x + (i + 1) * space
                 # add the last layer's size, if there is a layer on the left
                 if last_layer_size_x:
                     tg_left_x += sum(last_layer_size_x)
 
                 last_layer_size_x.append(size[layer].x)
 
-                res[layer] = Vector((tg_left_x - bboxs[layer].area.left, 0, 0))
-        else:
-            top_pos = bboxs[most_top_layer].area.bottom_center
-            bottom_pos = bboxs[most_bottom_layer].area.top_center
+                res[layer] = Vector((tg_left_x - edges[layer][2], 0, 0))
+
+
+        elif mode == DistributionMode.VERTICAL:
+            start_y: float = edges[most_bottom_layer][0]
+            end_y: float = edges[most_top_layer][1]
             # space is top to bottom minus the size of the remaining layers
-            remain_layers = [layer for layer in layers if layer not in [most_top_layer, most_bottom_layer]]
+            remain_layers = [layer for layer in layers if layer not in [most_bottom_layer, most_top_layer]]
             sorted_layers = sorted([layer for layer in remain_layers], key=lambda x: center[x].y)
-            space = (top_pos.y - bottom_pos.y) - sum([size[layer].y for layer in remain_layers])
+            space = abs(end_y - start_y) - sum([size[layer].y for layer in remain_layers])
             space /= len(layers) - 1
             # vertical sort the center of the remaining layers
             last_layer_size_y: list[float] = []
             for i, layer in enumerate(sorted_layers):
-                tg_top_y: float = top_pos.y - (i + 1) * space
-                # add the last layer's size, if there is a layer on the top
+                tg_bottom_y: float = start_y + (i + 1) * space
+                # add the last layer's size, if there is a layer on the bottom
                 if last_layer_size_y:
-                    tg_top_y -= sum(last_layer_size_y)
+                    tg_bottom_y += sum(last_layer_size_y)
 
                 last_layer_size_y.append(size[layer].y)
 
-                res[layer] = Vector((0, tg_top_y - bboxs[layer].area.top, 0))
+                res[layer] = Vector((0, tg_bottom_y - edges[layer][1], 0))
 
         return res
