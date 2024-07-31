@@ -258,13 +258,12 @@ class GPencilLayersBBox(CalcBBox):
         :return: A dictionary of the layer name and the difference."""
 
         self.calc_multiple_layers_bbox(layers)
-
         bbox = GPencilLayerBBox(self.gp_data)
+
         res: dict[str, Vector] = {}
         for layer in self.gp_data.layers:
             if layer.info not in layers: continue
-
-            bbox.calc_bbox(layer.info)
+            bbox.calc_bbox(layer.info, local=False)
             match mode:
                 case AlignMode.TOP:
                     res[layer.info] = Vector((0, bbox.area.top - self.area.top, 0))
@@ -274,9 +273,9 @@ class GPencilLayersBBox(CalcBBox):
                     res[layer.info] = Vector((bbox.area.left - self.area.left, 0, 0))
                 case AlignMode.RIGHT:
                     res[layer.info] = Vector((bbox.area.right - self.area.right, 0, 0))
-                case AlignMode.HORIZONTAL:
+                case AlignMode.MIDDLE:
                     res[layer.info] = Vector((0, bbox.area.left_center.y - self.area.left_center.y, 0))
-                case AlignMode.VERTICAL:
+                case AlignMode.CENTER:
                     res[layer.info] = Vector((bbox.area.top_center.x - self.area.top_center.x, 0, 0))
 
         return res
@@ -288,6 +287,8 @@ class GPencilLayersBBox(CalcBBox):
         :return: A dictionary of the layer name and the difference."""
 
         self.calc_multiple_layers_bbox(layers)
+        bbox = GPencilLayerBBox(self.gp_data)
+
         # first, calculate the center of the layers, size of the layers, and the edge center points of the layers
         size: dict[str, Vector] = {}
         center: dict[str, Vector] = {}
@@ -295,8 +296,7 @@ class GPencilLayersBBox(CalcBBox):
         bboxs: dict[str, GPencilLayerBBox] = {}
         for layer in self.gp_data.layers:
             if layer.info not in layers: continue
-            bbox = GPencilLayerBBox(self.gp_data)
-            bbox.calc_bbox(layer.info)
+            bbox.calc_bbox(layer.info, local=False)
             bboxs[layer.info] = bbox
             size[layer.info] = bbox.area.size
             edges[layer.info] = [bbox.area.top, bbox.area.bottom, bbox.area.left, bbox.area.right]
