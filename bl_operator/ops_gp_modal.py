@@ -33,7 +33,7 @@ class TransformModal(bpy.types.Operator):
     def _init(self, context, event):
         gp_data = get_edit_tree_gp_data(context)
         self.build_model = BuildGreasePencilData(gp_data)
-        self.bbox_model = GPencilLayerBBox(gp_data=self.build_model.gp_data, mode=context.scene.est_gp_transform_mode)
+        self.bbox_model = GPencilLayerBBox(gp_data=self.build_model.gp_data, mode="LOCAL")
         self.bbox_model.calc_active_layer_bbox()
         self.mouse_state = MouseDragState()
         self.mouse_state.init(event)
@@ -46,7 +46,7 @@ class TransformModal(bpy.types.Operator):
     def _finish(self, context) -> set:
         EST_OT_gp_view.show()
         SelectedGPLayersRuntime.update_from_gp_data(self.build_model.gp_data,
-                                                    mode=context.scene.est_gp_transform_mode)
+                                                    mode="LOCAL")
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -259,7 +259,7 @@ class EST_OT_gp_view(bpy.types.Operator):
         self.draw_handle.add_to_node_editor(self.view_hover, (self, context))
         context.window_manager.modal_handler_add(self)
         context.area.tag_redraw()
-        self.drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
+        self.drag_vm.set_bbox_mode("LOCAL")
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
@@ -269,8 +269,8 @@ class EST_OT_gp_view(bpy.types.Operator):
 
         if event.type in {'MOUSEMOVE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'MIDDLEMOUSE'}:
             self.update_drag_vm(context, event)
-            if context.scene.est_gp_transform_mode != self.drag_vm.bbox_model.mode:
-                self.drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
+            if "LOCAL" != self.drag_vm.bbox_model.mode:
+                self.drag_vm.set_bbox_mode("LOCAL")
             context.area.tag_redraw()
 
         return {'PASS_THROUGH'}
@@ -306,13 +306,13 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
         gp_data = get_edit_tree_gp_data(context)
 
         if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y),
-                                               local=context.scene.est_gp_transform_mode)) is None:
+                                               local="LOCAL")) is None:
             return {'FINISHED'}
 
         drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
         drag_vm.build_model.active_layer_index = layer_index
         drag_vm.clear_selected_layers_points()
-        drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
+        drag_vm.set_bbox_mode("LOCAL")
         drag_vm.bbox_model.calc_active_layer_bbox()
         SelectedGPLayersRuntime.set_active(gp_data.layers.active.info)
         context.area.tag_redraw()
@@ -361,7 +361,7 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
         self.draw_handle = ViewDrawHandle()
         self.draw_handle.add_to_node_editor(self.view_drag, (self, context))
         context.window_manager.modal_handler_add(self)
-        self.drag_vm.set_bbox_mode(context.scene.est_gp_transform_mode)
+        self.drag_vm.set_bbox_mode("LOCAL")
         self.drag_vm.update_mouse_pos(context, event)
         return {'RUNNING_MODAL'}
 
@@ -388,7 +388,7 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
     def _finish(self, context) -> set:
         self.draw_handle.remove_from_node_editor()
         EST_OT_gp_view.show()
-        SelectedGPLayersRuntime.update_from_gp_data(self.drag_vm.gp_data, mode=context.scene.est_gp_transform_mode)
+        SelectedGPLayersRuntime.update_from_gp_data(self.drag_vm.gp_data, mode="LOCAL")
         context.area.tag_redraw()
         return {'FINISHED'}
 

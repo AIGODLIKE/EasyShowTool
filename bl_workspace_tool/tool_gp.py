@@ -122,8 +122,8 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
 
     def draw_settings(self, layout, tool):
         scene = bpy.context.scene
-        row = layout.row()
-        row.prop(scene, 'est_gp_transform_mode', text="Transform Orientations", expand=True)
+        # row = layout.row()
+        # row.prop(scene, 'est_gp_transform_mode', text="Transform Orientations", expand=True)
 
         box = layout.box()
         box.label(text="New", icon='ADD')
