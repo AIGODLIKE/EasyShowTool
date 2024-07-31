@@ -371,7 +371,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """
 
         layer = self._get_layer(layer_name_or_index)
-        vec = VecTool.v2d_2_loc3d(Vector(v)) if space == 'v2d' else Vector(v)
+        vec = Vector(v) if space == '3d' else VecTool.v2d_2_loc3d(Vector(v))
         self.edit_layer.move_layer(layer, vec)
         return self
 
@@ -386,7 +386,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         :param local: The local scale flag.
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
-        vec_pivot = VecTool.v2d_2_loc3d(pivot) if space == '3d' else pivot
+        vec_pivot = pivot if space == '3d' else VecTool.v2d_2_loc3d(pivot)
         self.edit_layer.scale_layer(layer, scale, vec_pivot, local)
         return self
 

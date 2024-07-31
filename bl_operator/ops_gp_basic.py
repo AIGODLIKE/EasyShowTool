@@ -3,9 +3,10 @@ from bpy.props import IntVectorProperty, FloatVectorProperty, StringProperty, Bo
 from mathutils import Vector
 
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
-from ..model.model_gp_bbox import GPencilLayerBBox
+from ..model.model_gp_bbox import GPencilLayerBBox, GPencilLayersBBox
 from ..model.utils import VecTool
 from ..model.data_enums import ShootAngles, GPAddTypes
+from ..view_model.view_model_select import SelectedGPLayersRuntime
 from .functions import has_edit_tree, get_pos_layer_index, load_icon_svg, \
     get_edit_tree_gp_data, ensure_builtin_font
 
@@ -89,11 +90,20 @@ class EST_OT_scale_gp(bpy.types.Operator):
     def execute(self, context):
         if not (gp_data := get_edit_tree_gp_data(context)):
             return {'CANCELLED'}
-        bbox = GPencilLayerBBox(gp_data)
-        bbox.calc_active_layer_bbox()
-        pivot = bbox.center
-        with BuildGreasePencilData(gp_data) as gp_data_builder:
-            gp_data_builder.scale_active(self.scale_vector, pivot, space='v2d')
+        if SelectedGPLayersRuntime.selected_layers():
+            bbox = GPencilLayersBBox(gp_data)
+            bbox.calc_multiple_layers_bbox(SelectedGPLayersRuntime.selected_layers())
+            pivot = bbox.center
+            with BuildGreasePencilData(gp_data) as gp_data_builder:
+                for layer in SelectedGPLayersRuntime.selected_layers():
+                    gp_data_builder.scale(layer, self.scale_vector, pivot, space='3d')
+            SelectedGPLayersRuntime.update_from_gp_data(gp_data)
+        else:
+            bbox = GPencilLayerBBox(gp_data)
+            bbox.calc_active_layer_bbox()
+            pivot = bbox.center
+            with BuildGreasePencilData(gp_data) as gp_data_builder:
+                gp_data_builder.scale_active(self.scale_vector, pivot, space='3d')
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -119,7 +129,7 @@ class EST_OT_rotate_gp(bpy.types.Operator):
         bbox.calc_active_layer_bbox()
         pivot = bbox.center
         with BuildGreasePencilData(gp_data) as gp_data_builder:
-            gp_data_builder.rotate_active(self.rotate_angle, pivot, space='v2d')
+            gp_data_builder.rotate_active(self.rotate_angle, pivot, space='3d')
         context.area.tag_redraw()
         return {'FINISHED'}
 
