@@ -33,4 +33,6 @@ data = {
     'Align Right': '右对齐',
     'Distribute Horizontal': '水平分布',
     'Distribute Vertical': '垂直分布',
+    'Horizontal Flip': '水平翻转',
+    'Vertical Flip': '垂直翻转',
 }
