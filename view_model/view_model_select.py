@@ -47,6 +47,7 @@ class SelectedGPLayersRuntime:
     def update_from_gp_data(cls, gp_data: bpy.types.GreasePencil, mode: Literal['GLOBAL', 'LOCAL'] = 'LOCAL'):
         bbox_model = GPencilLayerBBox(gp_data, mode=mode)
         for layer_name in cls.selected_layers_points_v2d.keys():
+            if layer_name not in gp_data.layers: continue
             bbox_model.calc_bbox(layer_name, local=True)
             points = list(bbox_model.bbox_points_v2d)
             points[2], points[3] = points[3], points[2]  # swap the bottom left and bottom right

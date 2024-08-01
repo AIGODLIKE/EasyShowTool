@@ -49,7 +49,14 @@ class EST_OT_remove_gp(bpy.types.Operator):
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
         if not gp_data: return {'CANCELLED'}
         with BuildGreasePencilData(gp_data) as gp_data_builder:
-            gp_data_builder.remove_active_layer()
+            if SelectedGPLayersRuntime.selected_layers():
+                for layer in SelectedGPLayersRuntime.selected_layers():
+                    gp_data_builder.remove_layer(layer)
+                    SelectedGPLayersRuntime.remove(layer)
+            else:
+                gp_data_builder.remove_active_layer()
+        SelectedGPLayersRuntime.update_from_gp_data(gp_data)
+        context.area.tag_redraw()
         return {'FINISHED'}
 
 
