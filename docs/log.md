@@ -11,6 +11,13 @@
         + Left/right/top/bottom alignment
         + Horizontal center/vertical center alignment
         + Horizontal/Vertical Distribution
+    + Color
+        + Change Selected Color
+        + Change Selected opacity
+        + New UI
+
++ Scale/Rotate Improvement
+    + Use bounding box center instead of stroke pivot(which work bad on some object)
 
 ### v0.1.3
 

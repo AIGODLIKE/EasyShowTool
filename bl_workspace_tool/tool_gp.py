@@ -123,20 +123,22 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
 
     def draw_settings(self, layout, tool):
         scene = bpy.context.scene
-        # row = layout.row()
-        # row.prop(scene, 'est_gp_transform_mode', text="Transform Orientations", expand=True)
 
         box = layout.box()
-        box.label(text="New", icon='ADD')
-        row = box.row()
-        row.prop(scene, "est_gp_add_type", text='Source', expand=True)
-        box.prop(scene, "est_gp_size")
+        box.label(text="Palette", icon='COLOR')
+
         col = box.column(align=True)
         row = col.row(align=True)
         row.prop(scene, 'est_palette_color', text='Color')
         row.popover(panel='EST_PT_palette_viewer', text='Preset', icon='COLOR')
         col.prop(scene, "est_gp_opacity", slider=True)
         col.prop(scene, "est_gp_thickness", slider=True)
+
+        box = layout.box()
+        box.label(text="New", icon='ADD')
+        row = box.row()
+        row.prop(scene, "est_gp_add_type", text='Source', expand=True)
+        box.prop(scene, "est_gp_size")
 
         if scene.est_gp_add_type == 'TEXT':
             box.template_ID(scene, "est_gp_text_font", open="font.open", unlink="font.unlink")
@@ -147,7 +149,11 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
         elif scene.est_gp_add_type == 'BL_ICON':
             row = box.row()
             row.alignment = 'RIGHT'
-            row.label(text=bpy.context.scene.est_gp_icon, icon=bpy.context.scene.est_gp_icon)
+            try:
+                row.label(text=bpy.context.scene.est_gp_icon, icon=bpy.context.scene.est_gp_icon)
+            except TypeError:
+                pass
+
 
 
 def reigster():
