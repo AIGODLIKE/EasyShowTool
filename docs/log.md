@@ -15,9 +15,14 @@
         + Change Selected Color
         + Change Selected opacity
         + New UI
+    + Delete
+        + Delete selected object    
 
 + Scale/Rotate Improvement
     + Use bounding box center instead of stroke pivot(which work bad on some object)
+
++ Blender svg icon
+    + bounding stroke remove is more accurate now
 
 ### v0.1.3
 
