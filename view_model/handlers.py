@@ -229,11 +229,11 @@ class ScaleHandler(TransformHandler):
         if not self.pivot: return False
 
         if not self.selected_layers:
-            self.build_model.scale_active(self.delta_scale, self.pivot, space='v2d', local=self.bbox_model.is_local)
+            self.build_model.scale_active(self.delta_scale, self.pivot, space='3d', local=self.bbox_model.is_local)
         else:
             # print(self.pivot, self.delta_scale)
             for layer in self.selected_layers:
-                self.build_model.scale(layer, self.delta_scale, self.pivot, space='v2d', local=self.bbox_model.is_local)
+                self.build_model.scale(layer, self.delta_scale, self.pivot, space='3d', local=self.bbox_model.is_local)
 
         self.total_scale *= self.delta_scale
 
