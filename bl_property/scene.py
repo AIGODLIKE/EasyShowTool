@@ -1,13 +1,22 @@
 import bpy
-import time
-import threading
 
 from bpy.props import PointerProperty, IntProperty, EnumProperty, StringProperty, FloatVectorProperty, FloatProperty
-from bpy.app.handlers import persistent
 
 from ..model.model_color import ColorPaletteModel
 from ..model.data_enums import ShootAngles, GPAddTypes
-from ..bl_operator.functions import ensure_builtin_font
+from ..view_model.view_model_select import SelectedGPLayersRuntime
+from ..model.model_gp import BuildGreasePencilData
+from ..bl_operator.functions import has_edit_tree, get_edit_tree_gp_data
+
+
+def update_selected_layers_color(self, context):
+    if not has_edit_tree(context): return
+    if not SelectedGPLayersRuntime.selected_layers(): return
+    if not (gp_data := get_edit_tree_gp_data(context)): return
+
+    with BuildGreasePencilData(gp_data) as gp_data_builder:
+        for layer_name in SelectedGPLayersRuntime.selected_layers():
+            gp_data_builder.color(layer_name, self.est_palette_color)
 
 
 def register():
@@ -15,7 +24,7 @@ def register():
 
     bpy.types.Scene.est_palette_color = FloatVectorProperty(name="Color", size=3, subtype='COLOR_GAMMA', min=0.0,
                                                             max=1.0,
-                                                            default=(0.8, 0.8, 0.8))
+                                                            default=(0.8, 0.8, 0.8),update=update_selected_layers_color)
     bpy.types.Scene.est_gp_transform_mode = EnumProperty(name="Transform Mode", items=[('LOCAL', 'Local', 'Local'),
                                                                                        ('GLOBAL', 'Global', 'Global')],
                                                          default='LOCAL')

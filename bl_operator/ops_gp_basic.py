@@ -210,10 +210,9 @@ class EST_OT_add_gp(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class EST_OT_gp_set_active_layer_color(bpy.types.Operator):
-    bl_idname = 'est.gp_set_active_layer_color'
-    bl_label = 'Set Active Layer Color'
-    bl_description = 'Set the active layer color of the Grease Pencil Object'
+class EST_OT_gp_drop_layer_color(bpy.types.Operator):
+    bl_idname = 'est.gp_drop_layer_color'
+    bl_label = 'Drop Color'
     bl_options = {'UNDO'}
 
     @classmethod
@@ -244,7 +243,7 @@ def register():
     register_class(EST_OT_move_gp)
     register_class(EST_OT_rotate_gp)
     register_class(EST_OT_scale_gp)
-    register_class(EST_OT_gp_set_active_layer_color)
+    register_class(EST_OT_gp_drop_layer_color)
 
 
 def unregister():
@@ -256,4 +255,4 @@ def unregister():
     unregister_class(EST_OT_remove_gp)
     unregister_class(EST_OT_add_gp)
     unregister_class(EST_OT_toggle_gp_space)
-    unregister_class(EST_OT_gp_set_active_layer_color)
+    unregister_class(EST_OT_gp_drop_layer_color)

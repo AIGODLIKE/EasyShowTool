@@ -3,7 +3,7 @@ from ..public_path import get_tool_icon
 from ..bl_operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_drag_modal, EST_OT_add_gp_modal, \
     EST_OT_move_gp_modal, EST_OT_rotate_gp_modal, EST_OT_scale_gp_modal
 from ..bl_operator.ops_gp_basic import EST_OT_remove_gp, EST_OT_scale_gp, \
-    EST_OT_gp_set_active_layer_color
+    EST_OT_gp_drop_layer_color
 from ..bl_operator.ops_gp_align import EST_OT_align_menu, EST_OT_distribution_menu, AlignIcon
 
 
@@ -32,7 +32,7 @@ class EST_TL_gp_color(bpy.types.WorkSpaceTool):
     bl_icon = get_tool_icon('gp_color_tool')
     # bl_widget = "PH_GZG_place_tool"
     bl_keymap = (
-        (EST_OT_gp_set_active_layer_color.bl_idname,
+        (EST_OT_gp_drop_layer_color.bl_idname,
          {"type": "LEFTMOUSE", "value": "CLICK"},
          {"properties": []},  # [("deselect_all", True)]
          ),
@@ -93,7 +93,7 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
          # {"properties": [('use_mouse_pos', True)]}
          {"properties": []}
          ),
-        (EST_OT_gp_set_active_layer_color.bl_idname,
+        (EST_OT_gp_drop_layer_color.bl_idname,
          {"type": "C", "value": "PRESS"},
          {"properties": []},  # [("deselect_all", True)]
          ),
