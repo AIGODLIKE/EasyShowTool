@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from .utils import VecTool
 from .data_enums import ShootAngles
 from .model_gp_edit import EditGreasePencilLayer
-from .model_gp_property import GreasePencilProperty
+from .model_gp_property import GreasePencilProperty, GPencilStroke
 from .model_gp_bbox import GPencilLayerBBox
 
 
@@ -264,17 +264,28 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
     def remove_svg_bound(self) -> 'BuildGreasePencilData':
         """Remove the svg bound of the grease pencil data."""
+        if not (layer := self._get_layer(self.active_layer_index)):
+            return self
+
         stroke_remove = None
-        layer = self._get_layer(self.active_layer_index)
-        if layer:
-            frame = layer.frames[0]
-            for i, stroke in enumerate(frame.strokes):
-                if (i == 0 or i == len(frame.strokes) - 1) and len(stroke.points) == 37:
+        frame = layer.frames[0]
+        bbox = GPencilLayerBBox(self.gp_data)
+        bbox.calc_active_layer_bbox()
+
+        for i, stroke in enumerate(frame.strokes):
+            points = GPencilStroke.get_stroke_points(stroke)
+            min_x = np.min(points[:, 0])
+            max_x = np.max(points[:, 0])
+            min_y = np.min(points[:, 1])
+            max_y = np.max(points[:, 1])
+
+            if len(stroke.points) == 37:  # blender svg bound points num
+                if min_x == bbox.min_x and max_x == bbox.max_x and min_y == bbox.min_y and max_y == bbox.max_y:
                     stroke_remove = stroke
                     break
 
-            if stroke_remove:
-                frame.strokes.remove(stroke_remove)
+        if stroke_remove:
+            frame.strokes.remove(stroke_remove)
 
         return self
 
