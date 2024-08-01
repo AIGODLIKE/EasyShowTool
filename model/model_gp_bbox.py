@@ -107,15 +107,20 @@ class CalcBBox:
         if points.shape[1] == 2:  # Check if points are 2D
             points = np.hstack([points, np.zeros((points.shape[0], 1))])  # Convert to 3D
 
-        pivot = np.mean(points, axis=0)
+
+        min_x = np.min(points[:, 0])
+        max_x = np.max(points[:, 0])
+        min_y = np.min(points[:, 1])
+        max_y = np.max(points[:, 1])
+        center = np.array([(max_x + min_x) / 2, (max_y + min_y) / 2, 0])
+
         if local:
             # Adjust the points array for rotation
-
             if angle := -layer.rotation[2]:  # if angle is not 0
                 rotation_matrix = np.array([[np.cos(angle), -np.sin(angle), 0],
                                             [np.sin(angle), np.cos(angle), 0],
                                             [0, 0, 1]])
-                points = ((points - pivot) @ rotation_matrix) + pivot
+                points = ((points - center) @ rotation_matrix) + center
 
         max_xyz_id = np.argmax(points, axis=0)
         min_xyz_id = np.argmin(points, axis=0)
@@ -124,10 +129,12 @@ class CalcBBox:
         self.max_y = float(points[max_xyz_id[1], 1])
         self.min_x = float(points[min_xyz_id[0], 0])
         self.min_y = float(points[min_xyz_id[1], 1])
-        self.area.center = Vector(pivot)
 
         self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
+        self.area.center = Vector(center)
         self.area.setup(top=self.max_y, bottom=self.min_y, left=self.min_x, right=self.max_x)
+        # cross point for the area
+        # self.area.center = Vector(pivot)
 
     def _get_layer(self, layer_name_or_index: int | str) -> bpy.types.GPencilLayer:
         """Handle the layer.
