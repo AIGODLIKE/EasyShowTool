@@ -149,7 +149,11 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
         elif scene.est_gp_add_type == 'BL_ICON':
             row = box.row()
             row.alignment = 'RIGHT'
-            row.label(text=bpy.context.scene.est_gp_icon, icon=bpy.context.scene.est_gp_icon)
+            try:
+                row.label(text=bpy.context.scene.est_gp_icon, icon=bpy.context.scene.est_gp_icon)
+            except TypeError:
+                pass
+
 
 
 def reigster():
