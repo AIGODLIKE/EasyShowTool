@@ -41,11 +41,11 @@ class AlignMode(BL_Enum):
     BOTTOM: str = 'Bottom'
     LEFT: str = 'Left'
     RIGHT: str = 'Right'
-    H_CENTER: str = 'Horizontal Center'
-    V_CENTER: str = 'Vertical Center'
+    CENTER: str = 'Center'
+    MIDDLE: str = 'Middle'
 
 
-class Distribution(BL_Enum):
+class DistributionMode(BL_Enum):
     HORIZONTAL: str = 'Horizontal'
     VERTICAL: str = 'Vertical'
 

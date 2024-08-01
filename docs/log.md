@@ -1,4 +1,20 @@
+### v0.2.0
+
+**New Feature**
+
++ Initial support for multiple selection
+    + Transform
+        + Move selected g
+        + Rotate selected r
+        + Scale selected s
+    + Alignment & Distribution
+        + Left/right/top/bottom alignment
+        + Horizontal center/vertical center alignment
+        + Horizontal/Vertical Distribution
+
 ### v0.1.3
+
+> 2024/7/17
 
 **Fix**
 

@@ -25,6 +25,14 @@ data = {
     'Add Note': '添加注释',
     'Add Amazing notes to your node editor': '在节点编辑器中添加神奇的注释',
     'Add Blender Icon: Try to Remove Icon Bound': '添加 Blender 图标：尝试移除图标边界',
-    'Horizontal Center': '水平中心',
-    'Vertical Center': '垂直中心'
+    'Align Center': '居中对齐',
+    'Align Middle': '垂直居中',
+    'Align Top': '顶部对齐',
+    'Align Bottom': '底部对齐',
+    'Align Left': '左对齐',
+    'Align Right': '右对齐',
+    'Distribute Horizontal': '水平分布',
+    'Distribute Vertical': '垂直分布',
+    'Horizontal Flip': '水平翻转',
+    'Vertical Flip': '垂直翻转',
 }

@@ -3,8 +3,8 @@ from ..public_path import get_tool_icon
 from ..bl_operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_drag_modal, EST_OT_add_gp_modal, \
     EST_OT_move_gp_modal, EST_OT_rotate_gp_modal, EST_OT_scale_gp_modal
 from ..bl_operator.ops_gp_basic import EST_OT_remove_gp, EST_OT_scale_gp, \
-    EST_OT_gp_set_active_layer_color
-from ..bl_operator.ops_gp_align import EST_OT_align_menu
+    EST_OT_gp_drop_layer_color
+from ..bl_operator.ops_gp_align import EST_OT_align_menu, EST_OT_distribution_menu, AlignIcon
 
 
 class EST_TL_gp_add(bpy.types.WorkSpaceTool):
@@ -32,7 +32,7 @@ class EST_TL_gp_color(bpy.types.WorkSpaceTool):
     bl_icon = get_tool_icon('gp_color_tool')
     # bl_widget = "PH_GZG_place_tool"
     bl_keymap = (
-        (EST_OT_gp_set_active_layer_color.bl_idname,
+        (EST_OT_gp_drop_layer_color.bl_idname,
          {"type": "LEFTMOUSE", "value": "CLICK"},
          {"properties": []},  # [("deselect_all", True)]
          ),
@@ -45,7 +45,18 @@ class EST_OT_tool_context_menu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        layout.menu(EST_OT_align_menu.bl_idname)
+        # flip
+        layout.operator(EST_OT_scale_gp.bl_idname, text="Horizontal Flip",
+                        icon_value=AlignIcon.get_icon_id('FlipX')).scale_vector = (-1, 1)
+        layout.operator(EST_OT_scale_gp.bl_idname, text="Vertical Flip",
+                        icon_value=AlignIcon.get_icon_id('FlipY')).scale_vector = (1, -1)
+        layout.separator()
+
+        EST_OT_align_menu.draw_layout(self, context, layout)
+        layout.separator()
+
+        EST_OT_distribution_menu.draw_layout(self, context, layout)
+        layout.separator()
 
 
 # noinspection PyPep8Naming
@@ -82,7 +93,7 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
          # {"properties": [('use_mouse_pos', True)]}
          {"properties": []}
          ),
-        (EST_OT_gp_set_active_layer_color.bl_idname,
+        (EST_OT_gp_drop_layer_color.bl_idname,
          {"type": "C", "value": "PRESS"},
          {"properties": []},  # [("deselect_all", True)]
          ),
@@ -108,19 +119,12 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
         (EST_OT_remove_gp.bl_idname,
          {"type": 'X', "value": 'PRESS', "ctrl": False, "alt": False, "shift": False},
          {"properties": []}),
-        # flip scale
-        (EST_OT_scale_gp.bl_idname,
-         {"type": 'F', "value": 'PRESS', "ctrl": False, "alt": False, "shift": False},
-         {"properties": [('scale_vector', (-1, 1))]}),
-        (EST_OT_scale_gp.bl_idname,
-         {"type": 'F', "value": 'PRESS', "ctrl": False, "alt": False, "shift": True},
-         {"properties": [('scale_vector', (1, -1))]}),
     )
 
     def draw_settings(self, layout, tool):
         scene = bpy.context.scene
-        row = layout.row()
-        row.prop(scene, 'est_gp_transform_mode', text="Transform Orientations", expand=True)
+        # row = layout.row()
+        # row.prop(scene, 'est_gp_transform_mode', text="Transform Orientations", expand=True)
 
         box = layout.box()
         box.label(text="New", icon='ADD')

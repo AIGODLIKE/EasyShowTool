@@ -1,13 +1,14 @@
+from dataclasses import dataclass, field
+from typing import Literal
+
 import bpy
 import numpy as np
-from mathutils import Vector, Euler
-from typing import Union, Literal, Sequence, Callable
-from dataclasses import dataclass, field
+from mathutils import Vector
 
+from .data_enums import AlignMode, DistributionMode
 from .model_gp_property import GPencilStroke
 from .model_points import PointsArea, AreaPoint
-from .utils import EulerTool, VecTool
-from .data_enums import AlignMode
+from .utils import VecTool
 
 
 @dataclass
@@ -106,15 +107,20 @@ class CalcBBox:
         if points.shape[1] == 2:  # Check if points are 2D
             points = np.hstack([points, np.zeros((points.shape[0], 1))])  # Convert to 3D
 
-        pivot = np.mean(points, axis=0)
+
+        min_x = np.min(points[:, 0])
+        max_x = np.max(points[:, 0])
+        min_y = np.min(points[:, 1])
+        max_y = np.max(points[:, 1])
+        center = np.array([(max_x + min_x) / 2, (max_y + min_y) / 2, 0])
+
         if local:
             # Adjust the points array for rotation
-
             if angle := -layer.rotation[2]:  # if angle is not 0
                 rotation_matrix = np.array([[np.cos(angle), -np.sin(angle), 0],
                                             [np.sin(angle), np.cos(angle), 0],
                                             [0, 0, 1]])
-                points = ((points - pivot) @ rotation_matrix) + pivot
+                points = ((points - center) @ rotation_matrix) + center
 
         max_xyz_id = np.argmax(points, axis=0)
         min_xyz_id = np.argmin(points, axis=0)
@@ -123,10 +129,12 @@ class CalcBBox:
         self.max_y = float(points[max_xyz_id[1], 1])
         self.min_x = float(points[min_xyz_id[0], 0])
         self.min_y = float(points[min_xyz_id[1], 1])
-        self.area.center = Vector(pivot)
 
         self.last_layer_index = [i for i, l in enumerate(self.gp_data.layers) if l == layer][0]
+        self.area.center = Vector(center)
         self.area.setup(top=self.max_y, bottom=self.min_y, left=self.min_x, right=self.max_x)
+        # cross point for the area
+        # self.area.center = Vector(pivot)
 
     def _get_layer(self, layer_name_or_index: int | str) -> bpy.types.GPencilLayer:
         """Handle the layer.
@@ -257,25 +265,95 @@ class GPencilLayersBBox(CalcBBox):
         :return: A dictionary of the layer name and the difference."""
 
         self.calc_multiple_layers_bbox(layers)
-
         bbox = GPencilLayerBBox(self.gp_data)
-        res: dict[str, Vector] = {}
-        for layer in self.gp_data.layers:
-            if layer.info not in layers: continue
 
-            bbox.calc_bbox(layer.info)
+        res: dict[str, Vector] = {}
+        for layer in layers:
+            bbox.calc_bbox(layer, local=False)
             match mode:
                 case AlignMode.TOP:
-                    res[layer.info] = Vector((0, bbox.area.top - self.area.top, 0))
+                    res[layer] = Vector((0, bbox.area.top - self.area.top, 0))
                 case AlignMode.BOTTOM:
-                    res[layer.info] = Vector((0, bbox.area.bottom - self.area.bottom, 0))
+                    res[layer] = Vector((0, bbox.area.bottom - self.area.bottom, 0))
                 case AlignMode.LEFT:
-                    res[layer.info] = Vector((bbox.area.left - self.area.left, 0, 0))
+                    res[layer] = Vector((bbox.area.left - self.area.left, 0, 0))
                 case AlignMode.RIGHT:
-                    res[layer.info] = Vector((bbox.area.right - self.area.right, 0, 0))
-                case AlignMode.H_CENTER:
-                    res[layer.info] = Vector((0, bbox.area.left_center.y - self.area.left_center.y, 0))
-                case AlignMode.V_CENTER:
-                    res[layer.info] = Vector((bbox.area.top_center.x - self.area.top_center.x, 0, 0))
+                    res[layer] = Vector((bbox.area.right - self.area.right, 0, 0))
+                case AlignMode.MIDDLE:
+                    res[layer] = Vector((0, bbox.area.left_center.y - self.area.left_center.y, 0))
+                case AlignMode.CENTER:
+                    res[layer] = Vector((bbox.area.top_center.x - self.area.top_center.x, 0, 0))
+
+        return res
+
+    def calc_layers_distribute_difference(self, layers: list[str], mode: DistributionMode) -> dict[str, Vector]:
+        """Calculate the every layer's center to distribute position difference. make the space between every layer's bounding box center edge to be equal.
+        :param layers: A list of layer names or indices.
+        :param mode: The align mode from AlignMode
+        :return: A dictionary of the layer name and the difference."""
+
+        self.calc_multiple_layers_bbox(layers)
+        bbox = GPencilLayerBBox(self.gp_data)
+
+        # first, calculate the center of the layers, size of the layers, and the edge center points of the layers
+        size: dict[str, Vector] = {}
+        center: dict[str, Vector] = {}
+        edges: dict[str, list[float]] = {}
+        for layer in layers:
+            bbox.calc_bbox(layer, local=False)
+            size[layer] = bbox.area.size
+            edges[layer] = [bbox.area.top, bbox.area.bottom, bbox.area.left, bbox.area.right]
+            center[layer] = Vector((bbox.area.right - bbox.area.left, bbox.area.top - bbox.area.bottom, 0)) / 2
+
+        # second, get the most left, right, top, bottom layers based on their bounding box edge center points
+
+        most_left_layer = min(edges, key=lambda x: edges[x][2])
+        most_right_layer = max(edges, key=lambda x: edges[x][3])
+        most_top_layer = max(edges, key=lambda x: edges[x][0])
+        most_bottom_layer = min(edges, key=lambda x: edges[x][1])
+
+        # third, calculate the distribute difference
+        res: dict[str, Vector] = {}
+
+        if mode == DistributionMode.HORIZONTAL:
+            start_x: float = edges[most_left_layer][3]
+            end_x: float = edges[most_right_layer][2]
+            # space is left to right minus the size of the remaining layers
+            remain_layers = [layer for layer in layers if layer not in [most_left_layer, most_right_layer]]
+            sorted_layers = sorted([layer for layer in remain_layers], key=lambda x: center[x].x)
+            space = abs(end_x - start_x) - sum([size[layer].x for layer in remain_layers])
+            space /= len(layers) - 1
+            # horizontal sort the center of the remaining layers
+            last_layer_size_x: list[float] = []
+            for i, layer in enumerate(sorted_layers):
+                tg_left_x: float = start_x + (i + 1) * space
+                # add the last layer's size, if there is a layer on the left
+                if last_layer_size_x:
+                    tg_left_x += sum(last_layer_size_x)
+
+                last_layer_size_x.append(size[layer].x)
+
+                res[layer] = Vector((tg_left_x - edges[layer][2], 0, 0))
+
+
+        elif mode == DistributionMode.VERTICAL:
+            start_y: float = edges[most_bottom_layer][0]
+            end_y: float = edges[most_top_layer][1]
+            # space is top to bottom minus the size of the remaining layers
+            remain_layers = [layer for layer in layers if layer not in [most_bottom_layer, most_top_layer]]
+            sorted_layers = sorted([layer for layer in remain_layers], key=lambda x: center[x].y)
+            space = abs(end_y - start_y) - sum([size[layer].y for layer in remain_layers])
+            space /= len(layers) - 1
+            # vertical sort the center of the remaining layers
+            last_layer_size_y: list[float] = []
+            for i, layer in enumerate(sorted_layers):
+                tg_bottom_y: float = start_y + (i + 1) * space
+                # add the last layer's size, if there is a layer on the bottom
+                if last_layer_size_y:
+                    tg_bottom_y += sum(last_layer_size_y)
+
+                last_layer_size_y.append(size[layer].y)
+
+                res[layer] = Vector((0, tg_bottom_y - edges[layer][1], 0))
 
         return res
