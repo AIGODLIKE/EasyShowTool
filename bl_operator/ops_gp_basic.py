@@ -201,6 +201,8 @@ class EST_OT_add_gp(bpy.types.Operator):
                 .move_active(vec, space='v2d') \
                 .fit_size(Vector((self.size, self.size)), keep_aspect_ratio=True) \
                 .color_active(color=color) \
+                .opacity_active(context.scene.est_gp_opacity) \
+                .thickness_active(context.scene.est_gp_thickness) \
                 .to_2d()
             if self.add_type == 'BL_ICON' and get_pref().gp_performance.try_remove_svg_bound_stroke:
                 gp_data_builder.remove_svg_bound()
