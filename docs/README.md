@@ -30,6 +30,16 @@
 
 [Check Keymap for more details](keymap.md)
 
+#### Select Layers!
+
+In **v2.0** you can select multi-layers. **Just press G/S/R to move/scale and rotate them**
+
+Also, you can align and distribute them
+
+> Right click for the context menu
+
+![](statics/gif/align.gif)
+
 #### Create from multiple types
 
 > Double click to add a new complex annotation, make sure you have selected the type you want to add
@@ -39,7 +49,7 @@
 + custom color
 
 ![](statics/gif/create_text.gif)
-  
+
 **object**
 + mesh & gpencil
 + shot angle
@@ -76,7 +86,10 @@
 
 #### Color
 
-+ C to drop color
++ select color palette
++ or you can press C to drop color on the hover layer instead of select them
 
-![](statics/gif/color.gif)
+![](statics/gif/color2.gif)
+
+
     
