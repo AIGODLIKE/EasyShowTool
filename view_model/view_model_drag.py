@@ -136,15 +136,19 @@ class DragGreasePencilViewModal:
 
         self.debug_info['drag_handle'] = 'None'
         self.select_runtime.hide_select_box()
+        self.debug_info['cost_time'] = '0'
         if (self.pos_edge_center or self.pos_corner) and (drag_scale_handler := self.drag_handles.get('SCALE')):
             drag_scale_handler.handle(event=event, mouse_state=self.mouse_state, models=models, **pass_in_args)
             self.debug_info['drag_handle'] = 'Scale'
+            self.debug_info['cost_time'] = str(drag_scale_handler.cost_time) + 's'
         elif self.pos_corner_extrude and (drag_rotate_handler := self.drag_handles.get('ROTATE')):
             drag_rotate_handler.handle(event=event, mouse_state=self.mouse_state, models=models, **pass_in_args)
             self.debug_info['drag_handle'] = 'Rotate'
+            self.debug_info['cost_time'] = str(drag_rotate_handler.cost_time) + 's'
         elif self.in_drag_area and (drag_move_handler := self.drag_handles.get('MOVE')):
             drag_move_handler.handle(event=event, mouse_state=self.mouse_state, models=models, **pass_in_args)
             self.debug_info['drag_handle'] = 'Move'
+            self.debug_info['cost_time'] = str(drag_move_handler.cost_time) + 's'
         else:
             self.select_runtime.show_select_box()
             self._handle_select()

@@ -3,6 +3,7 @@ from typing import Callable, Optional, Literal
 import bpy
 from math import degrees
 from mathutils import Vector
+from timeit import timeit
 
 from ..model.utils import Coord, EdgeCenter, VecTool
 from ..model.model_gp_bbox import GPencilLayerBBox, GPencilLayersBBox
@@ -76,6 +77,8 @@ class TransformHandler:
     selected_layers: list[str] = None
     # mouse
     mouse_state: MouseDragState = None
+    # time
+    cost_time: float = 0
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         ...  # subclass should implement this method
@@ -94,7 +97,7 @@ class TransformHandler:
                 setattr(self, key, value)
         if self.call_before:
             self.call_before(self)
-        self.accept_event(event)
+        self.cost_time = timeit(lambda: self.accept_event(event), number=1)
         if self.call_after is not None:
             self.call_after(self)
         return True
