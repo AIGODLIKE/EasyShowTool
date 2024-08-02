@@ -4,7 +4,7 @@ from ..bl_operator.ops_gp_modal import EST_OT_gp_set_active_layer, EST_OT_gp_dra
     EST_OT_move_gp_modal, EST_OT_rotate_gp_modal, EST_OT_scale_gp_modal
 from ..bl_operator.ops_gp_basic import EST_OT_remove_gp, EST_OT_scale_gp, \
     EST_OT_gp_drop_layer_color
-from ..bl_operator.ops_gp_align import EST_OT_align_menu, EST_OT_distribution_menu, AlignIcon
+from ..bl_operator.ops_gp_align import EST_MT_align_menu, EST_MT_distribution_menu, AlignIcon
 
 
 class EST_TL_gp_add(bpy.types.WorkSpaceTool):
@@ -52,11 +52,20 @@ class EST_OT_tool_context_menu(bpy.types.Menu):
                         icon_value=AlignIcon.get_icon_id('FlipY')).scale_vector = (1, -1)
         layout.separator()
 
-        EST_OT_align_menu.draw_layout(self, context, layout)
+        EST_MT_align_menu.draw_layout(self, context, layout)
         layout.separator()
 
-        EST_OT_distribution_menu.draw_layout(self, context, layout)
+        EST_MT_distribution_menu.draw_layout(self, context, layout)
         layout.separator()
+
+
+class EST_PT_gp_op_menu(bpy.types.Menu):
+    bl_idname = "EST_PT_gp_op_menu"
+    bl_label = "Operation Menu"
+
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
 
 
 # noinspection PyPep8Naming
@@ -153,7 +162,6 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
                 row.label(text=bpy.context.scene.est_gp_icon, icon=bpy.context.scene.est_gp_icon)
             except TypeError:
                 pass
-
 
 
 def reigster():
