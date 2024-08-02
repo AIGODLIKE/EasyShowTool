@@ -306,13 +306,13 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
         gp_data = get_edit_tree_gp_data(context)
 
         if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y),
-                                               local="LOCAL")) is None:
+                                               local=True)) is None:
             return {'FINISHED'}
 
         drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
         drag_vm.build_model.active_layer_index = layer_index
         drag_vm.clear_selected_layers_points()
-        drag_vm.set_bbox_mode("LOCAL")
+        drag_vm.set_bbox_mode('LOCAL')
         drag_vm.bbox_model.calc_active_layer_bbox()
         SelectedGPLayersRuntime.set_active(gp_data.layers.active.info)
         context.area.tag_redraw()

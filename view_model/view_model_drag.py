@@ -58,7 +58,7 @@ class DragGreasePencilViewModal:
     def has_active_layer(self) -> bool:
         return self.build_model.has_active_layer()
 
-    def set_bbox_mode(self, mode: Literal['GLOBAL', 'LOCAL,', 'TOGGLE']):
+    def set_bbox_mode(self, mode: Literal['GLOBAL', 'LOCAL', 'TOGGLE']):
         if mode == 'GLOBAL':
             self.bbox_model.to_global()
         elif mode == 'LOCAL':
@@ -145,7 +145,6 @@ class DragGreasePencilViewModal:
         elif self.in_drag_area and (drag_move_handler := self.drag_handles.get('MOVE')):
             drag_move_handler.handle(event=event, mouse_state=self.mouse_state, models=models, **pass_in_args)
             self.debug_info['drag_handle'] = 'Move'
-
         else:
             self.select_runtime.show_select_box()
             self._handle_select()
