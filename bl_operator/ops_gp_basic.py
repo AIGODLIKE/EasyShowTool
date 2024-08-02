@@ -103,14 +103,14 @@ class EST_OT_scale_gp(bpy.types.Operator):
             pivot = bbox.center
             with BuildGreasePencilData(gp_data) as gp_data_builder:
                 for layer in SelectedGPLayersRuntime.selected_layers():
-                    gp_data_builder.scale(layer, self.scale_vector, pivot, space='3d')
+                    gp_data_builder.scale(layer, Vector(self.scale_vector), pivot, space='3d')
             SelectedGPLayersRuntime.update_from_gp_data(gp_data)
         else:
             bbox = GPencilLayerBBox(gp_data)
             bbox.calc_active_layer_bbox()
             pivot = bbox.center
             with BuildGreasePencilData(gp_data) as gp_data_builder:
-                gp_data_builder.scale_active(self.scale_vector, pivot, space='3d')
+                gp_data_builder.scale_active(Vector(self.scale_vector), pivot, space='3d')
         context.area.tag_redraw()
         return {'FINISHED'}
 
