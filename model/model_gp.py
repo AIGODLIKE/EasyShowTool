@@ -68,7 +68,9 @@ class CreateGreasePencilData(GreasePencilCache):
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.gpencil_add(type='EMPTY')
         obj = bpy.context.object
-        gp_data = obj.data
+        gp_data: bpy.types.GreasePencil = obj.data
+        # remove the default layer
+        gp_data.layers.remove(gp_data.layers[0])
         CreateGreasePencilData.del_later(obj)
         return gp_data
 
@@ -220,9 +222,18 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
     def remove_layer(self, layer_name_or_index: str | int) -> 'BuildGreasePencilData':
         """Remove the grease pencil annotation layer."""
-        layer = self._get_layer(layer_name_or_index)
-        if layer:
-            self.gp_data.layers.remove(layer)
+        if not (layer := self._get_layer(layer_name_or_index)): return self
+
+        index = self.gp_data.layers.find(layer.info)
+        self.gp_data.layers.remove(layer)
+        try:
+            next_layer = self.gp_data.layers[index - 1]
+            if not self.edit_layer.is_in_2d(next_layer):
+                self.edit_layer.display_in_3d(next_layer)
+            self.active_layer_index = index - 1
+
+        except IndexError:
+            pass
         return self
 
     def color_active(self, color: Color) -> 'BuildGreasePencilData':
@@ -239,9 +250,8 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
     def opacity(self, layer_name_or_index: str | int, opacity: float) -> 'BuildGreasePencilData':
         """Set the opacity of the grease pencil annotation layer."""
-        layer = self._get_layer(layer_name_or_index)
-        if layer:
-            layer.annotation_opacity = opacity
+        if not (layer := self._get_layer(layer_name_or_index)): return self
+        layer.annotation_opacity = opacity
         return self
 
     def color(self, layer_name_or_index: str | int, color: Color = None) -> 'BuildGreasePencilData':
@@ -249,17 +259,14 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         :param layer_name_or_index: The name or index of the layer.
         :param hex_color: The color in hex format.
         :return: instance"""
-        layer = self._get_layer(layer_name_or_index)
-        if layer:
-            layer.color = color
-
+        if not (layer := self._get_layer(layer_name_or_index)): return self
+        layer.color = color
         return self
 
     def thickness(self, layer_name_or_index: str | int, thickness: int) -> 'BuildGreasePencilData':
         """Set the thickness of the grease pencil annotation layer."""
-        layer = self._get_layer(layer_name_or_index)
-        if layer:
-            layer.thickness = thickness
+        if not (layer := self._get_layer(layer_name_or_index)): return self
+        layer.thickness = thickness
         return self
 
     def remove_svg_bound(self) -> 'BuildGreasePencilData':
