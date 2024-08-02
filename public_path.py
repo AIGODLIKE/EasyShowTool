@@ -3,7 +3,7 @@ from typing import Optional, Union, Any
 from pathlib import Path
 
 
-def get_pref(data_path: Optional[str] = None) -> Union[bpy.types.AddonPreferences, Any]:
+def get_pref(data_path: Optional[str] = None) -> bpy.types.AddonPreferences | Any:
     pref = bpy.context.preferences.addons.get(__package__).preferences
     if data_path is None:
         return pref
@@ -27,7 +27,7 @@ def get_tool_icon(icon_name: str) -> str:
     return get_asset_directory().joinpath('bl_ui_icon', 'icons_tool', icon_name).as_posix()
 
 
-def get_svg_icon(name: Optional[str] = None) -> Union[str, None]:
+def get_svg_icon(name: Optional[str] = None) -> str | None:
     d = get_asset_directory().joinpath('bl_ui_icon', 'icons_svg')
     if not name:
         return d.as_posix()
@@ -41,7 +41,7 @@ def get_color_palettes_directory() -> Path:
     return get_asset_directory().joinpath('color_palette')
 
 
-def get_color_palettes() -> dict[str,list[str]]:
+def get_color_palettes() -> dict[str, list[str]]:
     """Return the color palette directory and file names.
     """
     d = get_color_palettes_directory()
@@ -50,3 +50,7 @@ def get_color_palettes() -> dict[str,list[str]]:
         if p.is_dir():
             res[p.name] = [f.stem for f in p.iterdir() if f.name.endswith('.jpg')]
     return res
+
+
+def get_png_icons_directory() -> Path:
+    return get_asset_directory().joinpath('bl_ui_icon', 'icons_align')

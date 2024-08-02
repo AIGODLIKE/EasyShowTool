@@ -1,12 +1,13 @@
 import bpy
-from bpy.props import IntVectorProperty, FloatVectorProperty, StringProperty, BoolProperty, EnumProperty, IntProperty, \
-    PointerProperty
+from bpy.props import IntVectorProperty, FloatVectorProperty, StringProperty, BoolProperty, EnumProperty, IntProperty
 from mathutils import Vector
 
 from ..model.model_gp import CreateGreasePencilData, BuildGreasePencilData
-from ..model.model_gp_bbox import GPencilLayerBBox
-from ..model.utils import VecTool, ShootAngles
-from .functions import has_edit_tree, enum_add_type_items, enum_shot_orient_items, get_pos_layer_index, load_icon_svg, \
+from ..model.model_gp_bbox import GPencilLayerBBox, GPencilLayersBBox
+from ..model.utils import VecTool
+from ..model.data_enums import ShootAngles, GPAddTypes
+from ..view_model.view_model_select import SelectedGPLayersRuntime
+from .functions import has_edit_tree, get_pos_layer_index, load_icon_svg, \
     get_edit_tree_gp_data, ensure_builtin_font
 
 from ..public_path import get_pref
@@ -48,7 +49,14 @@ class EST_OT_remove_gp(bpy.types.Operator):
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
         if not gp_data: return {'CANCELLED'}
         with BuildGreasePencilData(gp_data) as gp_data_builder:
-            gp_data_builder.remove_active_layer()
+            if SelectedGPLayersRuntime.selected_layers():
+                for layer in SelectedGPLayersRuntime.selected_layers():
+                    gp_data_builder.remove_layer(layer)
+                    SelectedGPLayersRuntime.remove(layer)
+            else:
+                gp_data_builder.remove_active_layer()
+        SelectedGPLayersRuntime.update_from_gp_data(gp_data)
+        context.area.tag_redraw()
         return {'FINISHED'}
 
 
@@ -89,11 +97,20 @@ class EST_OT_scale_gp(bpy.types.Operator):
     def execute(self, context):
         if not (gp_data := get_edit_tree_gp_data(context)):
             return {'CANCELLED'}
-        bbox = GPencilLayerBBox(gp_data)
-        bbox.calc_active_layer_bbox()
-        pivot = bbox.center
-        with BuildGreasePencilData(gp_data) as gp_data_builder:
-            gp_data_builder.scale_active(self.scale_vector, pivot, space='v2d')
+        if SelectedGPLayersRuntime.selected_layers():
+            bbox = GPencilLayersBBox(gp_data)
+            bbox.calc_multiple_layers_bbox(SelectedGPLayersRuntime.selected_layers())
+            pivot = bbox.center
+            with BuildGreasePencilData(gp_data) as gp_data_builder:
+                for layer in SelectedGPLayersRuntime.selected_layers():
+                    gp_data_builder.scale(layer, self.scale_vector, pivot, space='3d')
+            SelectedGPLayersRuntime.update_from_gp_data(gp_data)
+        else:
+            bbox = GPencilLayerBBox(gp_data)
+            bbox.calc_active_layer_bbox()
+            pivot = bbox.center
+            with BuildGreasePencilData(gp_data) as gp_data_builder:
+                gp_data_builder.scale_active(self.scale_vector, pivot, space='3d')
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -119,7 +136,7 @@ class EST_OT_rotate_gp(bpy.types.Operator):
         bbox.calc_active_layer_bbox()
         pivot = bbox.center
         with BuildGreasePencilData(gp_data) as gp_data_builder:
-            gp_data_builder.rotate_active(self.rotate_angle, pivot, space='v2d')
+            gp_data_builder.rotate_active(self.rotate_angle, pivot, space='3d')
         context.area.tag_redraw()
         return {'FINISHED'}
 
@@ -130,13 +147,13 @@ class EST_OT_add_gp(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     add_type: bpy.props.EnumProperty(name='Type',
-                                     items=lambda _, __: enum_add_type_items(), )
+                                     items=lambda _, __: GPAddTypes.enum_items(), )
     # add source
     text: StringProperty(name="Text", default="Hello World")
     size: IntProperty(name="Size", default=100)
     obj: StringProperty(name="Object", default="")
     obj_shot_angle: EnumProperty(name="Shot Orientation",
-                                 items=lambda _, __: enum_shot_orient_items(), )
+                                 items=lambda _, __: ShootAngles.enum_items(), )
     icon: StringProperty(name="Icon", default="BLENDER")
     # location
     location: FloatVectorProperty(size=2, default=(0, 0), options={'SKIP_SAVE', 'HIDDEN'})
@@ -146,17 +163,6 @@ class EST_OT_add_gp(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context)
-
-    # def draw(self, context):
-    #     layout = self.layout
-    #     row = layout.row()
-    #     row.prop(self, 'add_type', expand=True)
-    #     layout.prop(self, 'size')
-    #     if self.add_type == 'TEXT':
-    #         layout.prop(self, 'text')
-    #     elif self.add_type == 'OBJECT':
-    #         layout.prop(context.window_manager, 'est_gp_obj')
-    #         layout.prop(self, 'obj_shot_angle')
 
     def invoke(self, context, event):
         self.mouse_pos = (event.mouse_region_x, event.mouse_region_y)
@@ -195,6 +201,8 @@ class EST_OT_add_gp(bpy.types.Operator):
                 .move_active(vec, space='v2d') \
                 .fit_size(Vector((self.size, self.size)), keep_aspect_ratio=True) \
                 .color_active(color=color) \
+                .opacity_active(context.scene.est_gp_opacity) \
+                .thickness_active(context.scene.est_gp_thickness) \
                 .to_2d()
             if self.add_type == 'BL_ICON' and get_pref().gp_performance.try_remove_svg_bound_stroke:
                 gp_data_builder.remove_svg_bound()
@@ -204,10 +212,9 @@ class EST_OT_add_gp(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class EST_OT_gp_set_active_layer_color(bpy.types.Operator):
-    bl_idname = 'est.gp_set_active_layer_color'
-    bl_label = 'Set Active Layer Color'
-    bl_description = 'Set the active layer color of the Grease Pencil Object'
+class EST_OT_gp_drop_layer_color(bpy.types.Operator):
+    bl_idname = 'est.gp_drop_layer_color'
+    bl_label = 'Drop Color'
     bl_options = {'UNDO'}
 
     @classmethod
@@ -218,7 +225,8 @@ class EST_OT_gp_set_active_layer_color(bpy.types.Operator):
         if not (gp_data := get_edit_tree_gp_data(context)):
             return {'CANCELLED'}
 
-        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y))) is None:
+        if (layer_index := get_pos_layer_index(gp_data, (event.mouse_region_x, event.mouse_region_y),
+                                               local="LOCAL")) is None:
             return {'FINISHED'}
 
         with BuildGreasePencilData(gp_data) as gp_data_builder:
@@ -237,7 +245,7 @@ def register():
     register_class(EST_OT_move_gp)
     register_class(EST_OT_rotate_gp)
     register_class(EST_OT_scale_gp)
-    register_class(EST_OT_gp_set_active_layer_color)
+    register_class(EST_OT_gp_drop_layer_color)
 
 
 def unregister():
@@ -249,4 +257,4 @@ def unregister():
     unregister_class(EST_OT_remove_gp)
     unregister_class(EST_OT_add_gp)
     unregister_class(EST_OT_toggle_gp_space)
-    unregister_class(EST_OT_gp_set_active_layer_color)
+    unregister_class(EST_OT_gp_drop_layer_color)

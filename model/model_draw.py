@@ -1,11 +1,12 @@
 from dataclasses import dataclass, field
 from mathutils import Vector, Color
 import bpy
-from typing import Optional, ClassVar, Literal
+from typing import Optional, ClassVar, Literal, Sequence
 from pathlib import Path
 import bmesh
 import numpy as np
 
+from ..view_model.view_model_mouse import MouseDragState
 from ..public_path import get_pref
 
 
@@ -58,15 +59,14 @@ class DrawPreference:
         self.debug_color = self.color_alpha(theme.face_back, 0.8)
 
 
+# TODO replace all draw data with runtime class
 @dataclass(slots=True)
 class DrawData:
     """Draw data for grease pencil, collect all the draw data need here"""
     points: list[Vector, Vector, Vector, Vector]
     edge_points: list[Vector, Vector, Vector, Vector]
-    layer_points:list[list[Vector]] = None # for selected layers points
 
-    start_pos: Optional[Vector] = None
-    end_pos: Optional[Vector] = None
+    mouse_state: Optional[MouseDragState] = None
     # from transform handles
     delta_degree: Optional[float] = None
     delta_scale: Optional[Vector] = None

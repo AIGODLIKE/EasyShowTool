@@ -1,13 +1,15 @@
-from dataclasses import dataclass
-from typing import Any, Callable, Optional, Literal
+from dataclasses import dataclass, field
+from typing import Callable, Optional, Literal
 import bpy
 from math import degrees
 from mathutils import Vector
-from typing import ClassVar
 
 from ..model.utils import Coord, EdgeCenter, VecTool
-from ..model.model_gp_bbox import GPencilLayerBBox
+from ..model.model_gp_bbox import GPencilLayerBBox, GPencilLayersBBox
 from ..model.model_gp import BuildGreasePencilData
+from ..model.model_points import AreaPoint
+from .view_model_mouse import MouseDragState
+from ..public_path import get_pref
 
 
 @dataclass
@@ -23,7 +25,7 @@ class ViewPan:
     pan_pos: tuple[int, int] = (0, 0)
     pan_post_prev: tuple[int, int] = (0, 0)
 
-    def is_on_region_edge(self, mouse_pos: tuple[int, int]) -> bool:
+    def is_on_region_edge(self, mouse_pos: Vector) -> bool:
         """Check if the mouse is on the edge of the region."""
         width, height = bpy.context.area.width, bpy.context.area.height
         for region in bpy.context.area.regions:
@@ -55,9 +57,9 @@ class ViewPan:
 
     def edge_pan(self, event) -> Vector:
         """pan view return: the pan vector."""
-        self.pan_post_prev: Vector = VecTool.r2d_2_v2d((event.mouse_region_x, event.mouse_region_y))
+        self.pan_post_prev: Vector = VecTool.r2d_2_v2d(Vector((event.mouse_region_x, event.mouse_region_y)))
         bpy.ops.view2d.pan(deltax=self.deltax, deltay=self.deltay)
-        self.pan_pos: Vector = VecTool.r2d_2_v2d((event.mouse_region_x, event.mouse_region_y))
+        self.pan_pos: Vector = VecTool.r2d_2_v2d(Vector((event.mouse_region_x, event.mouse_region_y)))
         return self.pan_pos - self.pan_post_prev
 
 
@@ -65,21 +67,27 @@ class ViewPan:
 class TransformHandler:
     """Handle the complex transform operation in the modal.
     state attr can be pass in the callback function to update the view."""
-    bbox_model: GPencilLayerBBox = None  # init by drag modal
-    build_model: BuildGreasePencilData = None  # init by drag modal
+    bbox_model: GPencilLayerBBox | None = None  # init by drag modal
+    build_model: BuildGreasePencilData | None = None  # init by drag modal
     # callback
     call_before: Optional[Callable] = None
     call_after: Optional[Callable] = None
+    # use for multi-layer
+    selected_layers: list[str] = None
+    # mouse
+    mouse_state: MouseDragState = None
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         ...  # subclass should implement this method
 
-    def handle(self, event: bpy.types.Event, models: Optional[dict] = None, **kwargs) -> bool:
+    def handle(self, event: bpy.types.Event, mouse_state: MouseDragState, models: Optional[dict] = None,
+               **kwargs) -> bool:
         # if key in self.__dict__: # set the attribute
+        if self.mouse_state is None:
+            self.mouse_state = mouse_state
         if self.bbox_model is None or self.build_model is None:
-            if models:
-                self.bbox_model = models.get('bbox_model', None)
-                self.build_model = models.get('build_model', None)
+            self.bbox_model = models.get('bbox_model', None)
+            self.build_model = models.get('build_model', None)
 
         for key, value in kwargs.items():
             if key in self.__annotations__:
@@ -89,6 +97,7 @@ class TransformHandler:
         self.accept_event(event)
         if self.call_after is not None:
             self.call_after(self)
+        return True
 
 
 @dataclass
@@ -97,9 +106,6 @@ class MoveHandler(TransformHandler):
     total_move: Vector = Vector((0, 0))  # value between the last mouse move and the first mouse move
     delta_move: Vector = None  # compare to the last mouse move
     # in
-    delta_vec_v2d: Vector = None
-    end_pos: tuple[int, int] = (0, 0)
-
     view_pan: ViewPan = None
 
     def __post_init__(self):
@@ -107,12 +113,18 @@ class MoveHandler(TransformHandler):
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the move event in the modal."""
-        if not self.delta_vec_v2d:
+        delta_vec_v2d = self.mouse_state.delta_vec_v2d
+        end_pos = self.mouse_state.end_pos
+        if not delta_vec_v2d:
             return False
-        self.build_model.move_active(self.delta_vec_v2d, space='v2d')
-        self.delta_move = self.delta_vec_v2d
-        self.total_move += self.delta_vec_v2d
-        if self.view_pan.is_on_region_edge(self.end_pos):
+        if not self.selected_layers:
+            self.build_model.move_active(delta_vec_v2d, space='v2d')
+        else:
+            for layer in self.selected_layers:
+                self.build_model.move(layer, delta_vec_v2d, space='v2d')
+        self.delta_move = delta_vec_v2d
+        self.total_move += delta_vec_v2d
+        if self.view_pan.is_on_region_edge(end_pos):
             pan_vec = self.view_pan.edge_pan(event)
             self.build_model.move_active(pan_vec, space='v2d')
             self.total_move += pan_vec
@@ -126,76 +138,45 @@ class RotateHandler(TransformHandler):
     delta_degree: float = 0
     # in
     pivot: Vector = None
-    mouse_pos: tuple[int, int] = (0, 0)
-    mouse_pos_prev: tuple[int, int] = (0, 0)
-    snap_degree: int = 0
+    snap_degree: int = field(default_factory=lambda: get_pref().gp_performance.snap_degree)
     snap_degree_count: int = 0
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the rotate event in the modal."""
         if not self.pivot:
-            self.pivot = self.bbox_model.center_v2d
-            self.pivot_r2d = self.bbox_model.center_r2d
+            if not self.selected_layers:
+                self.pivot = self.bbox_model.center_v2d
+                self.pivot_r2d = self.bbox_model.center_r2d
+            else:
+                layers_bbox = GPencilLayersBBox(self.bbox_model.gp_data)
+                layers_bbox.calc_multiple_layers_bbox(self.selected_layers)
+                self.pivot = layers_bbox.center_v2d
+                self.pivot_r2d = layers_bbox.center_r2d
 
-        vec_1 = Vector(self.mouse_pos) - self.pivot_r2d
-        vec_2 = Vector(self.mouse_pos_prev) - self.pivot_r2d
-        # clockwise or counterclockwise
-        inverse: Literal[1, -1] = VecTool.rotation_direction(vec_1, vec_2)
-        angle = inverse * vec_1.angle(vec_2)
+        inverse, angle = self.mouse_state.get_rotate_delta_angle(self.pivot_r2d)
         degree = degrees(angle)
 
         # snap
         if not event.shift:
             self.delta_degree += degree
-            self.build_model.rotate_active(degree, self.pivot , space='v2d')
+            if self.selected_layers:
+                for layer in self.selected_layers:
+                    self.build_model.rotate(layer, degree, self.pivot, space='v2d')
+            else:
+                self.build_model.rotate_active(degree, self.pivot, space='v2d')
             self.total_degree += degree
         else:
             self.snap_degree_count += abs(degree)
             if self.snap_degree_count > self.snap_degree:
                 self.snap_degree_count = 0
                 self.delta_degree += self.snap_degree * inverse
-                self.build_model.rotate_active(self.snap_degree * inverse, self.pivot , space='v2d')
+                if self.selected_layers:
+                    for layer in self.selected_layers:
+                        self.build_model.rotate(layer, self.snap_degree * inverse, self.pivot, space='v2d')
+                else:
+                    self.build_model.rotate_active(self.snap_degree * inverse, self.pivot, space='v2d')
                 self.total_degree += self.snap_degree * inverse
         return True
-
-
-# TODO need to use ScalePivot class to refactor the scale handler
-
-# @dataclass
-# class ScalePivot():
-#     # in
-#     bbox_model: GPencilLayerBBox
-#     pivot_type: Literal['edge_center', 'corner', 'center']
-#     pt_edge_center: int = 0
-#     pt_corner: int = 0
-#     # out
-#     position: Vector = None
-#
-#     def __post_init__(self):
-#         self.set_pivot()
-#
-#     def set_pivot(self):
-#         if self.pivot_type == 'edge_center':
-#             self.position = self.edge_center()
-#         elif self.pivot_type == 'corner':
-#             self.position = self.corner()
-#         elif self.pivot_type == 'center':
-#             self.position = self.center()
-#
-#     def edge_center(self) -> tuple[Vector, Vector]:
-#         points = self.bbox_model.edge_center_points_3d
-#         pivot_index = EdgeCenter.opposite(self.pt_edge_center)
-#         pivot: Vector = points[pivot_index]
-#         return pivot
-#
-#     def corner(self) -> tuple[Vector, Vector]:
-#         points = self.bbox_model.bbox_points_3d
-#         pivot_index = Coord.opposite(self.pt_corner)
-#         pivot = points[pivot_index]
-#         return pivot
-#
-#     def center(self) -> Vector:
-#         return self.bbox_model.center
 
 
 @dataclass
@@ -206,13 +187,11 @@ class ScaleHandler(TransformHandler):
     pivot: Vector = None
     pivot_local: Vector = None
     degree_local: float = 0
+
     # pass in
-    delta_vec_v2d: Vector = None
-    mouse_pos: tuple[int, int] = (0, 0)
-    pos_edge_center: Vector = None
-    pos_corner: Vector = None
-    pt_edge_center: int = 0
-    pt_corner: int = 0
+    force_center_scale: bool = False
+    pos_edge_center: AreaPoint | None = None
+    pos_corner: AreaPoint | None = None
 
     def accept_event(self, event: bpy.types.Event) -> bool:
         """Handle the scale event in the modal.
@@ -220,36 +199,65 @@ class ScaleHandler(TransformHandler):
         unify_scale = event.shift
         center_scale = event.ctrl
 
-        if self.pos_edge_center:
-            if center_scale:
-                self.both_sides_edge_center(unify_scale)
-            else:
-                self.one_side_edge_center(unify_scale)
-        elif self.pos_corner:
-            if center_scale:
-                self.both_sides_corner(unify_scale)
-            else:
-                self.one_side_corner(unify_scale)
+        self.delta_vec_v2d = self.mouse_state.delta_vec_v2d
+        self.mouse_pos = self.mouse_state.mouse_pos
+
+        if self.force_center_scale:
+            bboxs = GPencilLayersBBox(self.bbox_model.gp_data)
+            if self.build_model.active_layer.info not in self.selected_layers:
+                self.selected_layers.append(self.build_model.active_layer.info)
+                self.pos_corner = bboxs.area.top_right
+
+            bboxs.calc_multiple_layers_bbox(self.selected_layers)
+            self.both_sides_corner(not unify_scale)  # invert the unify_scale to fit
+
+            self.pivot = bboxs.area.center
+
+        else:
+            if self.pos_edge_center:
+                if center_scale:
+                    self.both_sides_edge_center(unify_scale)
+                else:
+                    self.one_side_edge_center(unify_scale)
+            elif self.pos_corner:
+                if center_scale:
+                    self.both_sides_corner(unify_scale)
+                else:
+                    self.one_side_corner(unify_scale)
 
         if not self.delta_scale: return False
         if not self.pivot: return False
 
-        self.build_model.scale_active(self.delta_scale, self.pivot, space='v2d', local=self.bbox_model.is_local)
+        if not self.selected_layers:
+            self.build_model.scale_active(self.delta_scale, self.pivot, space='3d', local=self.bbox_model.is_local)
+        else:
+            # print(self.pivot, self.delta_scale)
+            for layer in self.selected_layers:
+                self.build_model.scale(layer, self.delta_scale, self.pivot, space='3d', local=self.bbox_model.is_local)
+
         self.total_scale *= self.delta_scale
 
         return True
 
-    def calc_both_side(self):
-        pivot = self.bbox_model.center
-        pivot_r2d = self.bbox_model.center_r2d
-        size_x_v2d, size_y_v2d = self.bbox_model.size_v2d
+    def calc_both_side(self) -> tuple[Vector, Vector, float, float, float, float]:
+        if not self.selected_layers:
+            pivot = self.bbox_model.center
+            pivot_r2d = self.bbox_model.center_r2d
+            size_x_v2d, size_y_v2d = self.bbox_model.size_v2d
+        else:
+            layers_bbox = GPencilLayersBBox(self.bbox_model.gp_data)
+            layers_bbox.calc_multiple_layers_bbox(self.selected_layers)
+            pivot = layers_bbox.center_v2d
+            pivot_r2d = layers_bbox.center_r2d
+            size_x_v2d, size_y_v2d = layers_bbox.size_v2d
 
-        if self.bbox_model.is_local:
+        if self.bbox_model.is_local and not self.selected_layers:
             # rotate the delta vector to the local space
-            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.rotation_2d())
+            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.layer_rotate_2d())
             delta_x, delta_y = correct_delta_vec.xy
         else:
             delta_x, delta_y = (self.delta_vec_v2d * 2).xy
+
         if self.mouse_pos[0] < pivot_r2d[0]:  # if on the left side
             delta_x = -delta_x
         if self.mouse_pos[1] < pivot_r2d[1]:  # if on the bottom side
@@ -257,10 +265,10 @@ class ScaleHandler(TransformHandler):
 
         return pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y
 
-    def calc_one_side(self):
+    def calc_one_side(self) -> tuple[float, float, float, float]:
         if self.bbox_model.is_local:
             # rotate the delta vector to the local space
-            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.rotation_2d())
+            correct_delta_vec = VecTool.rotate_by_angle(self.delta_vec_v2d, self.bbox_model.layer_rotate_2d())
             delta_x, delta_y = correct_delta_vec.xy
         else:
             delta_x, delta_y = self.delta_vec_v2d.xy
@@ -279,11 +287,11 @@ class ScaleHandler(TransformHandler):
         else:
             vec_scale.x = vec_scale.y
 
-    def both_sides_edge_center(self, unify_scale: bool):
+    def both_sides_edge_center(self, unify_scale: bool) -> None:
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
 
-        if EdgeCenter.point_on_bottom(self.pt_edge_center) or EdgeCenter.point_on_top(self.pt_edge_center):
+        if 'top' in self.pos_edge_center.position_type or 'bottom' in self.pos_edge_center.position_type:
             vec_scale = Vector((1, scale_y, 0))
         else:
             vec_scale = Vector((scale_x, 1, 0))
@@ -294,35 +302,47 @@ class ScaleHandler(TransformHandler):
         self.pivot = pivot
         self.delta_scale = vec_scale
 
-    def both_sides_corner(self, unify_scale: bool):
+    def both_sides_corner(self, unify_scale: bool) -> None:
         pivot, pivot_r2d, size_x_v2d, size_y_v2d, delta_x, delta_y = self.calc_both_side()
-        if self.pos_corner[0] == self.bbox_model.min_x:
-            delta_x = -delta_x
-        if self.pos_corner[1] == self.bbox_model.min_y:
-            delta_y = -delta_y
+
+        if not self.selected_layers:
+            if self.pos_corner.x == self.bbox_model.min_x:
+                delta_x = -delta_x
+            if self.pos_corner.y == self.bbox_model.min_y:
+                delta_y = -delta_y
 
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
         vec_scale = Vector((scale_x, scale_y, 0))
         if unify_scale:
             self.unify_scale(delta_x, delta_y, vec_scale)
 
-        self.pivot = pivot
+        if self.pivot is None:
+            self.pivot = pivot
         self.delta_scale = vec_scale
 
-    def one_side_edge_center(self, unify_scale: bool):
+    def one_side_edge_center(self, unify_scale: bool) -> None:
         delta_x, delta_y, size_x_v2d, size_y_v2d = self.calc_one_side()
-        points = self.bbox_model.edge_center_points_3d
-        pivot_index = EdgeCenter.opposite(self.pt_edge_center)
-        pivot: Vector = points[pivot_index]
+        points = self.bbox_model.edge_center_points_3d  # top_center, right_center, bottom_center, left_center
+        match self.pos_edge_center.position_type:
+            case 'top_center':
+                pivot = points[2]
+            case 'right_center':
+                pivot = points[3]
+            case 'bottom_center':
+                pivot = points[0]
+            case 'left_center':
+                pivot = points[1]
+            case _:
+                raise ValueError(f"Invalid position type: {self.pos_edge_center.position_type}")
 
-        if EdgeCenter.point_on_left(self.pt_edge_center):
+        if 'left' in self.pos_edge_center.position_type:
             delta_x = -delta_x
-        if EdgeCenter.point_on_bottom(self.pt_edge_center):
+        if 'bottom' in self.pos_edge_center.position_type:
             delta_y = -delta_y
 
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)
 
-        if EdgeCenter.point_on_left(self.pt_edge_center) or EdgeCenter.point_on_right(self.pt_edge_center):
+        if 'left' in self.pos_edge_center.position_type or 'right' in self.pos_edge_center.position_type:
             vec_scale = Vector((scale_x, 1, 0))
         else:
             vec_scale = Vector((1, scale_y, 0))
@@ -333,15 +353,24 @@ class ScaleHandler(TransformHandler):
         self.pivot = pivot
         self.delta_scale = vec_scale
 
-    def one_side_corner(self, unify_scale: bool):
+    def one_side_corner(self, unify_scale: bool) -> None:
         delta_x, delta_y, size_x_v2d, size_y_v2d = self.calc_one_side()
-        points = self.bbox_model.bbox_points_3d
-        pivot_index = Coord.opposite(self.pt_corner)
-        pivot = points[pivot_index]
+        points = self.bbox_model.bbox_points_3d  # top_left, top_right, bottom_left, bottom_right
+        match self.pos_corner.position_type:
+            case 'top_left':
+                pivot = points[3]
+            case 'top_right':
+                pivot = points[2]
+            case 'bottom_left':
+                pivot = points[1]
+            case 'bottom_right':
+                pivot = points[0]
+            case _:
+                raise ValueError(f"Invalid position type: {self.pos_corner.position_type}")
 
-        if Coord.point_on_left(self.pt_corner):
+        if 'left' in self.pos_corner.position_type:
             delta_x = -delta_x
-        if Coord.point_on_bottom(self.pt_corner):
+        if 'bottom' in self.pos_corner.position_type:
             delta_y = -delta_y
 
         scale_x, scale_y = self.calc_scale(delta_x, delta_y, size_x_v2d, size_y_v2d)

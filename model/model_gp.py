@@ -3,9 +3,10 @@ import numpy as np
 from mathutils import Vector, Euler, Color
 from typing import Literal, Optional, Union, ClassVar
 from dataclasses import dataclass, field
-from .utils import VecTool, ShootAngles
+from .utils import VecTool
+from .data_enums import ShootAngles
 from .model_gp_edit import EditGreasePencilLayer
-from .model_gp_property import GreasePencilProperty
+from .model_gp_property import GreasePencilProperty, GPencilStroke
 from .model_gp_bbox import GPencilLayerBBox
 
 
@@ -67,7 +68,9 @@ class CreateGreasePencilData(GreasePencilCache):
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.gpencil_add(type='EMPTY')
         obj = bpy.context.object
-        gp_data = obj.data
+        gp_data: bpy.types.GreasePencil = obj.data
+        # remove the default layer
+        gp_data.layers.remove(gp_data.layers[0])
         CreateGreasePencilData.del_later(obj)
         return gp_data
 
@@ -202,20 +205,35 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
             self.edit_layer.display_in_3d(layer)
         return self
 
-    def set_active_layer(self, layer_name_or_index: Union[str, int]) -> 'BuildGreasePencilData':
+    def set_active_layer(self, layer_name_or_index: str | int) -> 'BuildGreasePencilData':
         """Set the active grease pencil annotation layer."""
-        self.active_layer_index = layer_name_or_index
+        if isinstance(layer_name_or_index, int):
+            self.active_layer_index = layer_name_or_index
+        elif isinstance(layer_name_or_index, str):
+            for i, layer in enumerate(self.gp_data.layers):
+                if layer.info == layer_name_or_index:
+                    self.active_layer_index = i
+                    break
         return self
 
     def remove_active_layer(self) -> 'BuildGreasePencilData':
         """Delete the active grease pencil annotation layer."""
         return self.remove_layer(self.active_layer_index)
 
-    def remove_layer(self, layer_name_or_index: Union[str, int]) -> 'BuildGreasePencilData':
+    def remove_layer(self, layer_name_or_index: str | int) -> 'BuildGreasePencilData':
         """Remove the grease pencil annotation layer."""
-        layer = self._get_layer(layer_name_or_index)
-        if layer:
-            self.gp_data.layers.remove(layer)
+        if not (layer := self._get_layer(layer_name_or_index)): return self
+
+        index = self.gp_data.layers.find(layer.info)
+        self.gp_data.layers.remove(layer)
+        try:
+            next_layer = self.gp_data.layers[index - 1]
+            if not self.edit_layer.is_in_2d(next_layer):
+                self.edit_layer.display_in_3d(next_layer)
+            self.active_layer_index = index - 1
+
+        except IndexError:
+            pass
         return self
 
     def color_active(self, color: Color) -> 'BuildGreasePencilData':
@@ -230,44 +248,51 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
     def thickness_active(self, thickness: int = 1) -> 'BuildGreasePencilData':
         return self.thickness(self.active_layer_index, thickness)
 
-    def opacity(self, layer_name_or_index: Union[str, int], opacity: float) -> 'BuildGreasePencilData':
+    def opacity(self, layer_name_or_index: str | int, opacity: float) -> 'BuildGreasePencilData':
         """Set the opacity of the grease pencil annotation layer."""
-        layer = self._get_layer(layer_name_or_index)
-        if layer:
-            layer.annotation_opacity = opacity
+        if not (layer := self._get_layer(layer_name_or_index)): return self
+        layer.annotation_opacity = opacity
         return self
 
-    def color(self, layer_name_or_index: Union[str, int], color: Color = None) -> 'BuildGreasePencilData':
+    def color(self, layer_name_or_index: str | int, color: Color = None) -> 'BuildGreasePencilData':
         """Set the color of the grease pencil annotation layer.
         :param layer_name_or_index: The name or index of the layer.
         :param hex_color: The color in hex format.
         :return: instance"""
-        layer = self._get_layer(layer_name_or_index)
-        if layer:
-            layer.color = color
-
+        if not (layer := self._get_layer(layer_name_or_index)): return self
+        layer.color = color
         return self
 
-    def thickness(self, layer_name_or_index: Union[str, int], thickness: int) -> 'BuildGreasePencilData':
+    def thickness(self, layer_name_or_index: str | int, thickness: int) -> 'BuildGreasePencilData':
         """Set the thickness of the grease pencil annotation layer."""
-        layer = self._get_layer(layer_name_or_index)
-        if layer:
-            layer.thickness = thickness
+        if not (layer := self._get_layer(layer_name_or_index)): return self
+        layer.thickness = thickness
         return self
 
     def remove_svg_bound(self) -> 'BuildGreasePencilData':
         """Remove the svg bound of the grease pencil data."""
+        if not (layer := self._get_layer(self.active_layer_index)):
+            return self
+
         stroke_remove = None
-        layer = self._get_layer(self.active_layer_index)
-        if layer:
-            frame = layer.frames[0]
-            for i, stroke in enumerate(frame.strokes):
-                if (i == 0 or i == len(frame.strokes) - 1) and len(stroke.points) == 37:
+        frame = layer.frames[0]
+        bbox = GPencilLayerBBox(self.gp_data)
+        bbox.calc_active_layer_bbox()
+
+        for i, stroke in enumerate(frame.strokes):
+            points = GPencilStroke.get_stroke_points(stroke)
+            min_x = np.min(points[:, 0])
+            max_x = np.max(points[:, 0])
+            min_y = np.min(points[:, 1])
+            max_y = np.max(points[:, 1])
+
+            if len(stroke.points) == 37:  # blender svg bound points num
+                if min_x == bbox.min_x and max_x == bbox.max_x and min_y == bbox.min_y and max_y == bbox.max_y:
                     stroke_remove = stroke
                     break
 
-            if stroke_remove:
-                frame.strokes.remove(stroke_remove)
+        if stroke_remove:
+            frame.strokes.remove(stroke_remove)
 
         return self
 
@@ -337,7 +362,8 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """Scale the active grease pencil layer."""
         return self.scale(self.active_layer_name, scale, pivot, space, local)
 
-    def rotate_active(self, degree: int, pivot: Vector, space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
+    def rotate_active(self, degree: int | float, pivot: Vector,
+                      space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Rotate the active grease pencil layer."""
         return self.rotate(self.active_layer_name, degree, pivot, space)
 
@@ -353,7 +379,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
         return self
 
-    def move(self, layer_name_or_index: Union[str, int], v: Vector,
+    def move(self, layer_name_or_index: str | int, v: Vector,
              space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Move the grease pencil data.
         :param layer_name_or_index: The name or index of the layer.
@@ -363,11 +389,11 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """
 
         layer = self._get_layer(layer_name_or_index)
-        vec = VecTool.v2d_2_loc3d(v) if space == 'v2d' else v
+        vec = Vector(v) if space == '3d' else VecTool.v2d_2_loc3d(Vector(v))
         self.edit_layer.move_layer(layer, vec)
         return self
 
-    def scale(self, layer_name_or_index: Union[str, int], scale: Vector, pivot: Vector,
+    def scale(self, layer_name_or_index: str | int, scale: Vector, pivot: Vector,
               space: Literal['v2d', '3d'] = '3d', local: bool = False) -> 'BuildGreasePencilData':
         """Scale the grease pencil data.
         The pivot point should be in 3D space.
@@ -378,11 +404,11 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         :param local: The local scale flag.
         :return: instance"""
         layer = self._get_layer(layer_name_or_index)
-        vec_pivot = VecTool.v2d_2_loc3d(pivot) if space == '3d' else pivot
+        vec_pivot = pivot if space == '3d' else VecTool.v2d_2_loc3d(pivot)
         self.edit_layer.scale_layer(layer, scale, vec_pivot, local)
         return self
 
-    def rotate(self, layer_name_or_index: Union[str, int], degree: int, pivot: Vector,
+    def rotate(self, layer_name_or_index: str | int, degree: int | float, pivot: Vector,
                space: Literal['v2d', '3d'] = '3d') -> 'BuildGreasePencilData':
         """Rotate the grease pencil data.
         The pivot point should be in 3D space.

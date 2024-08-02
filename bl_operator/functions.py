@@ -5,9 +5,9 @@ from mathutils import Vector
 import bpy
 from contextlib import contextmanager
 
-from ..model.utils import ShootAngles
+from ..model.data_enums import ShootAngles
 from ..model.model_gp_bbox import GPencilLayerBBox
-from ..view_model.view_model_detect import MouseDetectModel
+from ..view_model.view_model_mouse import MouseDetectModel
 from ..public_path import get_svg_icon
 
 
@@ -34,7 +34,7 @@ def has_active_node(context: bpy.types.Context, bl_idname: Optional[str] = None)
     return True
 
 
-def get_edit_tree_gp_data(context: bpy.types.Context) -> Union[bpy.types.GreasePencil, None]:
+def get_edit_tree_gp_data(context: bpy.types.Context) -> bpy.types.GreasePencil | None:
     """Check if there is an active grease pencil data on the active node tree."""
     nt: bpy.types.NodeTree = context.space_data.edit_tree
     gp_data: bpy.types.GreasePencil = nt.grease_pencil
@@ -47,32 +47,21 @@ def is_valid_workspace_tool(context) -> bool:
     return context.workspace.tools.from_space_node().idname in {'est.gp_edit_tool', 'est.gp_color_tool'}
 
 
-def enum_add_type_items() -> list[tuple[str, str, str]]:
-    """Return the items for the add_type enum property."""
-    data: dict = {
-        'TEXT': "Text",
-        'OBJECT': "Object",
-        'BL_ICON': "Icon",
-    }
-    return [(key, value, "") for key, value in data.items()]
-
-
-def enum_shot_orient_items() -> list[tuple[str, str, str]]:
-    """Return the items for the shot_orient enum property."""
-    return [(euler.name, euler.name.replace('_', ' ').title(), '') for euler in ShootAngles]
-
-
-def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Vector], feather=0) -> Union[int, None]:
+def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Sequence | Vector, feather=0,
+                        local: bool = True) -> int | None:
     """get the layer index by the mouse position."""
     # TODO select through if some layers are overlapped
     try:
-        bboxs: list[GPencilLayerBBox] = [GPencilLayerBBox(gp_data, layer) for layer in
-                                         gp_data.layers]
+        bbox = GPencilLayerBBox(gp_data)
+        bbox.mode = 'LOCAL' if local else 'GLOBAL'
         mouse_detect = MouseDetectModel()
-        for i, bbox in enumerate(bboxs):
+        mouse_detect.bind_bbox(bbox)
+
+        for i, layer in enumerate(gp_data.layers):
             bbox.calc_bbox(i)
-            mouse_detect.bind_bbox(bbox)
             if mouse_detect.in_bbox_area(pos, feather):
+                if gp_data.layers.active_index == i:
+                    continue
                 return bbox.last_layer_index
     except ReferenceError:  # ctrl z will cause the reference error
         return None
@@ -80,11 +69,13 @@ def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Union[Sequence, Ve
         return None
     return None
 
+
 def ensure_builtin_font():
     """if a old file is loaded, the font may not be loaded, so load the built-in font."""
     if bpy.context.scene.est_gp_text_font is None and 'Bfont Regular' not in bpy.data.fonts:
         bpy.data.curves.new('tmp', type='FONT')  # make sure the built-in font is loaded
         bpy.context.scene.est_gp_text_font = bpy.data.fonts['Bfont Regular']
+
 
 @contextmanager
 def ensure_3d_view(context: bpy.types.Context):
@@ -108,7 +99,7 @@ def get_icons() -> list[str]:
     return icons
 
 
-def load_icon_svg(icon: str) -> Union[bpy.types.Object, None]:
+def load_icon_svg(icon: str) -> bpy.types.Object | None:
     SCALE = 2
 
     if (icon_svg := get_svg_icon(icon.lower())) is None:

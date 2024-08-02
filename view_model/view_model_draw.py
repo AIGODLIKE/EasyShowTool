@@ -9,8 +9,9 @@ import blf
 
 from ..model.model_draw import DrawData, DrawPreference
 from ..model.model_gp_bbox import GPencilLayerBBox
+from ..model.model_points import PointsArea
 
-indices = GPencilLayerBBox.indices
+indices = PointsArea.indices
 
 
 @dataclass
@@ -85,9 +86,20 @@ class DrawViewModel:
         batch = batch_for_shader(self.shader, 'LINES', {"pos": [start_pos, end_pos]})
         batch.draw(self.shader)
 
-    def draw_box(self, points: Sequence[Vector]):
-        self.shader.uniform_float("color", self.color_hover)
+    def draw_box_outline(self, points: Sequence[Vector], color: Color | list = None):
+        if color:
+            self.shader.uniform_float("color", color)
+        else:
+            self.shader.uniform_float("color", self.color_hover)
         batch = batch_for_shader(self.shader, 'LINE_LOOP', {"pos": points})
+        batch.draw(self.shader)
+
+    def draw_box_area(self, points: Sequence[Vector], color: Color | list = None):
+        if color:
+            self.shader.uniform_float("color", color)
+        else:
+            self.shader.uniform_float("color", self.color_hover)
+        batch = batch_for_shader(self.shader, 'TRIS', {"pos": points}, indices=indices)
         batch.draw(self.shader)
 
     def _draw_text_left_bottom(self, text_lines: Sequence[str], size=24, space: int = 5):
@@ -115,10 +127,27 @@ class DrawViewModel:
 
     def draw_rotate_angle(self):
         if self.delta_degree:
-            # center = (self.points[0] + self.points[3]) / 2
-            # self.draw_line(center, self.end_pos)
-            # self.draw_line(center, self.start_pos)
-            self.draw_text(f"{round(self.delta_degree, 1)}°", self.end_pos + Vector((0, 20)))
+            self.draw_text(f"{round(self.delta_degree, 1)}°", Vector((self.mouse_state.end_pos)) + Vector((0, 20)))
+
+    def draw_select_box(self):
+        if not self.mouse_state: return
+        if not self.mouse_state.is_move: return
+        # draw a selected box with the start and end pos
+        if not self.mouse_state.start_pos.x > 0: return
+
+        gpu.state.blend_set('ALPHA')
+        select_color = list(self.color_highlight)
+        select_color[3] = 0.5
+        area: PointsArea = self.mouse_state.drag_area()
+        points = area.corner_points_line_order
+        self.draw_box_outline(points, color=select_color)
+        # draw area
+        select_color[3] = 0.025
+        points = area.corner_points
+        self.draw_box_area(points, color=select_color)
+        # draw the line between start and end pos
+        # self.draw_line(self.mouse_state.start_pos, self.mouse_state.end_pos)
+        # draw the distance between start and end pos
 
     def draw_debug_info(self, dict_info: OrderedDict[str, str]):
         self.shader.uniform_float("color", self.debug_color)
@@ -131,15 +160,7 @@ class DrawViewModel:
         if textlines:
             self._draw_text_left_bottom(textlines)
 
-        if not self.start_pos or not self.end_pos: return
-        if self.end_pos[0] == 0 and self.end_pos[1] == 0: return
-        if self.start_pos[0] == 0 and self.start_pos[1] == 0: return
-        # draw the line between start and end pos
-        self.draw_line(self.start_pos, self.end_pos)
-        # draw a selected box with the start and end pos
-        points = [self.start_pos, Vector((self.end_pos.x, self.start_pos.y)),
-                  self.end_pos, Vector((self.start_pos.x, self.end_pos.y))]
-        self.draw_box(points)
-        # draw the distance between start and end pos
-        dis = round((self.start_pos - self.end_pos).length, 2)
-        self.draw_text(f"{dis}px", self.end_pos + Vector((0, -20)))
+        if not self.mouse_state: return
+        if not self.mouse_state.is_move: return
+        dis = round((self.mouse_state.start_pos - self.mouse_state.end_pos).length, 2)
+        self.draw_text(f"{dis}px", self.mouse_state.end_pos + Vector((+20, -20)))
