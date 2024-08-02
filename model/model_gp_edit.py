@@ -15,43 +15,36 @@ class EditGreasePencilStroke(GPencilStroke):
 
     def _move_stroke(self, stroke: bpy.types.GPencilStroke, v: Vector):
         """Move the grease pencil data."""
-        move_3d = Vector((v[0], v[1], 0))
         with self.stroke_points(stroke) as points:
-            points += move_3d
+            points += v
             stroke.points.foreach_set('co', points.ravel())
 
     def _scale_stroke(self, stroke: bpy.types.GPencilStroke, scale: Vector, pivot: Vector):
         """Scale the grease pencil data."""
-        scale_3d = Vector((scale[0], scale[1], 1))
-        pivot_3d = Vector((pivot[0], pivot[1], 0))
         with self.stroke_points(stroke) as points:
-            points = (points - pivot_3d) * scale_3d + pivot_3d
+            points = (points - pivot) * scale + pivot
             stroke.points.foreach_set('co', points.ravel())
 
     def _rotate_stroke(self, stroke: bpy.types.GPencilStroke, angle: int, pivot: Vector):
         """Rotate the grease pencil data around the pivot point."""
-        pivot_3d = Vector((pivot[0], pivot[1], 0))
-
         with self.stroke_points(stroke) as points:
             # use numpy to calculate the rotation
-            points = ((points - pivot_3d) @ np.array([[np.cos(angle), -np.sin(angle), 0],
-                                                      [np.sin(angle), np.cos(angle), 0],
-                                                      [0, 0, 1]]) + pivot_3d)
+            points = ((points - pivot) @ np.array([[np.cos(angle), -np.sin(angle), 0],
+                                                   [np.sin(angle), np.cos(angle), 0],
+                                                   [0, 0, 1]]) + pivot)
 
             stroke.points.foreach_set('co', points.ravel())
 
     def _scale_stroke_local(self, strokes: bpy.types.GPencilStroke, scale: Vector, angle: float, pivot: Vector):
         """rotate around the pivot point. before scale, then rotate back"""
-        pivot_3d = Vector((pivot[0], pivot[1], 0))
-        scale_3d = Vector((scale[0], scale[1], 1))
         with self.stroke_points(strokes) as points:
-            points = ((points - pivot_3d) @ np.array([[np.cos(angle), -np.sin(angle), 0],
-                                                      [np.sin(angle), np.cos(angle), 0],
-                                                      [0, 0, 1]]) + pivot_3d)
-            points = (points - pivot_3d) * scale_3d + pivot_3d
-            points = ((points - pivot_3d) @ np.array([[np.cos(-angle), -np.sin(-angle), 0],
-                                                      [np.sin(-angle), np.cos(-angle), 0],
-                                                      [0, 0, 1]]) + pivot_3d)
+            points = ((points - pivot) @ np.array([[np.cos(angle), -np.sin(angle), 0],
+                                                   [np.sin(angle), np.cos(angle), 0],
+                                                   [0, 0, 1]]) + pivot)
+            points = (points - pivot) * scale + pivot
+            points = ((points - pivot) @ np.array([[np.cos(-angle), -np.sin(-angle), 0],
+                                                   [np.sin(-angle), np.cos(-angle), 0],
+                                                   [0, 0, 1]]) + pivot)
             strokes.points.foreach_set('co', points.ravel())
 
 
@@ -70,15 +63,17 @@ class EditGreasePencilLayer(EditGreasePencilStroke):
                 stroke.points.foreach_set('co', points[stroke].ravel())
 
     def move_layer(self, layer: bpy.types.GPencilLayer, v: Vector):
+        v_3d = v.to_3d()
         for frame in layer.frames:
             for stroke in frame.strokes:
-                self._move_stroke(stroke, v)
+                self._move_stroke(stroke, v_3d)
 
     def rotate_layer(self, layer: bpy.types.GPencilLayer, degree: int, pivot: Vector):
         angle = radians(degree)
+        pivot_3d = pivot.to_3d()
         for frame in layer.frames:
             for stroke in frame.strokes:
-                self._rotate_stroke(stroke, angle, pivot)
+                self._rotate_stroke(stroke, angle, pivot_3d)
 
         # store rotation in layer.rotation, but inverse the rotation
         # because rotate from z up view in 3d clockwise, value is negative
@@ -87,15 +82,17 @@ class EditGreasePencilLayer(EditGreasePencilStroke):
 
     def scale_layer(self, layer: bpy.types.GPencilLayer, scale: Vector, pivot: Vector, local=False):
         """Scale the grease pencil data. Local scale will rotate the data first, then scale, then rotate back."""
+        pivot_3d = pivot.to_3d()
+        scale_3d = scale.to_3d()
         if local:
             angle = -layer.rotation[2]  # since the rotation is stored in the layer, we need to inverse it
             for frame in layer.frames:
                 for stroke in frame.strokes:
-                    self._scale_stroke_local(stroke, scale, angle, pivot)
+                    self._scale_stroke_local(stroke, scale_3d, angle, pivot_3d)
         else:
             for frame in layer.frames:
                 for stroke in frame.strokes:
-                    self._scale_stroke(stroke, scale, pivot)
+                    self._scale_stroke(stroke, scale_3d, pivot_3d)
 
     def display_in_2d(self, layer: bpy.types.GPencilLayer):
         self._set_display_mode(layer, '2DSPACE')
