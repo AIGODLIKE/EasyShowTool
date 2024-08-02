@@ -27,7 +27,7 @@ class EST_PT_icon_viewer(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = "Tool"
     bl_options = {'HEADER_LAYOUT_EXPAND'}
-    bl_order = 2
+    bl_order = 3
 
     @classmethod
     def poll(cls, context):
@@ -53,9 +53,6 @@ class EST_PT_icon_viewer(bpy.types.Panel):
             if filter and not re.search(filter, str(icon), re.I):
                 continue
             gird.operator("est.set_icon", text='', icon=icon, emboss=False).icon = icon
-
-
-
 
 
 def register():

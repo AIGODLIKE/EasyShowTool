@@ -105,34 +105,34 @@ class AlignIcon:
         cls.pv_coll.clear()
 
 
-class EST_OT_align_menu(bpy.types.Menu):
-    bl_idname = "EST_OT_align_menu"
+class EST_MT_align_menu(bpy.types.Menu):
+    bl_idname = "EST_MT_align_menu"
     bl_label = "Align"
 
     def draw(self, context):
         layout = self.layout
         self.draw_layout(context, layout)
 
-    def draw_layout(self, context, layout):
+    def draw_layout(self, context, layout, text: bool = True):
         for mode in AlignMode:
             op = layout.operator(EST_OT_align_gp.bl_idname,
-                                 text=f'Align {mode.value}',
+                                 text=f'Align {mode.value}' if text else '',
                                  icon_value=AlignIcon.get_icon_id(f'Align{mode.value}'))
             op.align_mode = mode.name
 
 
-class EST_OT_distribution_menu(bpy.types.Menu):
-    bl_idname = "EST_OT_distribution_menu"
+class EST_MT_distribution_menu(bpy.types.Menu):
+    bl_idname = "EST_MT_distribution_menu"
     bl_label = "Distribution"
 
     def draw(self, context):
         layout = self.layout
         self.draw_layout(context, layout)
 
-    def draw_layout(self, context, layout):
+    def draw_layout(self, context, layout, text: bool = True):
         for mode in DistributionMode:
             op = layout.operator(EST_OT_distribution_gp.bl_idname,
-                                 text=f'Distribute {mode.value}',
+                                 text=f'Distribute {mode.value}' if text else '',
                                  icon_value=AlignIcon.get_icon_id(f'Distribution{mode.value}'))
             op.distribution_mode = mode.name
 
@@ -141,15 +141,15 @@ def register():
     AlignIcon.register_icon()
 
     bpy.utils.register_class(EST_OT_align_gp)
-    bpy.utils.register_class(EST_OT_align_menu)
+    bpy.utils.register_class(EST_MT_align_menu)
     bpy.utils.register_class(EST_OT_distribution_gp)
-    bpy.utils.register_class(EST_OT_distribution_menu)
+    bpy.utils.register_class(EST_MT_distribution_menu)
 
 
 def unregister():
     bpy.utils.unregister_class(EST_OT_align_gp)
-    bpy.utils.unregister_class(EST_OT_align_menu)
+    bpy.utils.unregister_class(EST_MT_align_menu)
     bpy.utils.unregister_class(EST_OT_distribution_gp)
-    bpy.utils.unregister_class(EST_OT_distribution_menu)
+    bpy.utils.unregister_class(EST_MT_distribution_menu)
 
     AlignIcon.unregister_icon()
