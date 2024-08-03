@@ -222,11 +222,12 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
 
     def remove_layer(self, layer_name_or_index: str | int) -> 'BuildGreasePencilData':
         """Remove the grease pencil annotation layer."""
-        if not (layer := self._get_layer(layer_name_or_index)): return self
-
-        index = self.gp_data.layers.find(layer.info)
-        self.gp_data.layers.remove(layer)
         try:
+            if not (layer := self._get_layer(layer_name_or_index)): return self
+
+            index = self.gp_data.layers.find(layer.info)
+            self.gp_data.layers.remove(layer)
+
             next_layer = self.gp_data.layers[index - 1]
             if not self.edit_layer.is_in_2d(next_layer):
                 self.edit_layer.display_in_3d(next_layer)

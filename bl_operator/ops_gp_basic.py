@@ -47,7 +47,8 @@ class EST_OT_remove_gp(bpy.types.Operator):
     def execute(self, context):
         nt: bpy.types.NodeTree = context.space_data.edit_tree
         gp_data: bpy.types.GreasePencil = nt.grease_pencil
-        if not gp_data: return {'CANCELLED'}
+        if not gp_data:
+            return {'CANCELLED'}
         with BuildGreasePencilData(gp_data) as gp_data_builder:
             if SelectedGPLayersRuntime.selected_layers():
                 for layer in SelectedGPLayersRuntime.selected_layers():
