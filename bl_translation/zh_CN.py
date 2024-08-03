@@ -25,7 +25,7 @@ data = {
     'Add Note': '添加注释',
     'Add Amazing notes to your node editor': '在节点编辑器中添加神奇的注释',
     'Add Blender Icon: Try to Remove Icon Bound': '添加 Blender 图标：尝试移除图标边界',
-    'Align Center': '居中对齐',
+    'Align Center': '水平居中',
     'Align Middle': '垂直居中',
     'Align Top': '顶部对齐',
     'Align Bottom': '底部对齐',
