@@ -164,20 +164,20 @@ class DragGreasePencilViewModal:
         bbox_model = GPencilLayerBBox(self.gp_data)
         bbox_model.mode = self.bbox_model.mode
         detect_model = MouseDetectModel().bind_bbox(bbox_model)
-        if not event.shift:
+        if not (event.shift or event.ctrl): # clear the selected layers if no key is pressed
             self.select_runtime.clear()
 
         for layer in self.gp_data.layers:
             bbox_model.calc_bbox(layer.info)
-            if detect_model.bbox_in_area(box_area_points, all=self.select_all):
-                if not event.ctrl:  # add / update
-                    points = list(bbox_model.bbox_points_v2d)
-                    points[2], points[3] = points[3], points[2]
-                    self.select_runtime.update(layer.info, points)
-                else:  # remove
-                    self.select_runtime.remove(layer.info)
+            if not detect_model.bbox_in_area(box_area_points, all=self.select_all): continue
+            if event.ctrl:  # remove
+                self.select_runtime.remove(layer.info)
+            else:
+                points = list(bbox_model.bbox_points_v2d)
+                points[2], points[3] = points[3], points[2]
+                self.select_runtime.update(layer.info, points)
         # clear the selected layers if no layer is selected
-        if not (event.shift or event.ctrl) and not self.select_runtime.selected_layers():
+        if not event.shift and not event.ctrl and not self.select_runtime.selected_layers():
             self.select_runtime.clear()
         # if only one layer is selected, set it to active
         if len(self.select_runtime.selected_layers()) == 1:
