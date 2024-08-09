@@ -25,7 +25,8 @@ class SelectedGPLayersRuntime:
 
     @classmethod
     def remove(cls, layer: str):
-        cls.selected_layers_points_v2d.pop(layer)
+        if layer in cls.selected_layers_points_v2d:
+            cls.selected_layers_points_v2d.pop(layer)
 
     @classmethod
     def clear(cls):

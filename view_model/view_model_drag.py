@@ -151,10 +151,10 @@ class DragGreasePencilViewModal:
             self.debug_info['cost_time'] = str(drag_move_handler.cost_time) + 's'
         else:
             self.select_runtime.show_select_box()
-            self._handle_select()
+            self._handle_select(event)
             self.debug_info['drag_handle'] = 'Select'
 
-    def _handle_select(self):
+    def _handle_select(self, event):
         # drag box points to detect if a layer is selected
         box_area = self.mouse_state.drag_area()
         box_area_points = box_area.corner_points
@@ -162,13 +162,18 @@ class DragGreasePencilViewModal:
         bbox_model = GPencilLayerBBox(self.gp_data)
         bbox_model.mode = self.bbox_model.mode
         detect_model = MouseDetectModel().bind_bbox(bbox_model)
-        self.select_runtime.clear()
         for layer in self.gp_data.layers:
             bbox_model.calc_bbox(layer.info)
             if detect_model.bbox_in_area(box_area_points):
-                points = list(bbox_model.bbox_points_v2d)
-                points[2], points[3] = points[3], points[2]
-                self.select_runtime.update(layer.info, points)
+                if not event.ctrl:  # add / update
+                    points = list(bbox_model.bbox_points_v2d)
+                    points[2], points[3] = points[3], points[2]
+                    self.select_runtime.update(layer.info, points)
+                else:  # remove
+                    self.select_runtime.remove(layer.info)
+        # clear the selected layers if no layer is selected
+        if not (event.shift or event.ctrl) and not self.select_runtime.selected_layers():
+            self.select_runtime.clear()
         # if only one layer is selected, set it to active
         if len(self.select_runtime.selected_layers()) == 1:
             self.build_model.set_active_layer(self.select_runtime.selected_layers()[0])
