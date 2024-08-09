@@ -1,4 +1,19 @@
+### v0.2.1
+
+**New Feature**
+
++ improve multiple selection
+    + shift + click to add selection
+    + ctrl + click to remove selection
+    + option: select all corner/one corner to select a layer
+
+**Fix**
+
++ error when press x to remove when no layer
+
 ### v0.2.0
+
+> 2024/8/3
 
 **New Feature**
 
@@ -16,7 +31,7 @@
         + Change Selected opacity
         + New UI
     + Delete
-        + Delete selected object    
+        + Delete selected object
 
 + Scale/Rotate Improvement
     + Use bounding box center instead of stroke pivot(which work bad on some object)
