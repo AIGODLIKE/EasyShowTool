@@ -40,6 +40,8 @@ class DragGreasePencilViewModal:
     in_drag_area: bool = False
     # copy
     already_copied: bool = False
+    # select
+    select_all: bool = field(default_factory=lambda: get_pref().gp_performance.select_all)
     # debug
     debug: bool = field(default_factory=lambda: get_pref().debug)
     debug_info: OrderedDict[str, str] = field(default_factory=OrderedDict)
@@ -162,9 +164,12 @@ class DragGreasePencilViewModal:
         bbox_model = GPencilLayerBBox(self.gp_data)
         bbox_model.mode = self.bbox_model.mode
         detect_model = MouseDetectModel().bind_bbox(bbox_model)
+        if not event.shift:
+            self.select_runtime.clear()
+
         for layer in self.gp_data.layers:
             bbox_model.calc_bbox(layer.info)
-            if detect_model.bbox_in_area(box_area_points):
+            if detect_model.bbox_in_area(box_area_points, all=self.select_all):
                 if not event.ctrl:  # add / update
                     points = list(bbox_model.bbox_points_v2d)
                     points[2], points[3] = points[3], points[2]
