@@ -32,12 +32,14 @@ class GreasePencilDrawProperty(bpy.types.PropertyGroup):
 
 class GreasePencilPerformanceProperty(bpy.types.PropertyGroup):
     # lazy_update: BoolProperty(default=False, name='Lazy Update')
+
+    try_remove_svg_bound_stroke: BoolProperty(default=True, name='Add Blender Icon: Try to Remove Icon Bound')
+    select_all: BoolProperty(default=True, name='Drag Select: Only all selected layers are considered selected')
+
     snap_degree: IntProperty(name='Rotate Snap Degree', default=15)
     detect_edge_px: IntProperty(default=20, name='Detect Edge Radius', subtype='PIXEL')
     detect_corner_px: IntProperty(default=20, name='Detect Corner Radius', subtype='PIXEL')
     detect_rotate_px: IntProperty(default=20, name='Detect Rotate Radius', subtype='PIXEL')
-
-    try_remove_svg_bound_stroke: BoolProperty(default=True, name='Add Blender Icon: Try to Remove Icon Bound')
 
     text = 'Tool Behavior'
     icon = 'MODIFIER'
@@ -46,7 +48,8 @@ class GreasePencilPerformanceProperty(bpy.types.PropertyGroup):
 class Preference(bpy.types.AddonPreferences):
     bl_idname = __package__
 
-    ui_tab:EnumProperty(items=[('GENERAL', 'General', ''), ('NOTE', 'Note', ''), ('GP', 'Grease Pencil', '')], name='UI Tab', default='GENERAL')
+    ui_tab: EnumProperty(items=[('GENERAL', 'General', ''), ('NOTE', 'Note', ''), ('GP', 'Grease Pencil', '')],
+                         name='UI Tab', default='GENERAL')
     # add note operator
     note: PointerProperty(type=NoteProperty)
     # grease pencil

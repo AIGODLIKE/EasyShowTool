@@ -35,4 +35,5 @@ data = {
     'Distribute Vertical': '垂直分布',
     'Horizontal Flip': '水平翻转',
     'Vertical Flip': '垂直翻转',
+    'Drag Select: Only all selected layers are considered selected': '拖动选择：只有选定所有的图层才被视为选定',
 }
