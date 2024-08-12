@@ -51,6 +51,8 @@ def zip_dir() -> None:
     with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
         for root, dirs, files in os.walk(tg_dir):
             for file in files:
+                # if file name is this file, skip
+                if file == os.path.basename(__file__): continue
                 zip.write(os.path.join(root, file), arcname=os.path.join(root, file).replace(str(tg_dir), ''))
     print(f'Zip file: {zip_file}')
     shutil.rmtree(tg_dir)

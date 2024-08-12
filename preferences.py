@@ -34,7 +34,7 @@ class GreasePencilPerformanceProperty(bpy.types.PropertyGroup):
     # lazy_update: BoolProperty(default=False, name='Lazy Update')
 
     try_remove_svg_bound_stroke: BoolProperty(default=True, name='Add Blender Icon: Try to Remove Icon Bound')
-    select_all: BoolProperty(default=True, name='Drag Select: Only all selected layers are considered selected')
+    select_all: BoolProperty(default=False, name='Drag Select: Only all selected layers are considered selected')
 
     snap_degree: IntProperty(name='Rotate Snap Degree', default=15)
     detect_edge_px: IntProperty(default=20, name='Detect Edge Radius', subtype='PIXEL')
