@@ -399,15 +399,25 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """Rotate the active grease pencil layer."""
         return self.rotate(self.active_layer_name, degree, pivot, space)
 
-    def fit_size(self, size: Vector, keep_aspect_ratio: bool = True) -> 'BuildGreasePencilData':
+    def fit_size(self, size: Vector,
+                 fit_type: Literal['keep_ratio', 'max', 'min'] = 'keep_ratio',
+                 pivot_pos: Literal[
+                     'center',
+                     'top_left',
+                     'top_right',
+                     'bottom_left',
+                     'bottom_right'
+                 ] = 'center') -> 'BuildGreasePencilData':
         """Fit the size of the active grease pencil layer."""
         bbox = GPencilLayerBBox(self.active_layer)
         bbox.gp_data = self.gp_data
         bbox.calc_bbox(self.active_layer_index)
         scale = Vector((size[0] / (bbox.max_x - bbox.min_x), size[1] / (bbox.max_y - bbox.min_y)))
-        if keep_aspect_ratio:
+        if fit_type == 'max':
+            scale = Vector((max(scale), max(scale)))
+        elif fit_type == 'min':
             scale = Vector((min(scale), min(scale)))
-        self.edit_layer.scale_layer(self.active_layer, scale, bbox.center)
+        self.edit_layer.scale_layer(self.active_layer, scale, getattr(bbox, pivot_pos))
 
         return self
 
