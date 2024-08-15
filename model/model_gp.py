@@ -75,6 +75,37 @@ class CreateGreasePencilData(GreasePencilCache):
         return gp_data
 
     @staticmethod
+    def square(p1: Vector, p2: Vector) -> bpy.types.GreasePencil:
+        """Create a square grease pencil data.
+        p1: corner 1
+        p2: corner 2 (opposite corner)
+        """
+        CreateGreasePencilData.ensure_context_obj()
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.mesh.primitive_plane_add(enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
+        obj = bpy.context.object
+        obj.name = 'Square'
+        # corner order of this mesh is : bottom_left, bottom_right, top_left, top_right
+        obj.data.vertices[0].co = p1.to_3d()
+        obj.data.vertices[1].co = Vector((p2[0], p1[1], 0))
+        obj.data.vertices[2].co = Vector((p1[0], p2[1], 0))
+        obj.data.vertices[3].co = p2.to_3d()
+        CreateGreasePencilData.del_later(obj)
+        return CreateGreasePencilData.from_mesh_obj(obj)
+
+    @staticmethod
+    def circle(center: Vector, radius: float) -> bpy.types.GreasePencil:
+        CreateGreasePencilData.ensure_context_obj()
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.mesh.primitive_circle_add(radius=radius, enter_editmode=False, align='WORLD', location=center.to_3d(),
+                                          vertices=128,
+                                          scale=(1, 1, 1))
+        obj = bpy.context.object
+        obj.name = 'Circle'
+        CreateGreasePencilData.del_later(obj)
+        return CreateGreasePencilData.from_mesh_obj(obj)
+
+    @staticmethod
     def from_text(text: str, size: int = 100, font: str = 'Bfont Regular') -> bpy.types.GreasePencil:
         """
         Create a text object in the scene and convert it to grease pencil data.

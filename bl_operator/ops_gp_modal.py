@@ -1,9 +1,9 @@
 import bpy
-from bpy.props import StringProperty
+from bpy.props import StringProperty, EnumProperty
 from typing import ClassVar
 from mathutils import Vector
 
-from ..model.model_gp import BuildGreasePencilData
+from ..model.model_gp import BuildGreasePencilData, CreateGreasePencilData
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool
 from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
@@ -213,6 +213,73 @@ class EST_OT_add_gp_modal(bpy.types.Operator):
         return False
 
 
+class EST_OT_drag_add_gp_modal(bpy.types.Operator):
+    bl_idname = "est.drag_add_gp_modal"
+    bl_label = "Add"
+    bl_description = "Add %s"
+    bl_options = {'UNDO', "GRAB_CURSOR", "BLOCKING"}
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context)
+
+    @classmethod
+    def description(cls, context, property):
+        return cls.bl_description % property.add_type.title()
+
+    def invoke(self, context, event):
+        self.drag_add_type = context.scene.est_gp_drag_add_type
+        self.mouse_state = MouseDragState()
+        self.mouse_state.init(event)
+        self.gp_data = get_edit_tree_gp_data(context)
+        if self.drag_add_type == 'SQUARE':
+            new_gp_data = CreateGreasePencilData.square(p1=VecTool.r2d_2_loc3d(self.mouse_state.start_pos),
+                                                        p2=VecTool.r2d_2_loc3d(
+                                                            self.mouse_state.end_pos + Vector((5, 5))))
+        elif self.drag_add_type == 'CIRCLE':
+            new_gp_data = CreateGreasePencilData.circle(center=VecTool.r2d_2_loc3d(self.mouse_state.start_pos),
+                                                        radius=5)
+        else:
+            return {'CANCELLED'}
+        with (BuildGreasePencilData(self.gp_data) as gp_data_builder):
+            gp_data_builder.join(new_gp_data) \
+                .set_active_layer(-1) \
+                .move_active(VecTool.r2d_2_v2d(self.mouse_state.start_pos), space='v2d') \
+                .color_active(color=context.scene.est_palette_color) \
+                .opacity_active(context.scene.est_gp_opacity) \
+                .thickness_active(context.scene.est_gp_thickness)
+        self.gp_data_builder = gp_data_builder
+        self.gp_data_init = False
+        context.window_manager.modal_handler_add(self)
+        context.window.cursor_set('PICK_AREA')
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context, event):
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            return {'CANCELLED'}
+        if event.type == 'MOUSEMOVE':
+            self.mouse_state.update_mouse_position(event)
+            pos1 = VecTool.r2d_2_loc3d(self.mouse_state.start_pos)
+            pos2 = VecTool.r2d_2_loc3d(self.mouse_state.end_pos)
+            size_3d = (pos2 - pos1) * 2  # center
+            # avoid the size is too small
+            for i in range(2):
+                if abs(size_3d[i]) < 1:
+                    size_3d[i] = 1
+            if event.shift:
+                size_3d = Vector((size_3d[0], size_3d[1], 1))
+            self.gp_data_builder.fit_size(size_3d, keep_aspect_ratio=False if not event.shift else True)
+
+            if self.gp_data_init is False:
+                self.gp_data_builder.to_2d()
+                self.gp_data_init = True
+
+        if event.type == 'LEFTMOUSE':
+            return {'FINISHED'}
+        context.area.tag_redraw()
+        return {'RUNNING_MODAL'}
+
+
 class EST_OT_gp_view(bpy.types.Operator):
     bl_idname = "est.gp_view"
     bl_label = "View"
@@ -403,6 +470,7 @@ def register():
     register_class(EST_OT_gp_view)
     register_class(EST_OT_gp_set_active_layer)
     register_class(EST_OT_gp_drag_modal)
+    register_class(EST_OT_drag_add_gp_modal)
 
 
 def unregister():
@@ -416,3 +484,4 @@ def unregister():
     unregister_class(EST_OT_gp_view)
     unregister_class(EST_OT_gp_set_active_layer)
     unregister_class(EST_OT_gp_drag_modal)
+    unregister_class(EST_OT_drag_add_gp_modal)

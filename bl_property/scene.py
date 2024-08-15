@@ -3,7 +3,7 @@ import bpy
 from bpy.props import PointerProperty, IntProperty, EnumProperty, StringProperty, FloatVectorProperty, FloatProperty
 
 from ..model.model_color import ColorPaletteModel
-from ..model.data_enums import ShootAngles, GPAddTypes
+from ..model.data_enums import ShootAngles, GPAddTypes,GPDragAddTypes
 from ..view_model.view_model_select import SelectedGPLayersRuntime
 from ..model.model_gp import BuildGreasePencilData
 from ..bl_operator.functions import has_edit_tree, get_edit_tree_gp_data
@@ -51,6 +51,7 @@ def register():
     # Grease Pencil Add
     bpy.types.Scene.est_gp_size = IntProperty(name="Size", default=500, soft_min=200, soft_max=2000)
     bpy.types.Scene.est_gp_add_type = EnumProperty(items=lambda _, __: GPAddTypes.enum_items())
+    bpy.types.Scene.est_gp_drag_add_type = EnumProperty(items=lambda _, __: GPDragAddTypes.enum_items())
     bpy.types.Scene.est_gp_text = StringProperty(name="Text", default="Hello World")
     bpy.types.Scene.est_gp_text_font = PointerProperty(type=bpy.types.VectorFont)
     bpy.types.Scene.est_gp_obj = PointerProperty(name='Object', type=bpy.types.Object,
@@ -65,6 +66,7 @@ def unregister():
 
     del bpy.types.Scene.est_gp_size
     del bpy.types.Scene.est_gp_add_type
+    del bpy.types.Scene.est_gp_drag_add_type
     del bpy.types.Scene.est_gp_text
     del bpy.types.Scene.est_gp_obj
     del bpy.types.Scene.est_gp_obj_shot_angle
