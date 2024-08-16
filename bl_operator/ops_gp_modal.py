@@ -269,7 +269,7 @@ class EST_OT_drag_add_gp_modal(bpy.types.Operator):
             if event.shift:
                 size_3d = Vector((size_3d[0], size_3d[1], 1))
 
-            self.gp_data_builder.fit_size(size_3d, fit_type='max' if not event.shift else 'keep_ratio',
+            self.gp_data_builder.fit_size(size_3d, fit_type='max' if event.shift else 'none',
                                           pivot_pos='center')
             if self.gp_data_init is False:
                 self.gp_data_builder.to_2d()

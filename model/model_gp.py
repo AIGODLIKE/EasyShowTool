@@ -400,7 +400,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         return self.rotate(self.active_layer_name, degree, pivot, space)
 
     def fit_size(self, size: Vector,
-                 fit_type: Literal['keep_ratio', 'max', 'min'] = 'keep_ratio',
+                 fit_type: Literal['none', 'max', 'min'] = 'none',
                  pivot_pos: Literal[
                      'center',
                      'top_left',

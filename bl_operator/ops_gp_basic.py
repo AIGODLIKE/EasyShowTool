@@ -200,7 +200,7 @@ class EST_OT_add_gp(bpy.types.Operator):
             gp_data_builder.link(context).join(font_gp_data) \
                 .set_active_layer(-1) \
                 .move_active(vec, space='v2d') \
-                .fit_size(Vector((self.size, self.size)), fit_type='keep_ratio') \
+                .fit_size(Vector((self.size, self.size)), fit_type='min') \
                 .color_active(color=color) \
                 .opacity_active(context.scene.est_gp_opacity) \
                 .thickness_active(context.scene.est_gp_thickness) \
