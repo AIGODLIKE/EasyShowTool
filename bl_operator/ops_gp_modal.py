@@ -219,6 +219,15 @@ class EST_OT_drag_add_gp_modal(bpy.types.Operator):
     bl_description = "Add %s"
     bl_options = {'UNDO', "GRAB_CURSOR", "BLOCKING"}
 
+    mouse_state: MouseDragState = None
+    drag_type: str = None
+    drag_center: bool = False
+    move_center: bool = False
+    gp_data: bpy.types.GreasePencil
+    build_model: BuildGreasePencilData = None
+    bbox_model: GPencilLayerBBox = None
+    gp_data_init: bool = False
+
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context)
@@ -241,27 +250,34 @@ class EST_OT_drag_add_gp_modal(bpy.types.Operator):
                                                         radius=5)
         else:
             return {'CANCELLED'}
-        with (BuildGreasePencilData(self.gp_data) as gp_data_builder):
-            gp_data_builder.join(new_gp_data) \
+        with (BuildGreasePencilData(self.gp_data) as build_model):
+            build_model.join(new_gp_data) \
                 .set_active_layer(-1) \
                 .move_active(VecTool.r2d_2_v2d(self.mouse_state.start_pos), space='v2d') \
                 .color_active(color=context.scene.est_palette_color) \
                 .opacity_active(context.scene.est_gp_opacity) \
                 .thickness_active(context.scene.est_gp_thickness)
-        self.gp_data_builder = gp_data_builder
-        self.gp_data_init = False
+        self.build_model = build_model
+        self.bbox_model = GPencilLayerBBox(gp_data=self.build_model.gp_data, mode="LOCAL")
+
         context.window_manager.modal_handler_add(self)
         context.window.cursor_set('PICK_AREA')
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
+        self.drag_center = event.alt
+
         if event.type in {'ESC', 'RIGHTMOUSE'}:
             return {'CANCELLED'}
         if event.type == 'MOUSEMOVE':
             self.mouse_state.update_mouse_position(event)
             pos1 = VecTool.r2d_2_loc3d(self.mouse_state.start_pos)
             pos2 = VecTool.r2d_2_loc3d(self.mouse_state.end_pos)
-            size_3d = (pos2 - pos1) * 2  # center
+
+            if self.drag_center:
+                size_3d = (pos2 - pos1) * 2
+            else:
+                size_3d = pos2 - pos1
             # avoid the size is too small
             for i in range(2):
                 if abs(size_3d[i]) < 1:
@@ -269,10 +285,19 @@ class EST_OT_drag_add_gp_modal(bpy.types.Operator):
             if event.shift:
                 size_3d = Vector((size_3d[0], size_3d[1], 1))
 
-            self.gp_data_builder.fit_size(size_3d, fit_type='max' if event.shift else 'none',
-                                          pivot_pos='center')
+            self.build_model.fit_size(size_3d, fit_type='max' if event.shift else 'none',
+                                      pivot_pos='center')
+            if not self.drag_center and not event.shift:
+                self.bbox_model.calc_active_layer_bbox()
+                center = self.bbox_model.center_v2d
+                drag_start_v2d = VecTool.r2d_2_v2d(self.mouse_state.start_pos)
+                drag_end_v2d = VecTool.r2d_2_v2d(self.mouse_state.end_pos)
+                drag_center = (drag_start_v2d + drag_end_v2d) / 2
+                delta_v2d = drag_center.to_2d() - center.to_2d()
+                self.build_model.move_active(delta_v2d, space='v2d')
+
             if self.gp_data_init is False:
-                self.gp_data_builder.to_2d()
+                self.build_model.to_2d()
                 self.gp_data_init = True
 
         if event.type == 'LEFTMOUSE':

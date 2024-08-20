@@ -19,8 +19,14 @@ class EST_TL_gp_add(bpy.types.WorkSpaceTool):
          {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False, "ctrl": False},
          # {"properties": [('use_mouse_pos', True)]}
          {"properties": []}
-         ),(EST_OT_drag_add_gp_modal.bl_idname,
+         ),
+        (EST_OT_drag_add_gp_modal.bl_idname,
          {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": True, "ctrl": False},
+         # {"properties": [('use_mouse_pos', True)]}
+         {"properties": []}
+         ),
+        (EST_OT_drag_add_gp_modal.bl_idname,
+         {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False, "ctrl": False,"alt": True},
          # {"properties": [('use_mouse_pos', True)]}
          {"properties": []}
          ),

@@ -417,7 +417,10 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
             scale = Vector((max(scale), max(scale)))
         elif fit_type == 'min':
             scale = Vector((min(scale), min(scale)))
-        self.edit_layer.scale_layer(self.active_layer, scale, getattr(bbox, pivot_pos))
+
+        pivot = getattr(bbox, pivot_pos)
+        print(pivot_pos, pivot)
+        self.edit_layer.scale_layer(self.active_layer, scale, pivot)
 
         return self
 
