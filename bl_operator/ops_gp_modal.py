@@ -174,13 +174,14 @@ class EST_OT_add_gp_modal(bpy.types.Operator):
             return {'CANCELLED'}
         if event.type == 'LEFTMOUSE':
             v2d_loc = VecTool.r2d_2_v2d(Vector((event.mouse_region_x, event.mouse_region_y)))
-            res = self._add(context, v2d_loc)
+            res = self._add(self, context, v2d_loc)
             if res:
                 SelectedGPLayersRuntime.clear()  # clear the selected layers
                 SelectedGPLayersRuntime.set_active(get_edit_tree_gp_data(context).layers.active.info)
             return {'FINISHED'}
         return {'RUNNING_MODAL'}
 
+    @staticmethod
     def _add(self, context, location) -> bool:
         if self.add_type == 'TEXT':
             if context.scene.est_gp_text == '':
@@ -238,9 +239,12 @@ class EST_OT_drag_add_gp_modal(bpy.types.Operator):
 
     def invoke(self, context, event):
         self.drag_add_type = context.scene.est_gp_drag_add_type
+        self.add_type = context.scene.est_gp_add_type
+
         self.mouse_state = MouseDragState()
         self.mouse_state.init(event)
         self.gp_data = get_edit_tree_gp_data(context)
+
         if self.drag_add_type == 'SQUARE':
             new_gp_data = CreateGreasePencilData.square(p1=VecTool.r2d_2_loc3d(self.mouse_state.start_pos),
                                                         p2=VecTool.r2d_2_loc3d(
@@ -249,14 +253,20 @@ class EST_OT_drag_add_gp_modal(bpy.types.Operator):
             new_gp_data = CreateGreasePencilData.circle(center=VecTool.r2d_2_loc3d(self.mouse_state.start_pos),
                                                         radius=5)
         else:
-            return {'CANCELLED'}
-        with (BuildGreasePencilData(self.gp_data) as build_model):
-            build_model.join(new_gp_data) \
-                .set_active_layer(-1) \
-                .move_active(VecTool.r2d_2_v2d(self.mouse_state.start_pos), space='v2d') \
-                .color_active(color=context.scene.est_palette_color) \
-                .opacity_active(context.scene.est_gp_opacity) \
-                .thickness_active(context.scene.est_gp_thickness)
+            v2d_loc = VecTool.r2d_2_v2d(Vector((event.mouse_region_x, event.mouse_region_y)))
+            EST_OT_add_gp_modal._add(self, context, v2d_loc)
+
+        if self.drag_add_type in {'SQUARE', 'CIRCLE'}:
+            with (BuildGreasePencilData(self.gp_data) as build_model):
+                build_model.join(new_gp_data) \
+                    .set_active_layer(-1) \
+                    .move_active(VecTool.r2d_2_v2d(self.mouse_state.start_pos), space='v2d') \
+                    .color_active(color=context.scene.est_palette_color) \
+                    .opacity_active(context.scene.est_gp_opacity) \
+                    .thickness_active(context.scene.est_gp_thickness)
+        else:
+            self.gp_data = get_edit_tree_gp_data(context)
+            build_model = BuildGreasePencilData(self.gp_data)
         self.build_model = build_model
         self.bbox_model = GPencilLayerBBox(gp_data=self.build_model.gp_data, mode="LOCAL")
 
@@ -280,8 +290,8 @@ class EST_OT_drag_add_gp_modal(bpy.types.Operator):
                 size_3d = pos2 - pos1
             # avoid the size is too small
             for i in range(2):
-                if abs(size_3d[i]) < 1:
-                    size_3d[i] = 1
+                if abs(size_3d[i]) < 0.01:
+                    size_3d[i] = 0.01
             if event.shift:
                 size_3d = Vector((size_3d[0], size_3d[1], 1))
 

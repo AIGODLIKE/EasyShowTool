@@ -105,6 +105,15 @@ class CreateGreasePencilData(GreasePencilCache):
         CreateGreasePencilData.del_later(obj)
         return CreateGreasePencilData.from_mesh_obj(obj)
 
+    # @staticmethod
+    # def arrow(p1: Vector, p2: Vector, head_length: float = 0.1, head_width: float = 0.1) -> bpy.types.GreasePencil:
+    #     """use bmesh to create an arrow bone, just like ->"""
+    #     import bmesh
+    #     CreateGreasePencilData.ensure_context_obj()
+    #     bpy.ops.object.mode_set(mode='OBJECT')
+    #
+    #     # return CreateGreasePencilData.from_mesh_obj(obj)
+
     @staticmethod
     def from_text(text: str, size: int = 100, font: str = 'Bfont Regular') -> bpy.types.GreasePencil:
         """
@@ -413,13 +422,12 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         bbox.gp_data = self.gp_data
         bbox.calc_bbox(self.active_layer_index)
         scale = Vector((size[0] / (bbox.max_x - bbox.min_x), size[1] / (bbox.max_y - bbox.min_y)))
+        scale = Vector((abs(scale[0]), abs(scale[1])))         # abs scale
         if fit_type == 'max':
             scale = Vector((max(scale), max(scale)))
         elif fit_type == 'min':
             scale = Vector((min(scale), min(scale)))
-
         pivot = getattr(bbox, pivot_pos)
-        print(pivot_pos, pivot)
         self.edit_layer.scale_layer(self.active_layer, scale, pivot)
 
         return self

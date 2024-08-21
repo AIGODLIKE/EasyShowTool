@@ -26,7 +26,7 @@ class EST_TL_gp_add(bpy.types.WorkSpaceTool):
          {"properties": []}
          ),
         (EST_OT_drag_add_gp_modal.bl_idname,
-         {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False, "ctrl": False,"alt": True},
+         {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False, "ctrl": False, "alt": True},
          # {"properties": [('use_mouse_pos', True)]}
          {"properties": []}
          ),
@@ -49,6 +49,25 @@ class EST_TL_gp_add(bpy.types.WorkSpaceTool):
         box.label(text="New", icon='ADD')
         row = box.row()
         row.prop(scene, "est_gp_drag_add_type", text='Type', expand=True)
+
+        if scene.est_gp_drag_add_type == 'OTHER':
+            row = box.row()
+            row.prop(scene, "est_gp_add_type", text='Source', expand=True)
+            # box.prop(scene, "est_gp_size")
+
+            if scene.est_gp_add_type == 'TEXT':
+                box.template_ID(scene, "est_gp_text_font", open="font.open", unlink="font.unlink")
+                box.prop(scene, "est_gp_text")
+            elif scene.est_gp_add_type == 'OBJECT':
+                box.prop(scene, "est_gp_obj")
+                box.prop(scene, "est_gp_obj_shot_angle")
+            elif scene.est_gp_add_type == 'BL_ICON':
+                row = box.row()
+                row.alignment = 'RIGHT'
+                try:
+                    row.label(text=bpy.context.scene.est_gp_icon, icon=bpy.context.scene.est_gp_icon)
+                except TypeError:
+                    pass
 
 
 class EST_TL_gp_color(bpy.types.WorkSpaceTool):
