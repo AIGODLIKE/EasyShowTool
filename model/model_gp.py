@@ -75,6 +75,46 @@ class CreateGreasePencilData(GreasePencilCache):
         return gp_data
 
     @staticmethod
+    def square(p1: Vector, p2: Vector) -> bpy.types.GreasePencil:
+        """Create a square grease pencil data.
+        p1: corner 1
+        p2: corner 2 (opposite corner)
+        """
+        CreateGreasePencilData.ensure_context_obj()
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.mesh.primitive_plane_add(enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
+        obj = bpy.context.object
+        obj.name = 'Square'
+        # corner order of this mesh is : bottom_left, bottom_right, top_left, top_right
+        obj.data.vertices[0].co = p1.to_3d()
+        obj.data.vertices[1].co = Vector((p2[0], p1[1], 0))
+        obj.data.vertices[2].co = Vector((p1[0], p2[1], 0))
+        obj.data.vertices[3].co = p2.to_3d()
+        CreateGreasePencilData.del_later(obj)
+        return CreateGreasePencilData.from_mesh_obj(obj)
+
+    @staticmethod
+    def circle(center: Vector, radius: float) -> bpy.types.GreasePencil:
+        CreateGreasePencilData.ensure_context_obj()
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.mesh.primitive_circle_add(radius=radius, enter_editmode=False, align='WORLD', location=center.to_3d(),
+                                          vertices=128,
+                                          scale=(1, 1, 1))
+        obj = bpy.context.object
+        obj.name = 'Circle'
+        CreateGreasePencilData.del_later(obj)
+        return CreateGreasePencilData.from_mesh_obj(obj)
+
+    # @staticmethod
+    # def arrow(p1: Vector, p2: Vector, head_length: float = 0.1, head_width: float = 0.1) -> bpy.types.GreasePencil:
+    #     """use bmesh to create an arrow bone, just like ->"""
+    #     import bmesh
+    #     CreateGreasePencilData.ensure_context_obj()
+    #     bpy.ops.object.mode_set(mode='OBJECT')
+    #
+    #     # return CreateGreasePencilData.from_mesh_obj(obj)
+
+    @staticmethod
     def from_text(text: str, size: int = 100, font: str = 'Bfont Regular') -> bpy.types.GreasePencil:
         """
         Create a text object in the scene and convert it to grease pencil data.
@@ -368,15 +408,27 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         """Rotate the active grease pencil layer."""
         return self.rotate(self.active_layer_name, degree, pivot, space)
 
-    def fit_size(self, size: Vector, keep_aspect_ratio: bool = True) -> 'BuildGreasePencilData':
+    def fit_size(self, size: Vector,
+                 fit_type: Literal['none', 'max', 'min'] = 'none',
+                 pivot_pos: Literal[
+                     'center',
+                     'top_left',
+                     'top_right',
+                     'bottom_left',
+                     'bottom_right'
+                 ] = 'center') -> 'BuildGreasePencilData':
         """Fit the size of the active grease pencil layer."""
         bbox = GPencilLayerBBox(self.active_layer)
         bbox.gp_data = self.gp_data
         bbox.calc_bbox(self.active_layer_index)
         scale = Vector((size[0] / (bbox.max_x - bbox.min_x), size[1] / (bbox.max_y - bbox.min_y)))
-        if keep_aspect_ratio:
+        scale = Vector((abs(scale[0]), abs(scale[1])))         # abs scale
+        if fit_type == 'max':
+            scale = Vector((max(scale), max(scale)))
+        elif fit_type == 'min':
             scale = Vector((min(scale), min(scale)))
-        self.edit_layer.scale_layer(self.active_layer, scale, bbox.center)
+        pivot = getattr(bbox, pivot_pos)
+        self.edit_layer.scale_layer(self.active_layer, scale, pivot)
 
         return self
 

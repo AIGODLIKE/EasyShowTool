@@ -44,7 +44,7 @@ def get_edit_tree_gp_data(context: bpy.types.Context) -> bpy.types.GreasePencil 
 
 
 def is_valid_workspace_tool(context) -> bool:
-    return context.workspace.tools.from_space_node().idname in {'est.gp_edit_tool', 'est.gp_color_tool'}
+    return context.workspace.tools.from_space_node().idname in {'est.gp_edit_tool', 'est.gp_add_tool'}
 
 
 def get_pos_layer_index(gp_data: bpy.types.GreasePencil, pos: Sequence | Vector, feather=0,

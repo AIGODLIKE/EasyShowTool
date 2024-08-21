@@ -1,9 +1,9 @@
 import bpy
-from bpy.props import StringProperty
+from bpy.props import StringProperty, EnumProperty
 from typing import ClassVar
 from mathutils import Vector
 
-from ..model.model_gp import BuildGreasePencilData
+from ..model.model_gp import BuildGreasePencilData, CreateGreasePencilData
 from ..model.model_gp_bbox import GPencilLayerBBox
 from ..model.utils import VecTool
 from ..view_model.handlers import ScaleHandler, RotateHandler, MoveHandler
@@ -174,13 +174,14 @@ class EST_OT_add_gp_modal(bpy.types.Operator):
             return {'CANCELLED'}
         if event.type == 'LEFTMOUSE':
             v2d_loc = VecTool.r2d_2_v2d(Vector((event.mouse_region_x, event.mouse_region_y)))
-            res = self._add(context, v2d_loc)
+            res = self._add(self, context, v2d_loc)
             if res:
                 SelectedGPLayersRuntime.clear()  # clear the selected layers
                 SelectedGPLayersRuntime.set_active(get_edit_tree_gp_data(context).layers.active.info)
             return {'FINISHED'}
         return {'RUNNING_MODAL'}
 
+    @staticmethod
     def _add(self, context, location) -> bool:
         if self.add_type == 'TEXT':
             if context.scene.est_gp_text == '':
@@ -211,6 +212,108 @@ class EST_OT_add_gp_modal(bpy.types.Operator):
                                location=location)
             return True
         return False
+
+
+class EST_OT_drag_add_gp_modal(bpy.types.Operator):
+    bl_idname = "est.drag_add_gp_modal"
+    bl_label = "Add"
+    bl_description = "Add %s"
+    bl_options = {'UNDO', "GRAB_CURSOR", "BLOCKING"}
+
+    mouse_state: MouseDragState = None
+    drag_type: str = None
+    drag_center: bool = False
+    move_center: bool = False
+    gp_data: bpy.types.GreasePencil
+    build_model: BuildGreasePencilData = None
+    bbox_model: GPencilLayerBBox = None
+    gp_data_init: bool = False
+
+    @classmethod
+    def poll(cls, context):
+        return has_edit_tree(context)
+
+    @classmethod
+    def description(cls, context, property):
+        return cls.bl_description % property.add_type.title()
+
+    def invoke(self, context, event):
+        self.drag_add_type = context.scene.est_gp_drag_add_type
+        self.add_type = context.scene.est_gp_add_type
+
+        self.mouse_state = MouseDragState()
+        self.mouse_state.init(event)
+        self.gp_data = get_edit_tree_gp_data(context)
+
+        if self.drag_add_type == 'SQUARE':
+            new_gp_data = CreateGreasePencilData.square(p1=VecTool.r2d_2_loc3d(self.mouse_state.start_pos),
+                                                        p2=VecTool.r2d_2_loc3d(
+                                                            self.mouse_state.end_pos + Vector((5, 5))))
+        elif self.drag_add_type == 'CIRCLE':
+            new_gp_data = CreateGreasePencilData.circle(center=VecTool.r2d_2_loc3d(self.mouse_state.start_pos),
+                                                        radius=5)
+        else:
+            v2d_loc = VecTool.r2d_2_v2d(Vector((event.mouse_region_x, event.mouse_region_y)))
+            EST_OT_add_gp_modal._add(self, context, v2d_loc)
+
+        if self.drag_add_type in {'SQUARE', 'CIRCLE'}:
+            with (BuildGreasePencilData(self.gp_data) as build_model):
+                build_model.join(new_gp_data) \
+                    .set_active_layer(-1) \
+                    .move_active(VecTool.r2d_2_v2d(self.mouse_state.start_pos), space='v2d') \
+                    .color_active(color=context.scene.est_palette_color) \
+                    .opacity_active(context.scene.est_gp_opacity) \
+                    .thickness_active(context.scene.est_gp_thickness)
+        else:
+            self.gp_data = get_edit_tree_gp_data(context)
+            build_model = BuildGreasePencilData(self.gp_data)
+        self.build_model = build_model
+        self.bbox_model = GPencilLayerBBox(gp_data=self.build_model.gp_data, mode="LOCAL")
+
+        context.window_manager.modal_handler_add(self)
+        context.window.cursor_set('PICK_AREA')
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context, event):
+        self.drag_center = event.alt
+
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            return {'CANCELLED'}
+        if event.type == 'MOUSEMOVE':
+            self.mouse_state.update_mouse_position(event)
+            pos1 = VecTool.r2d_2_loc3d(self.mouse_state.start_pos)
+            pos2 = VecTool.r2d_2_loc3d(self.mouse_state.end_pos)
+
+            if self.drag_center:
+                size_3d = (pos2 - pos1) * 2
+            else:
+                size_3d = pos2 - pos1
+            # avoid the size is too small
+            for i in range(2):
+                if abs(size_3d[i]) < 0.01:
+                    size_3d[i] = 0.01
+            if event.shift:
+                size_3d = Vector((size_3d[0], size_3d[1], 1))
+
+            self.build_model.fit_size(size_3d, fit_type='max' if event.shift else 'none',
+                                      pivot_pos='center')
+            if not self.drag_center and not event.shift:
+                self.bbox_model.calc_active_layer_bbox()
+                center = self.bbox_model.center_v2d
+                drag_start_v2d = VecTool.r2d_2_v2d(self.mouse_state.start_pos)
+                drag_end_v2d = VecTool.r2d_2_v2d(self.mouse_state.end_pos)
+                drag_center = (drag_start_v2d + drag_end_v2d) / 2
+                delta_v2d = drag_center.to_2d() - center.to_2d()
+                self.build_model.move_active(delta_v2d, space='v2d')
+
+            if self.gp_data_init is False:
+                self.build_model.to_2d()
+                self.gp_data_init = True
+
+        if event.type == 'LEFTMOUSE':
+            return {'FINISHED'}
+        context.area.tag_redraw()
+        return {'RUNNING_MODAL'}
 
 
 class EST_OT_gp_view(bpy.types.Operator):
@@ -403,6 +506,7 @@ def register():
     register_class(EST_OT_gp_view)
     register_class(EST_OT_gp_set_active_layer)
     register_class(EST_OT_gp_drag_modal)
+    register_class(EST_OT_drag_add_gp_modal)
 
 
 def unregister():
@@ -416,3 +520,4 @@ def unregister():
     unregister_class(EST_OT_gp_view)
     unregister_class(EST_OT_gp_set_active_layer)
     unregister_class(EST_OT_gp_drag_modal)
+    unregister_class(EST_OT_drag_add_gp_modal)
