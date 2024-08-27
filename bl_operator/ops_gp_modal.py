@@ -310,11 +310,22 @@ class EST_OT_gp_set_active_layer(bpy.types.Operator):
             return {'FINISHED'}
 
         drag_vm = DragGreasePencilViewModal(gp_data=gp_data)
-        drag_vm.build_model.active_layer_index = layer_index
-        drag_vm.clear_selected_layers_points()
-        drag_vm.set_bbox_mode('LOCAL')
-        drag_vm.bbox_model.calc_active_layer_bbox()
-        SelectedGPLayersRuntime.set_active(gp_data.layers.active.info)
+        layer = gp_data.layers[layer_index]
+
+        if event.ctrl:  # subtraction select
+            SelectedGPLayersRuntime.remove(layer.info)
+        else:  # add select
+            if not event.shift:  # single select active layer
+                SelectedGPLayersRuntime.clear()
+
+            drag_vm.build_model.active_layer_index = layer_index
+            drag_vm.set_bbox_mode('LOCAL')
+            drag_vm.bbox_model.calc_active_layer_bbox()
+            points = list(drag_vm.bbox_model.bbox_points_v2d)
+            points[2], points[3] = points[3], points[2]
+            SelectedGPLayersRuntime.update(layer.info, points)
+            # SelectedGPLayersRuntime.set_active(gp_data.layers.active.info)
+
         context.area.tag_redraw()
         return {'FINISHED'}
 

@@ -15,6 +15,7 @@ class EST_TL_gp_add(bpy.types.WorkSpaceTool):
     bl_label = "Add"
     bl_icon = get_tool_icon('gp_add_tool')
     bl_keymap = (
+        # add drag
         (EST_OT_add_gp_modal.bl_idname,
          {"type": 'LEFTMOUSE', "value": 'PRESS', "shift": False, "ctrl": False},
          # {"properties": [('use_mouse_pos', True)]}
@@ -77,7 +78,7 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
     bl_label = "Move"
     bl_icon = get_tool_icon('gp_edit_tool')
     bl_keymap = (
-        # GSR
+        # scale/rotate/move: GSR
         (EST_OT_move_gp_modal.bl_idname,
          {"type": 'G', "value": 'PRESS', "shift": False, "ctrl": False},
          {"properties": []}),
@@ -87,21 +88,31 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
         (EST_OT_scale_gp_modal.bl_idname,
          {"type": 'S', "value": 'PRESS', "shift": False, "ctrl": False},
          {"properties": []}),
-        # context menu with right click
+        # right click: context menu
         ('wm.call_menu',
          {"type": 'RIGHTMOUSE', "value": 'PRESS'},
          {"properties": [("name", EST_OT_tool_context_menu.bl_idname)]},
          ),
-        # add
+        # select click
         (EST_OT_gp_set_active_layer.bl_idname,
-         {"type": "LEFTMOUSE", "value": "CLICK"},
+         {"type": "LEFTMOUSE", "value": "CLICK", "shift": False, "ctrl": False},
          {"properties": []},  # [("deselect_all", True)]
          ),
+        (EST_OT_gp_set_active_layer.bl_idname,
+         {"type": "LEFTMOUSE", "value": "CLICK", "shift": True, "ctrl": False},
+         {"properties": []},  # [("deselect_all", True)]
+         ),
+        (EST_OT_gp_set_active_layer.bl_idname,
+         {"type": "LEFTMOUSE", "value": "CLICK", "ctrl": True, "shift": False},
+         {"properties": []},  # [("deselect_all", True)]
+         ),
+        # add
         (EST_OT_add_gp_modal.bl_idname,
          {"type": 'LEFTMOUSE', "value": 'DOUBLE_CLICK', "shift": False, "ctrl": False},
          # {"properties": [('use_mouse_pos', True)]}
          {"properties": []}
          ),
+        # color
         (EST_OT_gp_drop_layer_color.bl_idname,
          {"type": "C", "value": "PRESS"},
          {"properties": []},  # [("deselect_all", True)]
