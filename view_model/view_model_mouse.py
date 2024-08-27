@@ -175,3 +175,17 @@ class MouseDragState:
 
     def is_move(self) -> bool:
         return self.start_pos.x > 0 and self.start_pos.y > 0
+
+    def drag_direction(self, opposite: bool = False) -> Literal['top_left', 'top_right', 'bottom_left', 'bottom_right']:
+
+        """Get the drag direction based on the start and end position.
+        :param opposite: if True, return the opposite direction
+        :return: the drag direction"""
+        s1 = 'top' if self.start_pos.y < self.end_pos.y else 'bottom'
+        s2 = 'right' if self.start_pos.x < self.end_pos.x else 'left'
+
+        if opposite:
+            s1 = 'top' if s1 == 'bottom' else 'bottom'
+            s2 = 'right' if s2 == 'left' else 'left'
+
+        return f'{s1}_{s2}'
