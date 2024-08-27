@@ -15,6 +15,7 @@ class EST_TL_gp_add(bpy.types.WorkSpaceTool):
     bl_label = "Add"
     bl_icon = get_tool_icon('gp_add_tool')
     bl_keymap = (
+        # drag add
         (EST_OT_drag_add_gp_modal.bl_idname,
          {"type": 'LEFTMOUSE', "value": 'CLICK_DRAG', "shift": False, "ctrl": False},
          # {"properties": [('use_mouse_pos', True)]}
@@ -30,6 +31,26 @@ class EST_TL_gp_add(bpy.types.WorkSpaceTool):
          # {"properties": [('use_mouse_pos', True)]}
          {"properties": []}
          ),
+        # add
+        (EST_OT_add_gp_modal.bl_idname,
+         {"type": 'LEFTMOUSE', "value": 'DOUBLE_CLICK', "shift": False, "ctrl": False},
+         # {"properties": [('use_mouse_pos', True)]}
+         {"properties": []}
+         ),
+        # scale/rotate/move: GSR
+        (EST_OT_move_gp_modal.bl_idname,
+         {"type": 'G', "value": 'PRESS', "shift": False, "ctrl": False},
+         {"properties": []}),
+        (EST_OT_rotate_gp_modal.bl_idname,
+         {"type": 'R', "value": 'PRESS', "shift": False, "ctrl": False},
+         {"properties": []}),
+        (EST_OT_scale_gp_modal.bl_idname,
+         {"type": 'S', "value": 'PRESS', "shift": False, "ctrl": False},
+         {"properties": []}),
+        # delete
+        (EST_OT_remove_gp.bl_idname,
+         {"type": 'X', "value": 'PRESS', "ctrl": False, "alt": False, "shift": False},
+         {"properties": []}),
     )
 
     def draw_settings(self, layout, tool):
@@ -152,12 +173,7 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
          {"type": "LEFTMOUSE", "value": "CLICK", "ctrl": True, "shift": False},
          {"properties": []},  # [("deselect_all", True)]
          ),
-        # add
-        (EST_OT_add_gp_modal.bl_idname,
-         {"type": 'LEFTMOUSE', "value": 'DOUBLE_CLICK', "shift": False, "ctrl": False},
-         # {"properties": [('use_mouse_pos', True)]}
-         {"properties": []}
-         ),
+
         # color
         (EST_OT_gp_drop_layer_color.bl_idname,
          {"type": "C", "value": "PRESS"},
@@ -200,25 +216,6 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
         col.prop(scene, "est_gp_opacity", slider=True)
         col.prop(scene, "est_gp_thickness", slider=True)
 
-        box = layout.box()
-        box.label(text="New", icon='ADD')
-        row = box.row()
-        row.prop(scene, "est_gp_add_type", text='Source', expand=True)
-        box.prop(scene, "est_gp_size")
-
-        if scene.est_gp_add_type == 'TEXT':
-            box.template_ID(scene, "est_gp_text_font", open="font.open", unlink="font.unlink")
-            box.prop(scene, "est_gp_text")
-        elif scene.est_gp_add_type == 'OBJECT':
-            box.prop(scene, "est_gp_obj")
-            box.prop(scene, "est_gp_obj_shot_angle")
-        elif scene.est_gp_add_type == 'BL_ICON':
-            row = box.row()
-            row.alignment = 'RIGHT'
-            try:
-                row.label(text=bpy.context.scene.est_gp_icon, icon=bpy.context.scene.est_gp_icon)
-            except TypeError:
-                pass
 
 
 def reigster():
