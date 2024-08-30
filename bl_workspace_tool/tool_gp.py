@@ -37,6 +37,11 @@ class EST_TL_gp_add(bpy.types.WorkSpaceTool):
          # {"properties": [('use_mouse_pos', True)]}
          {"properties": []}
          ),
+        # select click
+        (EST_OT_gp_set_active_layer.bl_idname,
+         {"type": "LEFTMOUSE", "value": "CLICK", "shift": False, "ctrl": False},
+         {"properties": []},  # [("deselect_all", True)]
+         ),
         # scale/rotate/move: GSR
         (EST_OT_move_gp_modal.bl_idname,
          {"type": 'G', "value": 'PRESS', "shift": False, "ctrl": False},
