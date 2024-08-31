@@ -56,5 +56,4 @@ class SelectedGPLayersRuntime:
 
     @classmethod
     def set_active(cls, layer: str):
-        cls.clear()
         cls.update(layer, [])  # update the active layer, but no need to update the points

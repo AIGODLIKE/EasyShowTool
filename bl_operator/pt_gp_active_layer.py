@@ -1,5 +1,5 @@
 import bpy
-from .functions import get_edit_tree_gp_data, has_edit_tree, is_valid_workspace_tool
+from .functions import get_edit_tree_gp_data, has_edit_tree, is_workspace_tool_edit
 from .op_palette_viewer import EST_PT_palette_viewer_active
 from bpy.app.translations import pgettext_iface as _p
 
@@ -15,7 +15,7 @@ class EST_PT_active_layer(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return has_edit_tree(context) and is_valid_workspace_tool(context) and get_edit_tree_gp_data(context)
+        return has_edit_tree(context) and is_workspace_tool_edit(context) and get_edit_tree_gp_data(context)
 
     def draw_header(self, context):
         layout = self.layout

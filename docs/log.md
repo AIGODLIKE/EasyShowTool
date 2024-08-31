@@ -1,3 +1,24 @@
+### v0.2.3
+
+**New Feature**
+
++ Add Tool(move the add function to a new tool)
+    + click to select active
+    + g/s/r to move/scale/rotate
+    + Drag to add square/circle
+    + Drag to add a new tip with scale
+    + Double click to add a new tip with original size
++ Tweak Tool (the old tool)
+    + shift + click to add selection
+    + ctrl + click to remove selection
+
+### v0.2.2
+
+**Fix**
+
++ Translation
++ Select clear problem
+
 ### v0.2.1
 
 **New Feature**

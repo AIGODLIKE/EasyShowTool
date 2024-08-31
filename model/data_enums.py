@@ -36,6 +36,12 @@ class GPAddTypes(BL_Enum):
     BL_ICON: str = "Icon"
 
 
+class GPDragAddTypes(BL_Enum):
+    SQUARE: str = "Square"
+    CIRCLE: str = "Circle"
+    OTHER: str = "Other"
+
+
 class AlignMode(BL_Enum):
     TOP: str = 'Top'
     BOTTOM: str = 'Bottom'

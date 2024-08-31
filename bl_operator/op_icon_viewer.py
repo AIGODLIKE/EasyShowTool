@@ -1,7 +1,7 @@
 import bpy
 import re
 from bpy.props import StringProperty
-from .functions import get_icons, has_edit_tree, is_valid_workspace_tool
+from .functions import get_icons, has_edit_tree,is_workspace_tool_add
 
 ICONS = []
 
@@ -34,7 +34,7 @@ class EST_PT_icon_viewer(bpy.types.Panel):
         global ICONS
         if not ICONS:
             ICONS = get_icons()
-        return has_edit_tree(context) and is_valid_workspace_tool(
+        return has_edit_tree(context) and is_workspace_tool_add(
             context) and context.scene.est_gp_add_type == 'BL_ICON'
 
     def draw_header(self, context):
