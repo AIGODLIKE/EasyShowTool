@@ -157,7 +157,7 @@ class EST_OT_add_gp_modal(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return has_edit_tree(context)
+        return has_edit_tree(context) and is_valid_workspace_tool(context)
 
     @classmethod
     def description(cls, context, property):
@@ -337,7 +337,7 @@ class EST_OT_gp_drag_modal(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return has_edit_tree(context)
+        return has_edit_tree(context) and is_valid_workspace_tool(context) and get_edit_tree_gp_data(context)
 
     def invoke(self, context, event):
         nt: bpy.types.NodeTree = context.space_data.edit_tree
