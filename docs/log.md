@@ -1,4 +1,4 @@
-### v0.2.3
+### v0.3.0
 
 **New Feature**
 
@@ -11,6 +11,10 @@
 + Tweak Tool (the old tool)
     + shift + click to add selection
     + ctrl + click to remove selection
+
+**Fix**
+
++ when no gp data, drag will report error
 
 ### v0.2.2
 
