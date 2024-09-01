@@ -244,6 +244,10 @@ class EST_OT_drag_add_gp_modal(bpy.types.Operator):
         self.mouse_state = MouseDragState()
         self.mouse_state.init(event)
         self.gp_data = get_edit_tree_gp_data(context)
+        ori_obj = context.object
+        if self.gp_data is None:
+            self.gp_data = CreateGreasePencilData.empty()
+            context.space_data.edit_tree.grease_pencil = self.gp_data
 
         if self.drag_add_type == 'SQUARE':
             new_gp_data = CreateGreasePencilData.square(p1=VecTool.r2d_2_loc3d(self.mouse_state.start_pos),
@@ -266,10 +270,11 @@ class EST_OT_drag_add_gp_modal(bpy.types.Operator):
                     .thickness_active(context.scene.est_gp_thickness)
         else:
             self.gp_data = get_edit_tree_gp_data(context)
+
             build_model = BuildGreasePencilData(self.gp_data)
         self.build_model = build_model
         self.bbox_model = GPencilLayerBBox(gp_data=self.build_model.gp_data, mode="LOCAL")
-
+        context.view_layer.objects.active = ori_obj # restore the active object, if there is no gp data at first
         context.window_manager.modal_handler_add(self)
         context.window.cursor_set('PICK_AREA')
         return {'RUNNING_MODAL'}

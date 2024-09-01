@@ -147,7 +147,7 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
     bL_idname_fallback = "node.select_box"
     bl_space_type = 'NODE_EDITOR'
     bl_context_mode = None
-    bl_label = "Move"
+    bl_label = "Tweak"
     bl_icon = get_tool_icon('gp_edit_tool')
     bl_keymap = (
         # scale/rotate/move: GSR
