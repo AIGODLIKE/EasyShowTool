@@ -42,7 +42,13 @@ Also, you can align and distribute them
 
 #### Create from multiple types
 
+In **v3.0** add tool is now a separate tool, you can use it to add text, object, icon, and more
+
 > Double click to add a new complex annotation, make sure you have selected the type you want to add
+> Drag to add from the corner to corner, or from the center to the corner
+
+**Square & Circle**
+New in **v3.0**
 
 **text**
 + custom font
