@@ -1,3 +1,8 @@
+### v0.3.1
+
+**Fix**
+Replaces the remove button of the default NODE_PT_annotation panel to prevent crashes
+
 ### v0.3.0
 
 **New Feature**
