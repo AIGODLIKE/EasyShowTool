@@ -1,5 +1,5 @@
 from . import ops_notes, ops_gp_modal, ops_gp_basic, op_icon_viewer, op_doc_server, op_palette_viewer, \
-    pt_gp_active_layer, ops_gp_align
+    pt_gp_active_layer, ops_gp_align, pt_gp_replace_panel
 
 
 def register():
@@ -11,6 +11,7 @@ def register():
     op_palette_viewer.register()
     ops_gp_align.register()
     pt_gp_active_layer.register()
+    pt_gp_replace_panel.register()
 
 
 def unregister():
@@ -22,3 +23,4 @@ def unregister():
     op_palette_viewer.unregister()
     ops_gp_align.unregister()
     pt_gp_active_layer.unregister()
+    pt_gp_replace_panel.unregister()

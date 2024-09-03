@@ -40,6 +40,8 @@ class EST_OT_remove_gp(bpy.types.Operator):
     bl_description = "Remove the selected Grease Pencil Object"
     bl_options = {'UNDO'}
 
+    delete_active_only: BoolProperty(name='Delete Active Only', default=False, options={'HIDDEN', 'SKIP_SAVE'})
+
     @classmethod
     def poll(cls, context):
         return has_edit_tree(context)
@@ -50,7 +52,7 @@ class EST_OT_remove_gp(bpy.types.Operator):
         if not gp_data:
             return {'CANCELLED'}
         with BuildGreasePencilData(gp_data) as gp_data_builder:
-            if SelectedGPLayersRuntime.selected_layers():
+            if SelectedGPLayersRuntime.selected_layers() and not self.delete_active_only:
                 for layer in SelectedGPLayersRuntime.selected_layers():
                     gp_data_builder.remove_layer(layer)
                     SelectedGPLayersRuntime.remove(layer)
