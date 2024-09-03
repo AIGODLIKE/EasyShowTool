@@ -112,8 +112,8 @@ class EST_TL_gp_color(bpy.types.WorkSpaceTool):
     )
 
 
-class EST_OT_tool_context_menu(bpy.types.Menu):
-    bl_idname = "EST_OT_tool_context_menu"
+class EST_MT_tool_context_menu(bpy.types.Menu):
+    bl_idname = "EST_MT_tool_context_menu"
     bl_label = "Context Menu"
 
     def draw(self, context):
@@ -163,7 +163,7 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
         # right click: context menu
         ('wm.call_menu',
          {"type": 'RIGHTMOUSE', "value": 'PRESS'},
-         {"properties": [("name", EST_OT_tool_context_menu.bl_idname)]},
+         {"properties": [("name", EST_MT_tool_context_menu.bl_idname)]},
          ),
         # select click
         (EST_OT_gp_set_active_layer.bl_idname,
@@ -226,7 +226,7 @@ class EST_TL_gp_edit(bpy.types.WorkSpaceTool):
 def reigster():
     from bpy.utils import register_tool, register_class
 
-    register_class(EST_OT_tool_context_menu)
+    register_class(EST_MT_tool_context_menu)
     register_tool(EST_TL_gp_add, separator=True)
     register_tool(EST_TL_gp_edit, separator=False)
     # register_tool(EST_TL_gp_color, separator=False)
@@ -235,7 +235,7 @@ def reigster():
 def unregister():
     from bpy.utils import unregister_tool, unregister_class
 
-    unregister_class(EST_OT_tool_context_menu)
+    unregister_class(EST_MT_tool_context_menu)
     unregister_tool(EST_TL_gp_add)
     unregister_tool(EST_TL_gp_edit)
     # unregister_tool(EST_TL_gp_color)
