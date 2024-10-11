@@ -1,10 +1,10 @@
 name = "Easy Show Tool"
 id = "EasyShowTool"
 maintainer = "Atticus, AIGODLIKE Community"
-version = "0.3.1"
+version = "0.4.0"
 tagline = "Adds notes to your node editor"
 blender_version_min = "4.2.0"
-blender_version_max = "4.2.1"
+blender_version_max = "4.3.0"
 type = "add-on"
 schema_version = "1.0.0"
 tags = ["Node","User Interface"]

@@ -8,6 +8,7 @@ from .data_enums import ShootAngles
 from .model_gp_edit import EditGreasePencilLayer
 from .model_gp_property import GreasePencilProperty, GPencilStroke
 from .model_gp_bbox import GPencilLayerBBox
+from ..bl_api import add_grease_pencil_empty, convert_to_grease_pencil, transform_apply_wrapper
 
 
 class GreasePencilCache:
@@ -49,8 +50,7 @@ class CreateGreasePencilData(GreasePencilCache):
 
     @classmethod
     def convert_2_gp(cls, keep_original: bool = False):
-        bpy.ops.object.convert(target='GPENCIL', seams=cls.seam, faces=cls.faces, offset=cls.offset,
-                               keep_original=keep_original)
+        convert_to_grease_pencil(seam=cls.seam, faces=cls.faces, offset=cls.offset, keep_original=keep_original)
 
     @staticmethod
     def ensure_context_obj():
@@ -66,7 +66,7 @@ class CreateGreasePencilData(GreasePencilCache):
         """Create an empty grease pencil data."""
         CreateGreasePencilData.ensure_context_obj()
         bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.gpencil_add(type='EMPTY')
+        add_grease_pencil_empty()
         obj = bpy.context.object
         gp_data: bpy.types.GreasePencil = obj.data
         # remove the default layer
@@ -151,7 +151,9 @@ class CreateGreasePencilData(GreasePencilCache):
         obj.select_set(True)
         bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
         obj.location = (0, 0, 0)  # set origin to geometry, and clear location, so that the object will be at the center
-        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True, isolate_users=True)
+
+        with transform_apply_wrapper(obj):
+            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True, isolate_users=True)
 
     @staticmethod
     def from_mesh_obj(obj: bpy.types.Object, size: int = 100,
@@ -422,7 +424,7 @@ class BuildGreasePencilData(GreasePencilCache, GreasePencilProperty):
         bbox.gp_data = self.gp_data
         bbox.calc_bbox(self.active_layer_index)
         scale = Vector((size[0] / (bbox.max_x - bbox.min_x), size[1] / (bbox.max_y - bbox.min_y)))
-        scale = Vector((abs(scale[0]), abs(scale[1])))         # abs scale
+        scale = Vector((abs(scale[0]), abs(scale[1])))  # abs scale
         if fit_type == 'max':
             scale = Vector((max(scale), max(scale)))
         elif fit_type == 'min':

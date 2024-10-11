@@ -3,7 +3,7 @@ bl_info = {
     "author": "Atticus, AIGODLIKE Community",
     "description": "Add Amazing notes to your node editor",
     "blender": (4, 2, 0),
-    "version": (0, 3, 1),
+    "version": (0, 4, 0),
     "location": "",
     "doc_url": "",
     "warning": "",
